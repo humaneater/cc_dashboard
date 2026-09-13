@@ -1,0 +1,19 @@
+[project]
+name = "cc_dashboard"
+description = "ComfyUI 总控台：浮动控制面板 + 蓝图生成器。一条龙多管线（文生图 / 图生图精修 / 图生视频 / 首尾帧 / 文生视频），跨 SDXL(Illustrious) 与 ANIMA 切换，姿势 / 脸手眼矫正 / 高清化都能一键开关。"
+version = "1.3.0"
+license = { file = "LICENSE" }
+# 纯前端扩展 + 本地脚本，不需要额外的 pip 依赖
+dependencies = []
+
+[project.urls]
+# 建好仓库后把这两行改成你自己的地址，Manager 里才会显示
+Repository = "https://github.com/humaneater/cc_dashboard"
+Homepage = "https://github.com/humaneater/cc_dashboard"
+
+[tool.comfy]
+# 想上架官方 Registry（comfy node publish）时，PublisherId 要填你在 registry.comfy.org 的 id；
+# 只发 zip / 自建 git 仓库的话留空即可。
+PublisherId = ""
+DisplayName = "ComfyUI 总控台"
+Icon = ""

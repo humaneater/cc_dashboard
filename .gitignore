@@ -1,0 +1,7 @@
+__pycache__/
+*.py[cod]
+*.log
+dist/
+tools/_object_info.json
+tools/_t_dock/
+.DS_Store
