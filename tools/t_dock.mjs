@@ -310,7 +310,11 @@ function buildGraph() {
     ["detailer_denoise_face", 0.4], ["detailer_denoise_hand", 0.5],
     ["detailer_denoise_eye", 0.5], ["upscale_tile", 1216],
     ["detailer_guide", 512], ["detailer_max_size", 1024],
-    ["detailer_crop", 2.5]]) {
+    ["detailer_crop", 2.5],
+    // 视频后处理（v1.4.0）：补帧倍数 / 视频高清目标倍数 / 放大模型倍率 / 分批 / 分块
+    ["vfi_multiplier", 2], ["video_upscale_factor", 2],
+    ["video_upscale_base", 4], ["video_upscale_batch", 4],
+    ["video_upscale_tile", 0]]) {
     nodes.push(paramNode(k, v));
   }
   nodes.push(loraNode("image", [{ i: 0, lora: "" }, { i: 1, lora: "" }]));
@@ -350,6 +354,13 @@ function buildGraph() {
   nodes.push(mD1, mD2);
   nodes.push(mark("module", "upscale", mkNode("m_u1", "SubgraphNode", { mode: 4 })));
   nodes.push(mark("module", "upscale", mkNode("m_u2", "SubgraphNode", { mode: 4 })));
+  // 视频后处理（v1.4.0）：三条视频管线各一份，同一个开关一起切
+  for (const k of ["vfi", "vupscale"]) {
+    for (let i = 0; i < 3; i++) {
+      nodes.push(mark("module", k,
+        mkNode("m_" + k + i, "SubgraphNode", { mode: 4 })));
+    }
+  }
   // 脸手眼矫正在真前端里是「两个实例共用同一份子图定义」，所以三级开关 / SAM
   // 写的是定义里那四个节点的 mode（这里照着搭：m_d1 / m_d2 指向同一个 subgraph）
   const dInner = [
@@ -1016,7 +1027,7 @@ try {
   await tick(20);
   eq(tube(imgSet), true, "视频管线收起整块图像参数");
   eq(tube(paramTab.children[1]), false, "视频参数显示出来");
-  eq(tube(secOf(paramTab.children[1], "视频参数")), false, "视频参数那块在");
+  eq(tube(secOf(paramTab.children[1], "视频生成参数")), false, "视频参数那块在");
 
   console.log("\n[13] 参数悬停说明 + 一键重置默认值");
   const numInputs = [];
@@ -1822,6 +1833,112 @@ try {
     eq(swA.widgets[1].value, "切窗口那次", "独立窗口失焦时也提交了没失焦的编辑");
     byText("⧉").dispatch("click");
     await tick(40);
+  }
+
+  console.log("\n[21] 视频后处理：视频高清化 / 视频补帧（v1.4.0）");
+  {
+    const roTextOf = (sec, label) => {
+      let hit = null;
+      walk(sec, (n) => {
+        if (hit || n.tagName !== "SPAN") return;
+        const c = n.children || [];
+        if (c.length === 2 && c[0].textContent === label) hit = c[1];
+      });
+      return hit ? hit.textContent : null;
+    };
+    const instsOf = (k) => app.graph.nodes.filter(
+      (n) => n.properties.cc_dock_role === "module"
+        && n.properties.cc_dock_key === k);
+    pipeBtn("图生视频").dispatch("click");
+    await tick(20);
+    const vSet = paramTab.children[1];
+    const vfiSec = secOf(vSet, "视频补帧参数");
+    const vupSec = secOf(vSet, "视频高清参数");
+    ok(!!vfiSec && !!vupSec, "参数页分成 视频生成 / 视频补帧 / 视频高清 三块");
+    eq(modBtn("视频高清化").classList.contains("ccd-hide"), false,
+      "视频管线出现「视频高清化」按钮");
+    eq(modBtn("视频补帧").classList.contains("ccd-hide"), false,
+      "视频管线出现「视频补帧」按钮");
+    eq(modBtn("姿势").classList.contains("ccd-hide"), true,
+      "视频管线上图像模块按钮收起（姿势）");
+    eq(modBtn("高清化").classList.contains("ccd-hide"), true,
+      "视频管线上图像那个「高清化」也收起");
+    eq(tube(vfiSec), true, "补帧模块关着 → 补帧参数收起");
+    eq(tube(vupSec), true, "视频高清模块关着 → 视频高清参数收起");
+
+    await setMod("视频高清化", true);
+    await setMod("视频补帧", true);
+    eq(tube(vupSec), false, "打开视频高清化 → 参数出现");
+    eq(tube(vfiSec), false, "打开视频补帧 → 参数出现");
+    eq(instsOf("vfi").length, 3, "三条视频管线各有一个补帧实例");
+    eq(instsOf("vfi").every((n) => n.mode === 0), true,
+      "一个开关把三个补帧实例一起打开");
+    eq(instsOf("vupscale").length, 3, "三条视频管线各有一个视频高清化实例");
+    eq(instsOf("vupscale").every((n) => n.mode === 0), true,
+      "一个开关把三个视频高清化实例一起打开");
+
+    const mInp = fieldOf(vfiSec, "补帧倍数").querySelector("input");
+    mInp.value = "3";
+    mInp.dispatch("change");
+    await tick(20);
+    eq(pnum("p_vfi_multiplier"), 3, "补帧倍数写进画布参数节点");
+    const vLen = pnum("p_video_length"), vFps = pnum("p_video_fps");
+    eq(roTextOf(vfiSec, "补帧后"),
+      Math.round((vLen - 1) * 3 + 1) + " 帧 / " + (vFps * 3) + " fps（"
+        + vLen + " 帧 ×3，时长不变）",
+      "只读行算出补帧后的帧数 / 帧率（时长不变）");
+    mInp.value = "4";
+    mInp.dispatch("change");
+    await tick(20);
+    const mRow = fieldOf(vfiSec, "补帧倍数");
+    const wEl = mRow && mRow.querySelector(".ccd-warn-txt");
+    ok(!!wEl && /拖影/.test(String(wEl.textContent)),
+      "补帧倍数 ≥4 会挂醒目提示（得到 "
+        + (wEl ? JSON.stringify(String(wEl.textContent)) : "没有提醒元素") + "）");
+    mInp.value = "2";
+    mInp.dispatch("change");
+    await tick(20);
+
+    const fInp = fieldOf(vupSec, "目标倍数").querySelector("input");
+    fInp.value = "1.5";
+    fInp.dispatch("change");
+    await tick(20);
+    eq(pnum("p_video_upscale_factor"), 1.5, "目标倍数写进画布参数节点");
+    const vw = pnum("p_video_width"), vh = pnum("p_video_height");
+    const roTxt = String(roTextOf(vupSec, "输出尺寸"));
+    ok(roTxt.indexOf(Math.round(vw * 1.5) + "×" + Math.round(vh * 1.5)) === 0,
+      "只读行算出高清后的尺寸：" + roTxt);
+    ok(/缩回系数 0.375/.test(roTxt),
+      "只读行标出「目标 ÷ 模型倍率」的实际缩回系数：" + roTxt);
+    const bInp = fieldOf(vupSec, "每批帧数").querySelector("input");
+    bInp.value = "2";
+    bInp.dispatch("change");
+    await tick(20);
+    eq(pnum("p_video_upscale_batch"), 2, "每批帧数写进画布参数节点");
+    const tInp = fieldOf(vupSec, "分块大小").querySelector("input");
+    tInp.value = "384";
+    tInp.dispatch("change");
+    await tick(20);
+    eq(pnum("p_video_upscale_tile"), 384, "分块大小写进画布参数节点");
+    ok(/0 = 自动|自动/.test(String(fieldOf(vupSec, "分块大小").querySelector("input").title || "")),
+      "分块大小的悬停说明里写了「0 = 自动」");
+
+    await setMod("视频补帧", false);
+    eq(instsOf("vfi").every((n) => n.mode === 4), true,
+      "关掉补帧 → 三个实例一起旁路（帧 / 帧率原样透传）");
+    eq(tube(vfiSec), true, "关掉补帧 → 补帧参数收起");
+    eq(tube(vupSec), false, "视频高清还开着 → 那块参数还在");
+
+    // 图像管线：这两个按钮不该出现，视频参数也要收起
+    pipeBtn("文生图").dispatch("click");
+    await tick(20);
+    eq(modBtn("视频补帧").classList.contains("ccd-hide"), true,
+      "切回文生图 → 视频补帧按钮收起");
+    eq(modBtn("视频高清化").classList.contains("ccd-hide"), true,
+      "切回文生图 → 视频高清化按钮收起");
+    eq(tube(paramTab.children[1]), true, "切回文生图 → 整块视频参数收起");
+    eq(modBtn("高清化").classList.contains("ccd-hide"), false,
+      "图像那个「高清化」按钮回来");
   }
 
 } catch (e) {

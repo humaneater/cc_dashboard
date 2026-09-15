@@ -2,7 +2,7 @@
   "id": "0b7a1c10-0002-4a01-9c01-000000000010",
   "revision": 0,
   "last_node_id": 1295,
-  "last_link_id": 157,
+  "last_link_id": 184,
   "nodes": [
     {
       "id": 101,
@@ -3748,8 +3748,8 @@
           "type": "CONDITIONING",
           "links": [
             119,
-            132,
-            145
+            131,
+            143
           ]
         }
       ],
@@ -3802,8 +3802,8 @@
           "type": "CONDITIONING",
           "links": [
             120,
-            133,
-            146
+            132,
+            144
           ]
         }
       ],
@@ -4181,8 +4181,8 @@
           "links": [
             121,
             122,
-            134,
-            135
+            133,
+            134
           ]
         }
       ],
@@ -4216,7 +4216,7 @@
           "name": "IMAGE",
           "type": "IMAGE",
           "links": [
-            152
+            149
           ]
         },
         {
@@ -4261,7 +4261,7 @@
           "name": "IMAGE",
           "type": "IMAGE",
           "links": [
-            153
+            150
           ]
         },
         {
@@ -4306,7 +4306,7 @@
           "name": "IMAGE",
           "type": "IMAGE",
           "links": [
-            154
+            151
           ]
         },
         {
@@ -4352,8 +4352,8 @@
           "type": "INT",
           "links": [
             123,
-            136,
-            147
+            135,
+            145
           ]
         }
       ],
@@ -4391,8 +4391,8 @@
           "type": "INT",
           "links": [
             124,
-            137,
-            148
+            136,
+            146
           ]
         }
       ],
@@ -4430,8 +4430,8 @@
           "type": "INT",
           "links": [
             125,
-            138,
-            149
+            137,
+            147
           ]
         }
       ],
@@ -4468,9 +4468,9 @@
           "name": "FLOAT",
           "type": "FLOAT",
           "links": [
-            126,
-            139,
-            150
+            154,
+            165,
+            176
           ]
         }
       ],
@@ -4506,10 +4506,10 @@
           "name": "INT",
           "type": "INT",
           "links": [
+            126,
             127,
-            128,
-            140,
-            141
+            138,
+            139
           ]
         }
       ],
@@ -4546,10 +4546,10 @@
           "name": "FLOAT",
           "type": "FLOAT",
           "links": [
+            128,
             129,
-            130,
-            142,
-            143
+            140,
+            141
           ]
         }
       ],
@@ -4585,9 +4585,9 @@
           "name": "INT",
           "type": "INT",
           "links": [
-            131,
-            144,
-            151
+            130,
+            142,
+            148
           ]
         }
       ],
@@ -4604,6 +4604,198 @@
       ]
     },
     {
+      "id": 481,
+      "type": "PrimitiveFloat",
+      "pos": [
+        100,
+        7240
+      ],
+      "size": [
+        300,
+        60
+      ],
+      "flags": {},
+      "order": 83,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "localized_name": "FLOAT",
+          "name": "FLOAT",
+          "type": "FLOAT",
+          "links": [
+            155,
+            166,
+            177
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "Node name for S&R": "PrimitiveFloat",
+        "cc_dock_role": "param",
+        "cc_dock_key": "vfi_multiplier"
+      },
+      "title": "补帧 · 倍数",
+      "widgets_values": [
+        2.0
+      ]
+    },
+    {
+      "id": 482,
+      "type": "PrimitiveFloat",
+      "pos": [
+        440,
+        7240
+      ],
+      "size": [
+        300,
+        60
+      ],
+      "flags": {},
+      "order": 84,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "localized_name": "FLOAT",
+          "name": "FLOAT",
+          "type": "FLOAT",
+          "links": [
+            159,
+            170,
+            181
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "Node name for S&R": "PrimitiveFloat",
+        "cc_dock_role": "param",
+        "cc_dock_key": "video_upscale_factor"
+      },
+      "title": "视频高清 · 目标倍数（相对原尺寸）",
+      "widgets_values": [
+        2.0
+      ]
+    },
+    {
+      "id": 483,
+      "type": "PrimitiveFloat",
+      "pos": [
+        780,
+        7240
+      ],
+      "size": [
+        300,
+        60
+      ],
+      "flags": {},
+      "order": 85,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "localized_name": "FLOAT",
+          "name": "FLOAT",
+          "type": "FLOAT",
+          "links": [
+            160,
+            171,
+            182
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "Node name for S&R": "PrimitiveFloat",
+        "cc_dock_role": "param",
+        "cc_dock_key": "video_upscale_base"
+      },
+      "title": "视频高清 · 放大模型倍率（换模型才要改）",
+      "widgets_values": [
+        4.0
+      ]
+    },
+    {
+      "id": 484,
+      "type": "PrimitiveInt",
+      "pos": [
+        1120,
+        7240
+      ],
+      "size": [
+        300,
+        60
+      ],
+      "flags": {},
+      "order": 86,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "localized_name": "INT",
+          "name": "INT",
+          "type": "INT",
+          "links": [
+            161,
+            172,
+            183
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "Node name for S&R": "PrimitiveInt",
+        "cc_dock_role": "param",
+        "cc_dock_key": "video_upscale_batch"
+      },
+      "title": "视频高清 · 每批帧数（0 = 不限制）",
+      "widgets_values": [
+        4,
+        "fixed"
+      ]
+    },
+    {
+      "id": 485,
+      "type": "PrimitiveInt",
+      "pos": [
+        1460,
+        7240
+      ],
+      "size": [
+        300,
+        60
+      ],
+      "flags": {},
+      "order": 87,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "localized_name": "INT",
+          "name": "INT",
+          "type": "INT",
+          "links": [
+            162,
+            173,
+            184
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "Node name for S&R": "PrimitiveInt",
+        "cc_dock_role": "param",
+        "cc_dock_key": "video_upscale_tile"
+      },
+      "title": "视频高清 · 分块大小（0 = 自动）",
+      "widgets_values": [
+        0,
+        "fixed"
+      ]
+    },
+    {
       "id": 431,
       "type": "0b7a1c10-0001-4a01-9c01-000000000007",
       "pos": [
@@ -4615,7 +4807,7 @@
         470
       ],
       "flags": {},
-      "order": 83,
+      "order": 88,
       "mode": 0,
       "inputs": [
         {
@@ -4628,7 +4820,7 @@
           "localized_name": "源图",
           "name": "start_image",
           "type": "IMAGE",
-          "link": 152
+          "link": 149
         },
         {
           "localized_name": "vae_decode",
@@ -4688,19 +4880,10 @@
           }
         },
         {
-          "localized_name": "帧率",
-          "name": "fps",
-          "type": "FLOAT",
-          "link": 126,
-          "widget": {
-            "name": "fps"
-          }
-        },
-        {
           "localized_name": "步数",
           "name": "steps_high",
           "type": "INT",
-          "link": 127,
+          "link": 126,
           "widget": {
             "name": "steps_high"
           }
@@ -4709,7 +4892,7 @@
           "localized_name": "步数",
           "name": "steps_low",
           "type": "INT",
-          "link": 128,
+          "link": 127,
           "widget": {
             "name": "steps_low"
           }
@@ -4718,7 +4901,7 @@
           "localized_name": "CFG",
           "name": "cfg_high",
           "type": "FLOAT",
-          "link": 129,
+          "link": 128,
           "widget": {
             "name": "cfg_high"
           }
@@ -4727,7 +4910,7 @@
           "localized_name": "CFG",
           "name": "cfg_low",
           "type": "FLOAT",
-          "link": 130,
+          "link": 129,
           "widget": {
             "name": "cfg_low"
           }
@@ -4736,7 +4919,7 @@
           "localized_name": "种子",
           "name": "seed",
           "type": "INT",
-          "link": 131,
+          "link": 130,
           "widget": {
             "name": "seed"
           }
@@ -4744,11 +4927,11 @@
       ],
       "outputs": [
         {
-          "localized_name": "video",
-          "name": "video",
-          "type": "VIDEO",
+          "localized_name": "帧",
+          "name": "frames",
+          "type": "IMAGE",
           "links": [
-            155
+            152
           ]
         }
       ],
@@ -4765,10 +4948,6 @@
           [
             "1",
             "length"
-          ],
-          [
-            "5",
-            "fps"
           ],
           [
             "2",
@@ -4800,10 +4979,234 @@
       "title": "图生视频 I2V"
     },
     {
+      "id": 492,
+      "type": "0b7a1c10-0001-4a01-9c01-00000000000a",
+      "pos": [
+        700,
+        7340
+      ],
+      "size": [
+        400,
+        260
+      ],
+      "flags": {},
+      "order": 89,
+      "mode": 4,
+      "inputs": [
+        {
+          "localized_name": "帧",
+          "name": "frames",
+          "type": "IMAGE",
+          "link": 152
+        },
+        {
+          "localized_name": "目标倍数",
+          "name": "factor",
+          "type": "FLOAT",
+          "link": 159,
+          "widget": {
+            "name": "factor"
+          }
+        },
+        {
+          "localized_name": "放大模型倍率",
+          "name": "base",
+          "type": "FLOAT",
+          "link": 160,
+          "widget": {
+            "name": "base"
+          }
+        },
+        {
+          "localized_name": "每批帧数",
+          "name": "batch",
+          "type": "INT",
+          "link": 161,
+          "widget": {
+            "name": "batch"
+          }
+        },
+        {
+          "localized_name": "分块大小（0=自动）",
+          "name": "tile",
+          "type": "INT",
+          "link": 162,
+          "widget": {
+            "name": "tile"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "帧",
+          "name": "frames",
+          "type": "IMAGE",
+          "links": [
+            153
+          ]
+        }
+      ],
+      "properties": {
+        "proxyWidgets": [
+          [
+            "3",
+            "a"
+          ],
+          [
+            "3",
+            "b"
+          ],
+          [
+            "2",
+            "max_batch_size"
+          ],
+          [
+            "2",
+            "tile_size"
+          ]
+        ],
+        "cnr_id": "comfy-core",
+        "Node name for S&R": "视频高清化",
+        "cc_dock_role": "module",
+        "cc_dock_key": "vupscale"
+      },
+      "widgets_values": [],
+      "title": "视频高清化"
+    },
+    {
+      "id": 491,
+      "type": "0b7a1c10-0001-4a01-9c01-00000000000b",
+      "pos": [
+        1140,
+        7340
+      ],
+      "size": [
+        360,
+        240
+      ],
+      "flags": {},
+      "order": 90,
+      "mode": 4,
+      "inputs": [
+        {
+          "localized_name": "帧",
+          "name": "frames",
+          "type": "IMAGE",
+          "link": 153
+        },
+        {
+          "localized_name": "帧率",
+          "name": "fps",
+          "type": "FLOAT",
+          "link": 154,
+          "widget": {
+            "name": "fps"
+          }
+        },
+        {
+          "localized_name": "补帧倍数",
+          "name": "multiplier",
+          "type": "FLOAT",
+          "link": 155,
+          "widget": {
+            "name": "multiplier"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "帧",
+          "name": "frames",
+          "type": "IMAGE",
+          "links": [
+            156
+          ]
+        },
+        {
+          "localized_name": "帧率",
+          "name": "fps",
+          "type": "FLOAT",
+          "links": [
+            157
+          ]
+        }
+      ],
+      "properties": {
+        "proxyWidgets": [
+          [
+            "2",
+            "a"
+          ],
+          [
+            "2",
+            "b"
+          ]
+        ],
+        "cnr_id": "comfy-core",
+        "Node name for S&R": "视频补帧",
+        "cc_dock_role": "module",
+        "cc_dock_key": "vfi"
+      },
+      "widgets_values": [],
+      "title": "视频补帧"
+    },
+    {
+      "id": 497,
+      "type": "CreateVideo",
+      "pos": [
+        1540,
+        7340
+      ],
+      "size": [
+        300,
+        110
+      ],
+      "flags": {},
+      "order": 91,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "images",
+          "name": "images",
+          "type": "IMAGE",
+          "link": 156
+        },
+        {
+          "localized_name": "帧率",
+          "name": "fps",
+          "type": "FLOAT",
+          "widget": {
+            "name": "fps"
+          },
+          "link": 157
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "VIDEO",
+          "name": "VIDEO",
+          "type": "VIDEO",
+          "links": [
+            158
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "Node name for S&R": "CreateVideo"
+      },
+      "title": "封装 I2V",
+      "widgets_values": [
+        16,
+        "auto",
+        "sRGB"
+      ]
+    },
+    {
       "id": 432,
       "type": "SaveVideo",
       "pos": [
-        700,
+        1880,
         7340
       ],
       "size": [
@@ -4811,14 +5214,14 @@
         160
       ],
       "flags": {},
-      "order": 84,
+      "order": 92,
       "mode": 2,
       "inputs": [
         {
           "localized_name": "video",
           "name": "video",
           "type": "VIDEO",
-          "link": 155
+          "link": 158
         }
       ],
       "outputs": [
@@ -4847,40 +5250,40 @@
       "id": 441,
       "type": "0b7a1c10-0001-4a01-9c01-000000000008",
       "pos": [
-        1100,
-        7340
+        100,
+        7900
       ],
       "size": [
         590,
-        520
+        470
       ],
       "flags": {},
-      "order": 85,
+      "order": 93,
       "mode": 0,
       "inputs": [
         {
           "localized_name": "vae_image",
           "name": "vae_image",
           "type": "VAE",
-          "link": 134
+          "link": 133
         },
         {
           "localized_name": "首帧",
           "name": "start_image",
           "type": "IMAGE",
-          "link": 153
+          "link": 150
         },
         {
           "localized_name": "尾帧",
           "name": "end_image",
           "type": "IMAGE",
-          "link": 154
+          "link": 151
         },
         {
           "localized_name": "vae_decode",
           "name": "vae_decode",
           "type": "VAE",
-          "link": 135
+          "link": 134
         },
         {
           "localized_name": "model_high",
@@ -4898,19 +5301,19 @@
           "localized_name": "positive",
           "name": "positive",
           "type": "CONDITIONING",
-          "link": 132
+          "link": 131
         },
         {
           "localized_name": "negative",
           "name": "negative",
           "type": "CONDITIONING",
-          "link": 133
+          "link": 132
         },
         {
           "localized_name": "宽",
           "name": "width",
           "type": "INT",
-          "link": 136,
+          "link": 135,
           "widget": {
             "name": "width"
           }
@@ -4919,7 +5322,7 @@
           "localized_name": "高",
           "name": "height",
           "type": "INT",
-          "link": 137,
+          "link": 136,
           "widget": {
             "name": "height"
           }
@@ -4928,25 +5331,16 @@
           "localized_name": "帧数",
           "name": "length",
           "type": "INT",
-          "link": 138,
+          "link": 137,
           "widget": {
             "name": "length"
-          }
-        },
-        {
-          "localized_name": "帧率",
-          "name": "fps",
-          "type": "FLOAT",
-          "link": 139,
-          "widget": {
-            "name": "fps"
           }
         },
         {
           "localized_name": "步数",
           "name": "steps_high",
           "type": "INT",
-          "link": 140,
+          "link": 138,
           "widget": {
             "name": "steps_high"
           }
@@ -4955,7 +5349,7 @@
           "localized_name": "步数",
           "name": "steps_low",
           "type": "INT",
-          "link": 141,
+          "link": 139,
           "widget": {
             "name": "steps_low"
           }
@@ -4964,7 +5358,7 @@
           "localized_name": "CFG",
           "name": "cfg_high",
           "type": "FLOAT",
-          "link": 142,
+          "link": 140,
           "widget": {
             "name": "cfg_high"
           }
@@ -4973,7 +5367,7 @@
           "localized_name": "CFG",
           "name": "cfg_low",
           "type": "FLOAT",
-          "link": 143,
+          "link": 141,
           "widget": {
             "name": "cfg_low"
           }
@@ -4982,7 +5376,7 @@
           "localized_name": "种子",
           "name": "seed",
           "type": "INT",
-          "link": 144,
+          "link": 142,
           "widget": {
             "name": "seed"
           }
@@ -4990,11 +5384,11 @@
       ],
       "outputs": [
         {
-          "localized_name": "video",
-          "name": "video",
-          "type": "VIDEO",
+          "localized_name": "帧",
+          "name": "frames",
+          "type": "IMAGE",
           "links": [
-            156
+            163
           ]
         }
       ],
@@ -5011,10 +5405,6 @@
           [
             "1",
             "length"
-          ],
-          [
-            "5",
-            "fps"
           ],
           [
             "2",
@@ -5046,25 +5436,249 @@
       "title": "首尾帧过渡 FLF2V"
     },
     {
+      "id": 494,
+      "type": "0b7a1c10-0001-4a01-9c01-00000000000a",
+      "pos": [
+        700,
+        7900
+      ],
+      "size": [
+        400,
+        260
+      ],
+      "flags": {},
+      "order": 94,
+      "mode": 4,
+      "inputs": [
+        {
+          "localized_name": "帧",
+          "name": "frames",
+          "type": "IMAGE",
+          "link": 163
+        },
+        {
+          "localized_name": "目标倍数",
+          "name": "factor",
+          "type": "FLOAT",
+          "link": 170,
+          "widget": {
+            "name": "factor"
+          }
+        },
+        {
+          "localized_name": "放大模型倍率",
+          "name": "base",
+          "type": "FLOAT",
+          "link": 171,
+          "widget": {
+            "name": "base"
+          }
+        },
+        {
+          "localized_name": "每批帧数",
+          "name": "batch",
+          "type": "INT",
+          "link": 172,
+          "widget": {
+            "name": "batch"
+          }
+        },
+        {
+          "localized_name": "分块大小（0=自动）",
+          "name": "tile",
+          "type": "INT",
+          "link": 173,
+          "widget": {
+            "name": "tile"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "帧",
+          "name": "frames",
+          "type": "IMAGE",
+          "links": [
+            164
+          ]
+        }
+      ],
+      "properties": {
+        "proxyWidgets": [
+          [
+            "3",
+            "a"
+          ],
+          [
+            "3",
+            "b"
+          ],
+          [
+            "2",
+            "max_batch_size"
+          ],
+          [
+            "2",
+            "tile_size"
+          ]
+        ],
+        "cnr_id": "comfy-core",
+        "Node name for S&R": "视频高清化",
+        "cc_dock_role": "module",
+        "cc_dock_key": "vupscale"
+      },
+      "widgets_values": [],
+      "title": "视频高清化"
+    },
+    {
+      "id": 493,
+      "type": "0b7a1c10-0001-4a01-9c01-00000000000b",
+      "pos": [
+        1140,
+        7900
+      ],
+      "size": [
+        360,
+        240
+      ],
+      "flags": {},
+      "order": 95,
+      "mode": 4,
+      "inputs": [
+        {
+          "localized_name": "帧",
+          "name": "frames",
+          "type": "IMAGE",
+          "link": 164
+        },
+        {
+          "localized_name": "帧率",
+          "name": "fps",
+          "type": "FLOAT",
+          "link": 165,
+          "widget": {
+            "name": "fps"
+          }
+        },
+        {
+          "localized_name": "补帧倍数",
+          "name": "multiplier",
+          "type": "FLOAT",
+          "link": 166,
+          "widget": {
+            "name": "multiplier"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "帧",
+          "name": "frames",
+          "type": "IMAGE",
+          "links": [
+            167
+          ]
+        },
+        {
+          "localized_name": "帧率",
+          "name": "fps",
+          "type": "FLOAT",
+          "links": [
+            168
+          ]
+        }
+      ],
+      "properties": {
+        "proxyWidgets": [
+          [
+            "2",
+            "a"
+          ],
+          [
+            "2",
+            "b"
+          ]
+        ],
+        "cnr_id": "comfy-core",
+        "Node name for S&R": "视频补帧",
+        "cc_dock_role": "module",
+        "cc_dock_key": "vfi"
+      },
+      "widgets_values": [],
+      "title": "视频补帧"
+    },
+    {
+      "id": 498,
+      "type": "CreateVideo",
+      "pos": [
+        1540,
+        7900
+      ],
+      "size": [
+        300,
+        110
+      ],
+      "flags": {},
+      "order": 96,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "images",
+          "name": "images",
+          "type": "IMAGE",
+          "link": 167
+        },
+        {
+          "localized_name": "帧率",
+          "name": "fps",
+          "type": "FLOAT",
+          "widget": {
+            "name": "fps"
+          },
+          "link": 168
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "VIDEO",
+          "name": "VIDEO",
+          "type": "VIDEO",
+          "links": [
+            169
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "Node name for S&R": "CreateVideo"
+      },
+      "title": "封装 FLF2V",
+      "widgets_values": [
+        16,
+        "auto",
+        "sRGB"
+      ]
+    },
+    {
       "id": 442,
       "type": "SaveVideo",
       "pos": [
-        1740,
-        7340
+        1880,
+        7900
       ],
       "size": [
         340,
         160
       ],
       "flags": {},
-      "order": 86,
+      "order": 97,
       "mode": 2,
       "inputs": [
         {
           "localized_name": "video",
           "name": "video",
           "type": "VIDEO",
-          "link": 156
+          "link": 169
         }
       ],
       "outputs": [
@@ -5093,34 +5707,34 @@
       "id": 451,
       "type": "0b7a1c10-0001-4a01-9c01-000000000009",
       "pos": [
-        2140,
-        7340
+        100,
+        8460
       ],
       "size": [
         550,
         470
       ],
       "flags": {},
-      "order": 87,
+      "order": 98,
       "mode": 0,
       "inputs": [
         {
           "localized_name": "positive",
           "name": "positive",
           "type": "CONDITIONING",
-          "link": 145
+          "link": 143
         },
         {
           "localized_name": "negative",
           "name": "negative",
           "type": "CONDITIONING",
-          "link": 146
+          "link": 144
         },
         {
           "localized_name": "宽",
           "name": "width",
           "type": "INT",
-          "link": 147,
+          "link": 145,
           "widget": {
             "name": "width"
           }
@@ -5129,7 +5743,7 @@
           "localized_name": "高",
           "name": "height",
           "type": "INT",
-          "link": 148,
+          "link": 146,
           "widget": {
             "name": "height"
           }
@@ -5138,25 +5752,16 @@
           "localized_name": "帧数",
           "name": "length",
           "type": "INT",
-          "link": 149,
+          "link": 147,
           "widget": {
             "name": "length"
-          }
-        },
-        {
-          "localized_name": "帧率",
-          "name": "fps",
-          "type": "FLOAT",
-          "link": 150,
-          "widget": {
-            "name": "fps"
           }
         },
         {
           "localized_name": "种子",
           "name": "seed",
           "type": "INT",
-          "link": 151,
+          "link": 148,
           "widget": {
             "name": "seed"
           }
@@ -5164,11 +5769,11 @@
       ],
       "outputs": [
         {
-          "localized_name": "video",
-          "name": "video",
-          "type": "VIDEO",
+          "localized_name": "帧",
+          "name": "frames",
+          "type": "IMAGE",
           "links": [
-            157
+            174
           ]
         }
       ],
@@ -5187,10 +5792,6 @@
             "length"
           ],
           [
-            "6",
-            "fps"
-          ],
-          [
             "4",
             "seed"
           ]
@@ -5204,25 +5805,249 @@
       "title": "文生视频 T2V"
     },
     {
+      "id": 496,
+      "type": "0b7a1c10-0001-4a01-9c01-00000000000a",
+      "pos": [
+        700,
+        8460
+      ],
+      "size": [
+        400,
+        260
+      ],
+      "flags": {},
+      "order": 99,
+      "mode": 4,
+      "inputs": [
+        {
+          "localized_name": "帧",
+          "name": "frames",
+          "type": "IMAGE",
+          "link": 174
+        },
+        {
+          "localized_name": "目标倍数",
+          "name": "factor",
+          "type": "FLOAT",
+          "link": 181,
+          "widget": {
+            "name": "factor"
+          }
+        },
+        {
+          "localized_name": "放大模型倍率",
+          "name": "base",
+          "type": "FLOAT",
+          "link": 182,
+          "widget": {
+            "name": "base"
+          }
+        },
+        {
+          "localized_name": "每批帧数",
+          "name": "batch",
+          "type": "INT",
+          "link": 183,
+          "widget": {
+            "name": "batch"
+          }
+        },
+        {
+          "localized_name": "分块大小（0=自动）",
+          "name": "tile",
+          "type": "INT",
+          "link": 184,
+          "widget": {
+            "name": "tile"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "帧",
+          "name": "frames",
+          "type": "IMAGE",
+          "links": [
+            175
+          ]
+        }
+      ],
+      "properties": {
+        "proxyWidgets": [
+          [
+            "3",
+            "a"
+          ],
+          [
+            "3",
+            "b"
+          ],
+          [
+            "2",
+            "max_batch_size"
+          ],
+          [
+            "2",
+            "tile_size"
+          ]
+        ],
+        "cnr_id": "comfy-core",
+        "Node name for S&R": "视频高清化",
+        "cc_dock_role": "module",
+        "cc_dock_key": "vupscale"
+      },
+      "widgets_values": [],
+      "title": "视频高清化"
+    },
+    {
+      "id": 495,
+      "type": "0b7a1c10-0001-4a01-9c01-00000000000b",
+      "pos": [
+        1140,
+        8460
+      ],
+      "size": [
+        360,
+        240
+      ],
+      "flags": {},
+      "order": 100,
+      "mode": 4,
+      "inputs": [
+        {
+          "localized_name": "帧",
+          "name": "frames",
+          "type": "IMAGE",
+          "link": 175
+        },
+        {
+          "localized_name": "帧率",
+          "name": "fps",
+          "type": "FLOAT",
+          "link": 176,
+          "widget": {
+            "name": "fps"
+          }
+        },
+        {
+          "localized_name": "补帧倍数",
+          "name": "multiplier",
+          "type": "FLOAT",
+          "link": 177,
+          "widget": {
+            "name": "multiplier"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "帧",
+          "name": "frames",
+          "type": "IMAGE",
+          "links": [
+            178
+          ]
+        },
+        {
+          "localized_name": "帧率",
+          "name": "fps",
+          "type": "FLOAT",
+          "links": [
+            179
+          ]
+        }
+      ],
+      "properties": {
+        "proxyWidgets": [
+          [
+            "2",
+            "a"
+          ],
+          [
+            "2",
+            "b"
+          ]
+        ],
+        "cnr_id": "comfy-core",
+        "Node name for S&R": "视频补帧",
+        "cc_dock_role": "module",
+        "cc_dock_key": "vfi"
+      },
+      "widgets_values": [],
+      "title": "视频补帧"
+    },
+    {
+      "id": 499,
+      "type": "CreateVideo",
+      "pos": [
+        1540,
+        8460
+      ],
+      "size": [
+        300,
+        110
+      ],
+      "flags": {},
+      "order": 101,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "images",
+          "name": "images",
+          "type": "IMAGE",
+          "link": 178
+        },
+        {
+          "localized_name": "帧率",
+          "name": "fps",
+          "type": "FLOAT",
+          "widget": {
+            "name": "fps"
+          },
+          "link": 179
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "VIDEO",
+          "name": "VIDEO",
+          "type": "VIDEO",
+          "links": [
+            180
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "Node name for S&R": "CreateVideo"
+      },
+      "title": "封装 T2V",
+      "widgets_values": [
+        16,
+        "auto",
+        "sRGB"
+      ]
+    },
+    {
       "id": 452,
       "type": "SaveVideo",
       "pos": [
-        2740,
-        7340
+        1880,
+        8460
       ],
       "size": [
         340,
         160
       ],
       "flags": {},
-      "order": 88,
+      "order": 102,
       "mode": 2,
       "inputs": [
         {
           "localized_name": "video",
           "name": "video",
           "type": "VIDEO",
-          "link": 157
+          "link": 180
         }
       ],
       "outputs": [
@@ -5259,13 +6084,13 @@
         1000
       ],
       "flags": {},
-      "order": 89,
+      "order": 103,
       "mode": 0,
       "inputs": [],
       "outputs": [],
       "properties": {},
       "widgets_values": [
-        "## ComfyUI 总控台 v6\n\n### 怎么用\n\n**面板是悬浮窗**，不随画布平移缩放：拖标题栏移动、拖边/角改大小，位置尺寸自动记住，\n挡住东西就往旁边一拖；顶栏右侧三个按钮管窗口本身：\n\n- **⧉**：变成独立小窗口（Chrome / Edge 支持），可以拖到另一个屏幕上，关掉自动收回页面\n- **📌**：钉回窗口顶部通栏（旧版的样子），再点一下恢复浮动\n- **◎**：跟随执行，**默认开**——跑图时自动切进正在执行的子图并聚焦那个节点；自己拖画布时会先让一让\n\n- **管线**：文生图 / 图生图精修 / 图生视频 / 首尾帧 / 文生视频，点一个切一个\n  切完之后，面板下面只显示这条管线用得上的东西：图像管线给图像提示词 + 图像参数 + 图像 LoRA，\n  视频管线的三兄弟给视频提示词 + 视频参数 + 视频 high/low LoRA，模块按钮也跟着换；不用自己找\n- **模型**：下拉即换 checkpoint，Illustrious / ANIMA 都在这里切；\n  选到 ANIMA 会自动变成 30 步 / CFG 4.5 / 不走 CLIP 取层 / 姿势换成 LLLite，\n  并把 CLIP、VAE 切到 ANIMA 专用那两路（Qwen3-0.6B 文本编码器 + Wan 2.1 VAE）\n- **模块**：姿势 / 脸手眼矫正 / 高清化，随时开关。姿势开关按当前模型族自动选 SDXL 或 ANIMA 那套\n\n面板右上角有四个页签，点开才展开，不占地方：\n\n- **提示词**：按管线只显示当前那两组（图像正 / 图像负，或视频正 / 视频负）\n  - **正向 = 8 段拼接**：每段一行 `#N` + 文本框 + `插件输入` + `启用` + `⌖ 跳转`，\n    右边是这段现在吃的是手填还是插件\n  - **负向 = 一个整体文本框**：不分段、不合并、没有插件开关，写完直接进编码\n  - **拼接**（只对正向）：8 段按顺序用分隔符（默认 `, `）拼成一条，空段自动跳过，所以没写满也不会有多余逗号；\n    分隔符在最上面那格，可以改\n  - **自动扩展**：一开始只露 3 行，你在哪一段写了字或者挂了插件，下面就自动多冒一行；最多 8 段。\n    想一次看全就点这组右上角的 `全部 8 段`；顶到头了会提示——真要更多，就在画布上再加一个拼接节点串上去\n  - **插件输入（手填 / 插件 二选一）**：勾上就是「这段听插件的」，点名框变灰、忽略手填；不勾就是「这段听我手写的」\n    （真的二选一：每段在画布上是一个 `CR Text Input Switch JK` 开关节点，插件的 STRING 输出接它的\n    「插件文本」口，开关的布尔值由面板控制；勾着插件但还没接线时会回落到手填文字，不会把这段变空）\n  - **⌖ 跳转**：点一下直接切到那一段的开关节点并放大居中——你在那儿把插件输出连上（比如 scene-composer 的\n    `environment` / `character` / `action` / `positive` / `negative` 的 `prompt` 口），回来勾上「插件输入」就能用。\n    没连线的会显示 `插件：未连线`，照着提示去连一下\n  - 每段的文字保存在「第 N 段（手填 / 插件）」节点上；拼接器节点里那 8 格是**只读镜像**，只为在画布上瞄一眼\n- **LoRA**：图像组给文生图 + 图生图共用；视频组给 I2V / FLF2V 的 high、low 两条链共用。\n  每行一个开关 + 一个下拉 + 强度，下面还有一行状态：\n  - `触发词: …` — 从 LoRA 元数据里读出来的训练触发词，**要锁角色/画风就把这词写进提示词**，不写的话很多时候看着像没生效\n  - `⚠ 已选但未启用` — 选了 LoRA 但左边开关没勾，后端会直接跳过这个 LoRA，勾上再出图\n  - `⚠ 与当前模型族可能不匹配` — 比如当前是 ANIMA 模型却挂了 Illustrious 的 LoRA（或反过来），换了多半不出效果\n  - 行数跟画布节点一致，在画布节点上点 “➕ Add Lora” 加行，面板自动跟上。\n    视频组第一行默认挂着 `lightx2v_4steps` 加速 LoRA（4 步 / CFG 1 的配方要它），不用就在面板上关掉\n- **参数**：按模块分区，**模块开着才显示那一块**（关掉模块那块自动收起来）\n  - **生成参数**：宽 / 高 / 步数 / CFG / 种子 + 🎲 随机；`重绘强度` 只在图生图精修时出现。\n    「高」右边那个 **⇄** 是长宽一键互换（1216×832 ↔ 832×1216）：想要竖图点一下就行，\n    视频那条也有自己的一个，两边互不影响\n  - **姿势参数**：姿势强度（姿势模块开着才有）\n  - **脸手眼矫正参数**：检测阈值（脸 / 手）/ 眼检测阈值 / 羽化 / 脸·手·眼三级重绘强度\n    （脸手眼矫正模块开着才有）。检测阈值调低 = 更容易认出脸和手；\n    眼那级单独一个阈值，是因为眼睛最容易在头发和花纹上误检；\n    羽化是遮罩边缘的柔化像素；三级重绘是各自的修复力度。\n    三级后面还挂着一道**色彩回正**，专门治「修完偏红 / 饱和度变高」\n  - **高清参数**：高清倍数 / 分块大小（带「自动」开关）/ 整体细化强度 / 分块精修强度 / 接缝修复强度\n    （高清化模块开着才有），底下两个只读行写着 **输出尺寸** / **实际分块**，不用自己算。\n    「高清倍数」是**最终尺寸 ÷ 原图尺寸**，填 2 就是 2 倍（以前填 2 出来是 4 倍，v6.3 起修好了）。\n    分块大小是这块里**唯一自动**的参数，其余几个强度你自己调，面板不会覆盖，\n    而且改了会记在浏览器里，刷新页面 / 重开工作流都还在\n    出图「像很多张拼起来」时先降分块精修强度、再降整体细化强度；接缝修复强度管块与块之间的糊合。\n    分块默认**自动跟着分辨率走**（精修尺寸的长边切 2 块，对齐 64、限 1024~1536），\n    取消「自动」就能自己钉一个固定值\n  - **视频参数**：宽 / 高 / 帧数 / 帧率 / 步数 / CFG / 种子 + 🎲 随机\n  - **🎲 随机（默认开）**：开着每张图 / 每段视频都是新种子；关掉就按下面那个数字出，方便微调。\n    这个开关是「这次打开页面」的事，刷新后回到默认开，不记进浏览器里\n  - 旁边那个 **🎲 按钮**是「只随机这一次」，点一下换个种子，不动上面的开关\n- **说明**：就是本页要点\n\n顶栏还有两个按钮：`⟳ 取图`（刷新 `output/` 图片下拉）、`↻ 同步`（从画布重新读一遍状态）。\n\n> 面板没出现？确认 `custom_nodes/cc_dashboard/web/dock.js` 在（插件装好）+ 刷新浏览器页面。\n> 想重新生成这份蓝图：面板「说明」页点「生成 / 更新蓝图」，或跑 `python tools/gen_dashboard.py`。\n> 面板跑到屏幕外了？`📌` 钉回顶部即可拉回来。\n> 实在不想用面板，也可以直接框选节点按 `Ctrl+B` 旁路 / `Ctrl+M` 静音，效果一样。\n\n### 画布结构（双击子图进去看内部连线）\n\n```\n[图像共用前端] 模型槽 → 图像 LoRA 组 → CLIP 取层 → 文本编码\n        ↓\n[文生图]  文生图 → 姿势 → 脸手眼矫正 → 高清化 → output/refined_*\n[图生图]  取图 → 图生图精修 → 脸手眼矫正 → 高清化 → output/refine_*\n[视频]    视频提示词 → 视频地基（UNET high/low + LoRA 组）→ I2V / FLF2V / T2V\n```\n\n- 文生图和图生图**共用**模型槽、提示词、LoRA 组\n- 提示词是「一处来源」：面板上的正向 8 段拼完再分发给文生图 / 图生图（负向就是一个单框，视频那套同理），\n  不是每个模型各写一份\n- 取图节点在画布上是可见的：图生图用 `output/` 里的图，I2V 也用 `output/`，刷新列表即可选到上一轮出的图\n- 管线切换是「静音其它 Save 节点」，不会白跑别的管线\n- 模块关掉靠旁路透传，不会断线也不会报错\n\n### 其它\n\n- 采样步数 / CFG / 尺寸 / 种子 / 重绘强度 / 高清倍数都在面板参数区，也可以直接改画布上的参数节点；\n  种子节点上的控制项（`randomize` / `fixed`）就是面板那个 🎲 随机开关写的，两边是同一个东西\n- 视频的 4 步是加速 LoRA 绑定的，想改步数就双击进 I2V / FLF2V 子图改\n- ANIMA 的裸 DiT（只含 `model.diffusion_model.*`，没有文本编码器 / VAE）已经接好了：\n  A2 区 `110 CLIPLoader` + `111 VAELoader` 补料，`112 / 113` 两个开关跟模型族自动切；\n  面板没加载时，手动把这两个开关设成 `2` 即可\n- 想接 Krea2 这类分离式权重：同样按 A2 区的接法，换成它自己的 `UNETLoader` + `CLIPLoader` + `VAELoader`\n- IPAdapter 参考图需求已删除（无节点、无权重）\n"
+        "## ComfyUI 总控台 v6\n\n### 怎么用\n\n**面板是悬浮窗**，不随画布平移缩放：拖标题栏移动、拖边/角改大小，位置尺寸自动记住，\n挡住东西就往旁边一拖；顶栏右侧三个按钮管窗口本身：\n\n- **⧉**：变成独立小窗口（Chrome / Edge 支持），可以拖到另一个屏幕上，关掉自动收回页面\n- **📌**：钉回窗口顶部通栏（旧版的样子），再点一下恢复浮动\n- **◎**：跟随执行，**默认开**——跑图时自动切进正在执行的子图并聚焦那个节点；自己拖画布时会先让一让\n\n- **管线**：文生图 / 图生图精修 / 图生视频 / 首尾帧 / 文生视频，点一个切一个\n  切完之后，面板下面只显示这条管线用得上的东西：图像管线给图像提示词 + 图像参数 + 图像 LoRA，\n  视频管线的三兄弟给视频提示词 + 视频参数 + 视频 high/low LoRA，模块按钮也跟着换；不用自己找\n- **模型**：下拉即换 checkpoint，Illustrious / ANIMA 都在这里切；\n  选到 ANIMA 会自动变成 30 步 / CFG 4.5 / 不走 CLIP 取层 / 姿势换成 LLLite，\n  并把 CLIP、VAE 切到 ANIMA 专用那两路（Qwen3-0.6B 文本编码器 + Wan 2.1 VAE）\n- **模块**：图像那边是 姿势 / 脸手眼矫正 / 高清化；视频那边是 视频高清化 / 视频补帧，\n  切到哪条管线就显示哪几个，随时开关。姿势开关按当前模型族自动选 SDXL 或 ANIMA 那套\n\n面板右上角有四个页签，点开才展开，不占地方：\n\n- **提示词**：按管线只显示当前那两组（图像正 / 图像负，或视频正 / 视频负）\n  - **正向 = 8 段拼接**：每段一行 `#N` + 文本框 + `插件输入` + `启用` + `⌖ 跳转`，\n    右边是这段现在吃的是手填还是插件\n  - **负向 = 一个整体文本框**：不分段、不合并、没有插件开关，写完直接进编码\n  - **拼接**（只对正向）：8 段按顺序用分隔符（默认 `, `）拼成一条，空段自动跳过，所以没写满也不会有多余逗号；\n    分隔符在最上面那格，可以改\n  - **自动扩展**：一开始只露 3 行，你在哪一段写了字或者挂了插件，下面就自动多冒一行；最多 8 段。\n    想一次看全就点这组右上角的 `全部 8 段`；顶到头了会提示——真要更多，就在画布上再加一个拼接节点串上去\n  - **插件输入（手填 / 插件 二选一）**：勾上就是「这段听插件的」，点名框变灰、忽略手填；不勾就是「这段听我手写的」\n    （真的二选一：每段在画布上是一个 `CR Text Input Switch JK` 开关节点，插件的 STRING 输出接它的\n    「插件文本」口，开关的布尔值由面板控制；勾着插件但还没接线时会回落到手填文字，不会把这段变空）\n  - **⌖ 跳转**：点一下直接切到那一段的开关节点并放大居中——你在那儿把插件输出连上（比如 scene-composer 的\n    `environment` / `character` / `action` / `positive` / `negative` 的 `prompt` 口），回来勾上「插件输入」就能用。\n    没连线的会显示 `插件：未连线`，照着提示去连一下\n  - 每段的文字保存在「第 N 段（手填 / 插件）」节点上；拼接器节点里那 8 格是**只读镜像**，只为在画布上瞄一眼\n- **LoRA**：图像组给文生图 + 图生图共用；视频组给 I2V / FLF2V 的 high、low 两条链共用。\n  每行一个开关 + 一个下拉 + 强度，下面还有一行状态：\n  - `触发词: …` — 从 LoRA 元数据里读出来的训练触发词，**要锁角色/画风就把这词写进提示词**，不写的话很多时候看着像没生效\n  - `⚠ 已选但未启用` — 选了 LoRA 但左边开关没勾，后端会直接跳过这个 LoRA，勾上再出图\n  - `⚠ 与当前模型族可能不匹配` — 比如当前是 ANIMA 模型却挂了 Illustrious 的 LoRA（或反过来），换了多半不出效果\n  - 行数跟画布节点一致，在画布节点上点 “➕ Add Lora” 加行，面板自动跟上。\n    视频组第一行默认挂着 `lightx2v_4steps` 加速 LoRA（4 步 / CFG 1 的配方要它），不用就在面板上关掉\n- **参数**：按模块分区，**模块开着才显示那一块**（关掉模块那块自动收起来）\n  - **生成参数**：宽 / 高 / 步数 / CFG / 种子 + 🎲 随机；`重绘强度` 只在图生图精修时出现。\n    「高」右边那个 **⇄** 是长宽一键互换（1216×832 ↔ 832×1216）：想要竖图点一下就行，\n    视频那条也有自己的一个，两边互不影响\n  - **姿势参数**：姿势强度（姿势模块开着才有）\n  - **脸手眼矫正参数**：检测阈值（脸 / 手）/ 眼检测阈值 / 羽化 / 脸·手·眼三级重绘强度\n    （脸手眼矫正模块开着才有）。检测阈值调低 = 更容易认出脸和手；\n    眼那级单独一个阈值，是因为眼睛最容易在头发和花纹上误检；\n    羽化是遮罩边缘的柔化像素；三级重绘是各自的修复力度。\n    三级后面还挂着一道**色彩回正**，专门治「修完偏红 / 饱和度变高」\n  - **高清参数**：高清倍数 / 分块大小（带「自动」开关）/ 整体细化强度 / 分块精修强度 / 接缝修复强度\n    （高清化模块开着才有），底下两个只读行写着 **输出尺寸** / **实际分块**，不用自己算。\n    「高清倍数」是**最终尺寸 ÷ 原图尺寸**，填 2 就是 2 倍（以前填 2 出来是 4 倍，v6.3 起修好了）。\n    分块大小是这块里**唯一自动**的参数，其余几个强度你自己调，面板不会覆盖，\n    而且改了会记在浏览器里，刷新页面 / 重开工作流都还在\n    出图「像很多张拼起来」时先降分块精修强度、再降整体细化强度；接缝修复强度管块与块之间的糊合。\n    分块默认**自动跟着分辨率走**（精修尺寸的长边切 2 块，对齐 64、限 1024~1536），\n    取消「自动」就能自己钉一个固定值\n  - **视频参数**：宽 / 高 / 帧数 / 帧率 / 步数 / CFG / 种子 + 🎲 随机\n  - **视频补帧参数**（补帧模块开着才有）：`补帧倍数`——2 = 相邻两帧之间插 1 帧\n    （帧数 ×2、帧率也 ×2，**播放速度不变**）；4 = 插 3 帧。16fps 的 81 帧 →×2 变 161 帧 / 32fps。\n    底下那行只读提示会算出补完的帧数 / 帧率。源素材本身糊的地方补完还是糊，常规 2 倍就够\n  - **视频高清参数**（视频高清化模块开着才有）：`目标倍数`是**相对原始尺寸**说的，\n    填 2 就是 640×640 → 1280×1280；`放大模型倍率`跟磁盘上那个放大模型对齐（4xUltrasharp 就是 4），\n    换 2x 模型时改成 2，缩放系数会自动按「目标 ÷ 模型倍率」重算；`每批帧数`是显存保险丝\n    （一次放大太多帧会炸，默认 4）；`分块大小`填 0 = 自动，显存不够就填 256 / 384 往下压。\n    整条链是「先整帧放大、再缩到目标尺寸」，中间那层大图很吃内存，嫌慢就把目标倍数降到 1.5\n  - **🎲 随机（默认开）**：开着每张图 / 每段视频都是新种子；关掉就按下面那个数字出，方便微调。\n    这个开关是「这次打开页面」的事，刷新后回到默认开，不记进浏览器里\n  - 旁边那个 **🎲 按钮**是「只随机这一次」，点一下换个种子，不动上面的开关\n- **说明**：就是本页要点\n\n顶栏还有两个按钮：`⟳ 取图`（刷新 `output/` 图片下拉）、`↻ 同步`（从画布重新读一遍状态）。\n\n> 面板没出现？确认 `custom_nodes/cc_dashboard/web/dock.js` 在（插件装好）+ 刷新浏览器页面。\n> 想重新生成这份蓝图：面板「说明」页点「生成 / 更新蓝图」，或跑 `python tools/gen_dashboard.py`。\n> 面板跑到屏幕外了？`📌` 钉回顶部即可拉回来。\n> 实在不想用面板，也可以直接框选节点按 `Ctrl+B` 旁路 / `Ctrl+M` 静音，效果一样。\n\n### 画布结构（双击子图进去看内部连线）\n\n```\n[图像共用前端] 模型槽 → 图像 LoRA 组 → CLIP 取层 → 文本编码\n        ↓\n[文生图]  文生图 → 姿势 → 脸手眼矫正 → 高清化 → output/refined_*\n[图生图]  取图 → 图生图精修 → 脸手眼矫正 → 高清化 → output/refine_*\n[视频]    视频提示词 → 视频地基（UNET high/low + LoRA 组）→ I2V / FLF2V / T2V\n              → 视频高清化 → 视频补帧 → 封装 → output/video/total_*\n```\n\n- 文生图和图生图**共用**模型槽、提示词、LoRA 组\n- 提示词是「一处来源」：面板上的正向 8 段拼完再分发给文生图 / 图生图（负向就是一个单框，视频那套同理），\n  不是每个模型各写一份\n- 取图节点在画布上是可见的：图生图用 `output/` 里的图，I2V 也用 `output/`，刷新列表即可选到上一轮出的图\n- 管线切换是「静音其它 Save 节点」，不会白跑别的管线\n- 模块关掉靠旁路透传，不会断线也不会报错\n- 视频后处理（高清化 / 补帧）在三条视频管线上各挂了一份，默认关着；\n  链子顺序是 **视频高清化 → 视频补帧**（先放大再补帧：同样一遍 4x 放大，\n  81 帧比补完的 161 帧省一半时间和显存），两个都关掉就直接输出原始帧\n\n### 其它\n\n- 采样步数 / CFG / 尺寸 / 种子 / 重绘强度 / 高清倍数都在面板参数区，也可以直接改画布上的参数节点；\n  种子节点上的控制项（`randomize` / `fixed`）就是面板那个 🎲 随机开关写的，两边是同一个东西\n- 视频的 4 步是加速 LoRA 绑定的，想改步数就双击进 I2V / FLF2V 子图改\n- ANIMA 的裸 DiT（只含 `model.diffusion_model.*`，没有文本编码器 / VAE）已经接好了：\n  A2 区 `110 CLIPLoader` + `111 VAELoader` 补料，`112 / 113` 两个开关跟模型族自动切；\n  面板没加载时，手动把这两个开关设成 `2` 即可\n- 想接 Krea2 这类分离式权重：同样按 A2 区的接法，换成它自己的 `UNETLoader` + `CLIPLoader` + `VAELoader`\n- IPAdapter 参考图需求已删除（无节点、无权重）\n"
       ]
     },
     {
@@ -5280,7 +6105,7 @@
         300
       ],
       "flags": {},
-      "order": 90,
+      "order": 104,
       "mode": 0,
       "inputs": [],
       "outputs": [],
@@ -5301,7 +6126,7 @@
         620
       ],
       "flags": {},
-      "order": 91,
+      "order": 105,
       "mode": 0,
       "inputs": [],
       "outputs": [],
@@ -6314,11 +7139,11 @@
     ],
     [
       126,
-      424,
+      425,
       0,
       431,
       10,
-      "FLOAT"
+      "INT"
     ],
     [
       127,
@@ -6330,11 +7155,11 @@
     ],
     [
       128,
-      425,
+      426,
       0,
       431,
       12,
-      "INT"
+      "FLOAT"
     ],
     [
       129,
@@ -6346,22 +7171,14 @@
     ],
     [
       130,
-      426,
-      0,
-      431,
-      14,
-      "FLOAT"
-    ],
-    [
-      131,
       427,
       0,
       431,
-      15,
+      14,
       "INT"
     ],
     [
-      132,
+      131,
       404,
       0,
       441,
@@ -6369,7 +7186,7 @@
       "CONDITIONING"
     ],
     [
-      133,
+      132,
       405,
       0,
       441,
@@ -6377,7 +7194,7 @@
       "CONDITIONING"
     ],
     [
-      134,
+      133,
       412,
       0,
       441,
@@ -6385,7 +7202,7 @@
       "VAE"
     ],
     [
-      135,
+      134,
       412,
       0,
       441,
@@ -6393,7 +7210,7 @@
       "VAE"
     ],
     [
-      136,
+      135,
       421,
       0,
       441,
@@ -6401,7 +7218,7 @@
       "INT"
     ],
     [
-      137,
+      136,
       422,
       0,
       441,
@@ -6409,7 +7226,7 @@
       "INT"
     ],
     [
-      138,
+      137,
       423,
       0,
       441,
@@ -6417,15 +7234,15 @@
       "INT"
     ],
     [
-      139,
-      424,
+      138,
+      425,
       0,
       441,
       11,
-      "FLOAT"
+      "INT"
     ],
     [
-      140,
+      139,
       425,
       0,
       441,
@@ -6433,15 +7250,15 @@
       "INT"
     ],
     [
-      141,
-      425,
+      140,
+      426,
       0,
       441,
       13,
-      "INT"
+      "FLOAT"
     ],
     [
-      142,
+      141,
       426,
       0,
       441,
@@ -6449,23 +7266,15 @@
       "FLOAT"
     ],
     [
-      143,
-      426,
-      0,
-      441,
-      15,
-      "FLOAT"
-    ],
-    [
-      144,
+      142,
       427,
       0,
       441,
-      16,
+      15,
       "INT"
     ],
     [
-      145,
+      143,
       404,
       0,
       451,
@@ -6473,7 +7282,7 @@
       "CONDITIONING"
     ],
     [
-      146,
+      144,
       405,
       0,
       451,
@@ -6481,7 +7290,7 @@
       "CONDITIONING"
     ],
     [
-      147,
+      145,
       421,
       0,
       451,
@@ -6489,7 +7298,7 @@
       "INT"
     ],
     [
-      148,
+      146,
       422,
       0,
       451,
@@ -6497,7 +7306,7 @@
       "INT"
     ],
     [
-      149,
+      147,
       423,
       0,
       451,
@@ -6505,23 +7314,15 @@
       "INT"
     ],
     [
-      150,
-      424,
-      0,
-      451,
-      5,
-      "FLOAT"
-    ],
-    [
-      151,
+      148,
       427,
       0,
       451,
-      6,
+      5,
       "INT"
     ],
     [
-      152,
+      149,
       413,
       0,
       431,
@@ -6529,7 +7330,7 @@
       "IMAGE"
     ],
     [
-      153,
+      150,
       414,
       0,
       441,
@@ -6537,7 +7338,7 @@
       "IMAGE"
     ],
     [
-      154,
+      151,
       415,
       0,
       441,
@@ -6545,28 +7346,268 @@
       "IMAGE"
     ],
     [
-      155,
+      152,
       431,
+      0,
+      492,
+      0,
+      "IMAGE"
+    ],
+    [
+      153,
+      492,
+      0,
+      491,
+      0,
+      "IMAGE"
+    ],
+    [
+      154,
+      424,
+      0,
+      491,
+      1,
+      "FLOAT"
+    ],
+    [
+      155,
+      481,
+      0,
+      491,
+      2,
+      "FLOAT"
+    ],
+    [
+      156,
+      491,
+      0,
+      497,
+      0,
+      "IMAGE"
+    ],
+    [
+      157,
+      491,
+      1,
+      497,
+      1,
+      "FLOAT"
+    ],
+    [
+      158,
+      497,
       0,
       432,
       0,
       "VIDEO"
     ],
     [
-      156,
+      159,
+      482,
+      0,
+      492,
+      1,
+      "FLOAT"
+    ],
+    [
+      160,
+      483,
+      0,
+      492,
+      2,
+      "FLOAT"
+    ],
+    [
+      161,
+      484,
+      0,
+      492,
+      3,
+      "INT"
+    ],
+    [
+      162,
+      485,
+      0,
+      492,
+      4,
+      "INT"
+    ],
+    [
+      163,
       441,
+      0,
+      494,
+      0,
+      "IMAGE"
+    ],
+    [
+      164,
+      494,
+      0,
+      493,
+      0,
+      "IMAGE"
+    ],
+    [
+      165,
+      424,
+      0,
+      493,
+      1,
+      "FLOAT"
+    ],
+    [
+      166,
+      481,
+      0,
+      493,
+      2,
+      "FLOAT"
+    ],
+    [
+      167,
+      493,
+      0,
+      498,
+      0,
+      "IMAGE"
+    ],
+    [
+      168,
+      493,
+      1,
+      498,
+      1,
+      "FLOAT"
+    ],
+    [
+      169,
+      498,
       0,
       442,
       0,
       "VIDEO"
     ],
     [
-      157,
+      170,
+      482,
+      0,
+      494,
+      1,
+      "FLOAT"
+    ],
+    [
+      171,
+      483,
+      0,
+      494,
+      2,
+      "FLOAT"
+    ],
+    [
+      172,
+      484,
+      0,
+      494,
+      3,
+      "INT"
+    ],
+    [
+      173,
+      485,
+      0,
+      494,
+      4,
+      "INT"
+    ],
+    [
+      174,
       451,
+      0,
+      496,
+      0,
+      "IMAGE"
+    ],
+    [
+      175,
+      496,
+      0,
+      495,
+      0,
+      "IMAGE"
+    ],
+    [
+      176,
+      424,
+      0,
+      495,
+      1,
+      "FLOAT"
+    ],
+    [
+      177,
+      481,
+      0,
+      495,
+      2,
+      "FLOAT"
+    ],
+    [
+      178,
+      495,
+      0,
+      499,
+      0,
+      "IMAGE"
+    ],
+    [
+      179,
+      495,
+      1,
+      499,
+      1,
+      "FLOAT"
+    ],
+    [
+      180,
+      499,
       0,
       452,
       0,
       "VIDEO"
+    ],
+    [
+      181,
+      482,
+      0,
+      496,
+      1,
+      "FLOAT"
+    ],
+    [
+      182,
+      483,
+      0,
+      496,
+      2,
+      "FLOAT"
+    ],
+    [
+      183,
+      484,
+      0,
+      496,
+      3,
+      "INT"
+    ],
+    [
+      184,
+      485,
+      0,
+      496,
+      4,
+      "INT"
     ]
   ],
   "groups": [
@@ -6613,7 +7654,7 @@
         30,
         4990,
         3240,
-        2940
+        4010
       ],
       "color": "#4a9e6b",
       "flags": {}
@@ -6642,8 +7683,8 @@
     },
     "workflowRendererVersion": "LG",
     "cc_dashboard_blueprint": {
-      "rev": 3,
-      "tag": "detailer-tuned-sam"
+      "rev": 4,
+      "tag": "video-post-vfi-upscale"
     }
   },
   "version": 0.4,
@@ -6681,7 +7722,7 @@
         },
         "inputs": [
           {
-            "id": "868af456-78d3-4539-b53a-37b343cd669b",
+            "id": "0040e93c-c326-4e29-98d9-472fee96ddef",
             "name": "model",
             "type": "MODEL",
             "linkIds": [
@@ -6694,7 +7735,7 @@
             ]
           },
           {
-            "id": "efe870d1-2346-43e6-82ec-a878a80f7a97",
+            "id": "f79f6d4f-ed9c-451c-a7f6-5496d0f9d72f",
             "name": "positive",
             "type": "CONDITIONING",
             "linkIds": [
@@ -6707,7 +7748,7 @@
             ]
           },
           {
-            "id": "391f7894-2e7b-40eb-92b7-006522186fd8",
+            "id": "53113b8a-fa97-4a55-8ff7-8e717ed4362a",
             "name": "negative",
             "type": "CONDITIONING",
             "linkIds": [
@@ -6720,7 +7761,7 @@
             ]
           },
           {
-            "id": "2b67990b-f9a5-49ac-8233-36855cc50674",
+            "id": "6427ed37-c4be-4946-b12c-d042a2453baa",
             "name": "vae",
             "type": "VAE",
             "linkIds": [
@@ -6733,7 +7774,7 @@
             ]
           },
           {
-            "id": "83a9c1fe-0c2a-4952-b976-de12ea8b0d6b",
+            "id": "91921920-5123-4b16-86d4-d62eda8ba0b0",
             "name": "width",
             "type": "INT",
             "linkIds": [
@@ -6746,7 +7787,7 @@
             ]
           },
           {
-            "id": "6da44c89-f0ad-4701-9616-72f85bbcd061",
+            "id": "59de55a2-e6f0-4e2e-864c-0efa1d360b9c",
             "name": "height",
             "type": "INT",
             "linkIds": [
@@ -6759,7 +7800,7 @@
             ]
           },
           {
-            "id": "5018734a-1b0b-4a08-ad11-3485608f762b",
+            "id": "4ae2afaf-1692-46d2-8561-5fa25e924c99",
             "name": "seed",
             "type": "INT",
             "linkIds": [
@@ -6772,7 +7813,7 @@
             ]
           },
           {
-            "id": "1c961e66-cea4-4006-82fe-5b9458dc37a8",
+            "id": "d447c526-5d6f-4d3a-9d03-30bf62fa2e1b",
             "name": "steps",
             "type": "INT",
             "linkIds": [
@@ -6785,7 +7826,7 @@
             ]
           },
           {
-            "id": "8effe3b1-beeb-49b5-9131-93982d6b8cff",
+            "id": "8e817965-e109-4760-90d6-ef62aa2339ba",
             "name": "cfg",
             "type": "FLOAT",
             "linkIds": [
@@ -6800,7 +7841,7 @@
         ],
         "outputs": [
           {
-            "id": "54ade2a3-280f-4b96-9839-d6e0d05283d0",
+            "id": "d6a06aa0-6ef2-4b1f-baa3-c39e291018a6",
             "name": "image",
             "type": "IMAGE",
             "linkIds": [
@@ -7141,7 +8182,7 @@
         },
         "inputs": [
           {
-            "id": "679ca122-c1a0-4251-8e5e-4392d833657b",
+            "id": "35e7253e-0981-4f41-8a9e-eb24cb17a054",
             "name": "source_image",
             "type": "IMAGE",
             "linkIds": [
@@ -7154,7 +8195,7 @@
             ]
           },
           {
-            "id": "901ceaf6-3fbe-494b-a31f-83e85a7020c9",
+            "id": "6f11fac3-8e4c-47af-953d-bbfec1a7995c",
             "name": "vae_encode",
             "type": "VAE",
             "linkIds": [
@@ -7167,7 +8208,7 @@
             ]
           },
           {
-            "id": "abde47a1-31fc-416b-b86f-ddcf12d93765",
+            "id": "25c4b8c0-a655-44af-8ee4-c8d2218ce9ac",
             "name": "vae_decode",
             "type": "VAE",
             "linkIds": [
@@ -7180,7 +8221,7 @@
             ]
           },
           {
-            "id": "16d7fbb9-f3b3-4aca-bf53-78b534541f08",
+            "id": "6bb50ccd-2ad0-4cc4-a50c-e6a6aef309b5",
             "name": "model",
             "type": "MODEL",
             "linkIds": [
@@ -7193,7 +8234,7 @@
             ]
           },
           {
-            "id": "b2ddf6c5-b637-45b8-b5f0-ba3836bf0d1b",
+            "id": "a32c9858-c940-4d1b-aac5-200efd56f4fc",
             "name": "positive",
             "type": "CONDITIONING",
             "linkIds": [
@@ -7206,7 +8247,7 @@
             ]
           },
           {
-            "id": "bafce3b8-cfb8-47b8-9eb1-eaf706043bab",
+            "id": "f93f1af8-6744-4576-9fe6-4598544a19aa",
             "name": "negative",
             "type": "CONDITIONING",
             "linkIds": [
@@ -7219,7 +8260,7 @@
             ]
           },
           {
-            "id": "bff708f2-96df-45a8-93be-a171f7a495ca",
+            "id": "2a75fbc5-e43f-4757-b242-f5a3ed0c2ef3",
             "name": "seed",
             "type": "INT",
             "linkIds": [
@@ -7232,7 +8273,7 @@
             ]
           },
           {
-            "id": "effcf02c-97be-451a-9e22-ce0fb8b854dc",
+            "id": "0a917b11-5a8e-47fc-8ec1-3519891561ac",
             "name": "steps",
             "type": "INT",
             "linkIds": [
@@ -7245,7 +8286,7 @@
             ]
           },
           {
-            "id": "7bc16b71-69b0-445e-aefc-e538c715adc5",
+            "id": "c395b514-4290-45a0-a516-f8658c2f94d6",
             "name": "cfg",
             "type": "FLOAT",
             "linkIds": [
@@ -7258,7 +8299,7 @@
             ]
           },
           {
-            "id": "7b8da39b-393a-4c89-9abb-8b0cb5434b2d",
+            "id": "a6e13194-2305-4ddf-8578-fd33422ce91d",
             "name": "denoise",
             "type": "FLOAT",
             "linkIds": [
@@ -7273,7 +8314,7 @@
         ],
         "outputs": [
           {
-            "id": "d2c7a0ef-9cdf-401a-8958-199530f31ec8",
+            "id": "3c8fcd4e-5baa-4e02-869e-79cdccad303c",
             "name": "image",
             "type": "IMAGE",
             "linkIds": [
@@ -7619,7 +8660,7 @@
         },
         "inputs": [
           {
-            "id": "d8d4e99d-7303-4b9a-9750-61dba756c19f",
+            "id": "185ccc09-055d-4f5e-b621-bd706e5d9945",
             "name": "positive",
             "type": "CONDITIONING",
             "linkIds": [
@@ -7632,7 +8673,7 @@
             ]
           },
           {
-            "id": "682301e4-dc9e-4f17-93a5-96265f51ee60",
+            "id": "6864d30b-1634-4ab4-87d6-03aea0d56fc8",
             "name": "negative",
             "type": "CONDITIONING",
             "linkIds": [
@@ -7645,7 +8686,7 @@
             ]
           },
           {
-            "id": "ae9eb785-1fc7-406d-8849-862310b42b62",
+            "id": "e8f35172-284a-443b-81d7-f5b6ac817096",
             "name": "pose_image",
             "type": "IMAGE",
             "linkIds": [
@@ -7658,7 +8699,7 @@
             ]
           },
           {
-            "id": "3ed704d2-d5b2-445e-bfc0-4534837049f1",
+            "id": "600cf23e-9582-456e-b4ed-43a35693ca08",
             "name": "strength",
             "type": "FLOAT",
             "linkIds": [
@@ -7673,7 +8714,7 @@
         ],
         "outputs": [
           {
-            "id": "463f0128-4a47-4c51-8f66-a4dd28ce120e",
+            "id": "dbd216d7-99f2-4e33-acd2-0e606b214599",
             "name": "positive",
             "type": "CONDITIONING",
             "linkIds": [
@@ -7686,7 +8727,7 @@
             ]
           },
           {
-            "id": "c7215d53-bb64-4c4c-9285-ababfcb1e68d",
+            "id": "b8d6b05d-7d67-4a9b-82a1-fbb7e34ce618",
             "name": "negative",
             "type": "CONDITIONING",
             "linkIds": [
@@ -7956,7 +8997,7 @@
         },
         "inputs": [
           {
-            "id": "a8f2b5b7-bc3a-4f3a-8503-debf480aefba",
+            "id": "7ea7837a-7c03-491e-a13d-0cf568d731db",
             "name": "model",
             "type": "MODEL",
             "linkIds": [
@@ -7969,7 +9010,7 @@
             ]
           },
           {
-            "id": "6c2fc12a-ff67-40fb-9283-f378d06d3fa2",
+            "id": "6d2e5f6d-1061-41b7-8e26-b7e9543cbf68",
             "name": "pose_image",
             "type": "IMAGE",
             "linkIds": [
@@ -7982,7 +9023,7 @@
             ]
           },
           {
-            "id": "9deb9e70-2b48-4d25-9128-1c079db1a9ed",
+            "id": "2c143096-77c7-44a5-93f7-5e43404ef843",
             "name": "strength",
             "type": "FLOAT",
             "linkIds": [
@@ -7997,7 +9038,7 @@
         ],
         "outputs": [
           {
-            "id": "8e19555a-32c8-4778-9771-6014bd8eebbf",
+            "id": "4cddab48-29a1-4eb1-9dbf-9ca77f7c47a2",
             "name": "model",
             "type": "MODEL",
             "linkIds": [
@@ -8190,7 +9231,7 @@
         },
         "inputs": [
           {
-            "id": "b0d33dac-a5a8-4ca1-a6ee-86aed5617839",
+            "id": "b3ad278c-0a22-495c-b75a-755244d04102",
             "name": "image",
             "type": "IMAGE",
             "linkIds": [
@@ -8204,7 +9245,7 @@
             ]
           },
           {
-            "id": "deaa9fcf-db88-4426-bf21-ba6404582c24",
+            "id": "af232676-58bd-4f3b-a6bd-8c80915c5c59",
             "name": "model",
             "type": "MODEL",
             "linkIds": [
@@ -8219,7 +9260,7 @@
             ]
           },
           {
-            "id": "76446a33-1169-44b3-af8f-d8bfd60f3d5e",
+            "id": "fc560272-471d-45db-83d4-ada9694b411c",
             "name": "clip",
             "type": "CLIP",
             "linkIds": [
@@ -8234,7 +9275,7 @@
             ]
           },
           {
-            "id": "dd87a925-7409-4c53-b7e7-85ec63647b4a",
+            "id": "f7445ef4-c0be-4bd8-b796-3dc209f60ccd",
             "name": "vae",
             "type": "VAE",
             "linkIds": [
@@ -8249,7 +9290,7 @@
             ]
           },
           {
-            "id": "d276b786-6f97-46e9-badb-7d828455a3d4",
+            "id": "b21aae5f-0d65-4b33-9f99-906d9728479b",
             "name": "positive",
             "type": "CONDITIONING",
             "linkIds": [
@@ -8264,7 +9305,7 @@
             ]
           },
           {
-            "id": "6fc37901-7c99-4ab9-9f30-061ba392cf8b",
+            "id": "8e7593bf-f226-4513-92f6-90e94417adb5",
             "name": "negative",
             "type": "CONDITIONING",
             "linkIds": [
@@ -8279,7 +9320,7 @@
             ]
           },
           {
-            "id": "ed0df26e-2372-4438-9b27-a811c8111c37",
+            "id": "055c857b-c097-4304-91b1-59747e90e302",
             "name": "denoise_face",
             "type": "FLOAT",
             "linkIds": [
@@ -8292,7 +9333,7 @@
             ]
           },
           {
-            "id": "006048cb-0282-4abb-85a1-f0aadb906bdf",
+            "id": "534cd77e-3238-4eb7-9f88-03a7d0d019b3",
             "name": "denoise_hand",
             "type": "FLOAT",
             "linkIds": [
@@ -8305,7 +9346,7 @@
             ]
           },
           {
-            "id": "91d57853-80c8-49c7-9b7e-9ad723ddabf9",
+            "id": "f083748d-fa87-4292-9082-5434773c43f3",
             "name": "denoise_eye",
             "type": "FLOAT",
             "linkIds": [
@@ -8318,7 +9359,7 @@
             ]
           },
           {
-            "id": "03d08574-b993-445f-a44f-1de20eba4c49",
+            "id": "594b3798-0604-4b69-978b-335cb5f74442",
             "name": "bbox_threshold",
             "type": "FLOAT",
             "linkIds": [
@@ -8332,7 +9373,7 @@
             ]
           },
           {
-            "id": "0be8cd33-eff9-4f51-aaae-7e61465ff5ed",
+            "id": "dd650ef7-7b0b-4bdb-923d-8ee078f143ae",
             "name": "bbox_threshold_eye",
             "type": "FLOAT",
             "linkIds": [
@@ -8345,7 +9386,7 @@
             ]
           },
           {
-            "id": "710ff488-a544-438d-9d8c-d703d729c947",
+            "id": "75890e03-e9f8-4162-a4e9-304a472f1448",
             "name": "feather",
             "type": "INT",
             "linkIds": [
@@ -8360,7 +9401,7 @@
             ]
           },
           {
-            "id": "d235d81b-c3b5-4dfa-a707-01142249e5fe",
+            "id": "c814b6da-809c-4bcd-abb5-8d610cee9b7a",
             "name": "guide",
             "type": "FLOAT",
             "linkIds": [
@@ -8375,7 +9416,7 @@
             ]
           },
           {
-            "id": "f91bd0b0-ca74-4bd2-b247-fee0a2acab6f",
+            "id": "738f75fe-076c-4cf9-bcb2-05866c29b6fe",
             "name": "max_size",
             "type": "FLOAT",
             "linkIds": [
@@ -8390,7 +9431,7 @@
             ]
           },
           {
-            "id": "f192b7f1-83c2-4f66-aacc-922db458f29b",
+            "id": "2c213bbe-d306-46bd-9035-810eab1f4125",
             "name": "crop",
             "type": "FLOAT",
             "linkIds": [
@@ -8407,7 +9448,7 @@
         ],
         "outputs": [
           {
-            "id": "36355337-eeae-4891-b69b-dc49478323ee",
+            "id": "f2f473c7-7c6d-49fa-9645-9d6374a9997c",
             "name": "image",
             "type": "IMAGE",
             "linkIds": [
@@ -9617,7 +10658,7 @@
         },
         "inputs": [
           {
-            "id": "a234ebf0-942f-4570-b571-36be898c1a3c",
+            "id": "96be8356-26f5-49ae-826d-69a9c681eccf",
             "name": "image",
             "type": "IMAGE",
             "linkIds": [
@@ -9630,7 +10671,7 @@
             ]
           },
           {
-            "id": "c9fe5570-d3f2-4e15-9584-dad41c172422",
+            "id": "a5584553-f17d-42ce-80d9-d706283328a8",
             "name": "model",
             "type": "MODEL",
             "linkIds": [
@@ -9644,7 +10685,7 @@
             ]
           },
           {
-            "id": "85c956be-be75-4b15-8d32-38477d6949ec",
+            "id": "84f4df68-97ab-40b3-937d-2d57d1f4942f",
             "name": "positive",
             "type": "CONDITIONING",
             "linkIds": [
@@ -9658,7 +10699,7 @@
             ]
           },
           {
-            "id": "616580c8-1077-489b-8133-d03d847c861a",
+            "id": "47a07d52-3ea4-4aef-b124-f430ddcda8fd",
             "name": "negative",
             "type": "CONDITIONING",
             "linkIds": [
@@ -9672,7 +10713,7 @@
             ]
           },
           {
-            "id": "08a0f908-16d3-4910-93d2-28dd57df84ad",
+            "id": "99ac70f9-0c5b-4888-a091-cfb9379c2bf4",
             "name": "vae",
             "type": "VAE",
             "linkIds": [
@@ -9687,7 +10728,7 @@
             ]
           },
           {
-            "id": "0bfc4507-1608-40ab-8bb3-7d518980e487",
+            "id": "f05eb471-746b-4510-8a0e-a68c82f7b2aa",
             "name": "factor",
             "type": "FLOAT",
             "linkIds": [
@@ -9700,7 +10741,7 @@
             ]
           },
           {
-            "id": "635d8ca2-7506-42ec-9605-93d11b08278e",
+            "id": "6a617e9c-0b49-4f6e-bee5-a9bf141d85f3",
             "name": "tile",
             "type": "INT",
             "linkIds": [
@@ -9714,7 +10755,7 @@
             ]
           },
           {
-            "id": "4f2f74fd-50fe-4503-940f-2f694ec991d0",
+            "id": "028172d6-2e77-4db5-aa02-9b17a15067e1",
             "name": "whole_denoise",
             "type": "FLOAT",
             "linkIds": [
@@ -9727,7 +10768,7 @@
             ]
           },
           {
-            "id": "7ed930e7-c475-4db4-9673-2221bea2c792",
+            "id": "151f5693-38fe-4051-9834-9ba609aca2a8",
             "name": "denoise",
             "type": "FLOAT",
             "linkIds": [
@@ -9740,7 +10781,7 @@
             ]
           },
           {
-            "id": "c615bc1d-f9ea-499a-bda5-e4c50762154c",
+            "id": "e39ebbda-90f6-4265-a42b-58a9262839a0",
             "name": "seam_fix_denoise",
             "type": "FLOAT",
             "linkIds": [
@@ -9755,7 +10796,7 @@
         ],
         "outputs": [
           {
-            "id": "9c76ee9e-dd99-472a-a658-c18949d08765",
+            "id": "e9a9f2b8-da4f-4009-be36-ecb2ce292745",
             "name": "image",
             "type": "IMAGE",
             "linkIds": [
@@ -10361,8 +11402,8 @@
         "version": 1,
         "state": {
           "lastGroupId": 0,
-          "lastNodeId": 5,
-          "lastLinkId": 25,
+          "lastNodeId": 4,
+          "lastLinkId": 23,
           "lastRerouteId": 0
         },
         "revision": 0,
@@ -10388,11 +11429,11 @@
         },
         "inputs": [
           {
-            "id": "85a86ebd-498b-4725-abdf-3068a724bd9a",
+            "id": "80681c24-3243-4eb7-99c9-473d273d8635",
             "name": "vae_image",
             "type": "VAE",
             "linkIds": [
-              9
+              8
             ],
             "localized_name": "vae_image",
             "pos": [
@@ -10401,11 +11442,11 @@
             ]
           },
           {
-            "id": "96e6493a-e61e-474e-bf5f-be0fdd8c81ce",
+            "id": "15f085e8-324b-4f1e-9250-af5442c97db3",
             "name": "start_image",
             "type": "IMAGE",
             "linkIds": [
-              10
+              9
             ],
             "localized_name": "源图",
             "pos": [
@@ -10414,11 +11455,11 @@
             ]
           },
           {
-            "id": "fe1b6d24-6acf-4d8c-9f60-52a76b52c3b5",
+            "id": "b1e2b1be-8fa2-4f72-aa78-358e71073d34",
             "name": "vae_decode",
             "type": "VAE",
             "linkIds": [
-              11
+              10
             ],
             "localized_name": "vae_decode",
             "pos": [
@@ -10427,11 +11468,11 @@
             ]
           },
           {
-            "id": "bcaaa5b4-2e4f-4f92-9c9e-b10a3fcc5581",
+            "id": "0edb6182-4396-49d0-9103-a914f27381e7",
             "name": "model_high",
             "type": "MODEL",
             "linkIds": [
-              12
+              11
             ],
             "localized_name": "model_high",
             "pos": [
@@ -10440,11 +11481,11 @@
             ]
           },
           {
-            "id": "63b02f0c-f5d9-4943-bd19-3e03463cda22",
+            "id": "66420313-7585-49bb-a4a7-86ea6e3ddb9a",
             "name": "model_low",
             "type": "MODEL",
             "linkIds": [
-              13
+              12
             ],
             "localized_name": "model_low",
             "pos": [
@@ -10453,11 +11494,11 @@
             ]
           },
           {
-            "id": "4194b408-8740-4a3f-adc8-a1b98816ad09",
+            "id": "b7c6a7d5-1990-4fc5-bf44-f7ff46b8280b",
             "name": "positive",
             "type": "CONDITIONING",
             "linkIds": [
-              14
+              13
             ],
             "localized_name": "positive",
             "pos": [
@@ -10466,11 +11507,11 @@
             ]
           },
           {
-            "id": "fef79722-1570-40d4-97b4-01e41ddb9ace",
+            "id": "42fe3d47-59e0-44c3-a68e-cbac9b16d89d",
             "name": "negative",
             "type": "CONDITIONING",
             "linkIds": [
-              15
+              14
             ],
             "localized_name": "negative",
             "pos": [
@@ -10479,11 +11520,11 @@
             ]
           },
           {
-            "id": "bd0efad3-a316-420e-8c8b-afe7e44aa119",
+            "id": "ab93a004-9e03-4b99-bda2-daf64e74bb6b",
             "name": "width",
             "type": "INT",
             "linkIds": [
-              16
+              15
             ],
             "localized_name": "宽",
             "pos": [
@@ -10492,11 +11533,11 @@
             ]
           },
           {
-            "id": "93faf4be-aab3-4932-8838-49e0229a6ef7",
+            "id": "3f0d6b81-16a7-4801-83ec-e253b4ed9980",
             "name": "height",
             "type": "INT",
             "linkIds": [
-              17
+              16
             ],
             "localized_name": "高",
             "pos": [
@@ -10505,11 +11546,11 @@
             ]
           },
           {
-            "id": "eaa8d5bf-b6dc-4c14-873b-c29ef810fc71",
+            "id": "0e8b5cf3-aa14-44b9-9a79-fa5ae0a8b65b",
             "name": "length",
             "type": "INT",
             "linkIds": [
-              18
+              17
             ],
             "localized_name": "帧数",
             "pos": [
@@ -10518,24 +11559,24 @@
             ]
           },
           {
-            "id": "888aa1ed-2afd-4c80-875b-e50be5aa2b7c",
-            "name": "fps",
-            "type": "FLOAT",
+            "id": "d8b3dbc3-0f52-45d6-bdf7-78360794ef34",
+            "name": "steps_high",
+            "type": "INT",
             "linkIds": [
-              19
+              18
             ],
-            "localized_name": "帧率",
+            "localized_name": "步数",
             "pos": [
               -200,
               500
             ]
           },
           {
-            "id": "fbb4135f-bd05-4cc2-96c9-589da83038ee",
-            "name": "steps_high",
+            "id": "295948de-58db-424d-bad0-1f81e7d24796",
+            "name": "steps_low",
             "type": "INT",
             "linkIds": [
-              20
+              19
             ],
             "localized_name": "步数",
             "pos": [
@@ -10544,24 +11585,24 @@
             ]
           },
           {
-            "id": "962a34d6-2166-4851-beaf-57ea6747238a",
-            "name": "steps_low",
-            "type": "INT",
+            "id": "b0add6ab-dab2-41bc-9b46-91b0fb50c8b7",
+            "name": "cfg_high",
+            "type": "FLOAT",
             "linkIds": [
-              21
+              20
             ],
-            "localized_name": "步数",
+            "localized_name": "CFG",
             "pos": [
               -200,
               580
             ]
           },
           {
-            "id": "1d0fc9d7-b658-4948-8f21-6775960ebc6b",
-            "name": "cfg_high",
+            "id": "5fe9580a-27a2-4703-a5f5-dd2ca85ef62d",
+            "name": "cfg_low",
             "type": "FLOAT",
             "linkIds": [
-              22
+              21
             ],
             "localized_name": "CFG",
             "pos": [
@@ -10570,41 +11611,28 @@
             ]
           },
           {
-            "id": "ae633ef6-4870-40b7-b70d-79943c73f458",
-            "name": "cfg_low",
-            "type": "FLOAT",
-            "linkIds": [
-              23
-            ],
-            "localized_name": "CFG",
-            "pos": [
-              -200,
-              660
-            ]
-          },
-          {
-            "id": "b0367412-85b1-4b56-b08d-3276300911e8",
+            "id": "951c0fa9-9ace-4a19-b980-3aa87e18d993",
             "name": "seed",
             "type": "INT",
             "linkIds": [
-              24
+              22
             ],
             "localized_name": "种子",
             "pos": [
               -200,
-              700
+              660
             ]
           }
         ],
         "outputs": [
           {
-            "id": "2210c14d-12bd-45ed-8995-80cf0104e2ac",
-            "name": "video",
-            "type": "VIDEO",
+            "id": "2175fcb6-85b3-4dce-b06c-eb0637ce8610",
+            "name": "frames",
+            "type": "IMAGE",
             "linkIds": [
-              25
+              23
             ],
-            "localized_name": "video",
+            "localized_name": "帧",
             "pos": [
               1400,
               100
@@ -10632,19 +11660,19 @@
                 "localized_name": "positive",
                 "name": "positive",
                 "type": "CONDITIONING",
-                "link": 14
+                "link": 13
               },
               {
                 "localized_name": "negative",
                 "name": "negative",
                 "type": "CONDITIONING",
-                "link": 15
+                "link": 14
               },
               {
                 "localized_name": "vae",
                 "name": "vae",
                 "type": "VAE",
-                "link": 9
+                "link": 8
               },
               {
                 "localized_name": "clip_vision_output",
@@ -10656,7 +11684,7 @@
                 "localized_name": "start_image",
                 "name": "start_image",
                 "type": "IMAGE",
-                "link": 10
+                "link": 9
               },
               {
                 "localized_name": "宽",
@@ -10665,7 +11693,7 @@
                 "widget": {
                   "name": "width"
                 },
-                "link": 16
+                "link": 15
               },
               {
                 "localized_name": "高",
@@ -10674,7 +11702,7 @@
                 "widget": {
                   "name": "height"
                 },
-                "link": 17
+                "link": 16
               },
               {
                 "localized_name": "帧数",
@@ -10683,7 +11711,7 @@
                 "widget": {
                   "name": "length"
                 },
-                "link": 18
+                "link": 17
               }
             ],
             "outputs": [
@@ -10745,7 +11773,7 @@
                 "localized_name": "model",
                 "name": "model",
                 "type": "MODEL",
-                "link": 12
+                "link": 11
               },
               {
                 "localized_name": "positive",
@@ -10772,7 +11800,7 @@
                 "widget": {
                   "name": "noise_seed"
                 },
-                "link": 24
+                "link": 22
               },
               {
                 "localized_name": "步数",
@@ -10781,7 +11809,7 @@
                 "widget": {
                   "name": "steps"
                 },
-                "link": 20
+                "link": 18
               },
               {
                 "localized_name": "CFG",
@@ -10790,7 +11818,7 @@
                 "widget": {
                   "name": "cfg"
                 },
-                "link": 22
+                "link": 20
               }
             ],
             "outputs": [
@@ -10840,7 +11868,7 @@
                 "localized_name": "model",
                 "name": "model",
                 "type": "MODEL",
-                "link": 13
+                "link": 12
               },
               {
                 "localized_name": "positive",
@@ -10867,7 +11895,7 @@
                 "widget": {
                   "name": "steps"
                 },
-                "link": 21
+                "link": 19
               },
               {
                 "localized_name": "CFG",
@@ -10876,7 +11904,7 @@
                 "widget": {
                   "name": "cfg"
                 },
-                "link": 23
+                "link": 21
               }
             ],
             "outputs": [
@@ -10932,7 +11960,7 @@
                 "localized_name": "vae",
                 "name": "vae",
                 "type": "VAE",
-                "link": 11
+                "link": 10
               }
             ],
             "outputs": [
@@ -10940,70 +11968,13 @@
                 "localized_name": "IMAGE",
                 "name": "IMAGE",
                 "type": "IMAGE",
-                "links": [
-                  8
-                ]
+                "links": null
               }
             ],
             "properties": {
               "cnr_id": "comfy-core",
               "Node name for S&R": "VAEDecode"
             }
-          },
-          {
-            "id": 5,
-            "type": "CreateVideo",
-            "pos": [
-              1560,
-              80
-            ],
-            "size": [
-              300,
-              110
-            ],
-            "flags": {},
-            "order": 4,
-            "mode": 0,
-            "inputs": [
-              {
-                "localized_name": "images",
-                "name": "images",
-                "type": "IMAGE",
-                "link": 8
-              },
-              {
-                "localized_name": "audio",
-                "name": "audio",
-                "type": "AUDIO",
-                "link": null
-              },
-              {
-                "localized_name": "帧率",
-                "name": "fps",
-                "type": "FLOAT",
-                "widget": {
-                  "name": "fps"
-                },
-                "link": 19
-              }
-            ],
-            "outputs": [
-              {
-                "localized_name": "VIDEO",
-                "name": "VIDEO",
-                "type": "VIDEO",
-                "links": null
-              }
-            ],
-            "properties": {
-              "cnr_id": "comfy-core",
-              "Node name for S&R": "CreateVideo"
-            },
-            "widgets_values": [
-              16,
-              "auto",
-              "sRGB"
-            ]
           }
         ],
         "groups": [],
@@ -11066,14 +12037,6 @@
           },
           {
             "id": 8,
-            "origin_id": 4,
-            "origin_slot": 0,
-            "target_id": 5,
-            "target_slot": 0,
-            "type": "IMAGE"
-          },
-          {
-            "id": 9,
             "origin_id": -10,
             "origin_slot": 0,
             "target_id": 1,
@@ -11081,7 +12044,7 @@
             "type": "VAE"
           },
           {
-            "id": 10,
+            "id": 9,
             "origin_id": -10,
             "origin_slot": 1,
             "target_id": 1,
@@ -11089,7 +12052,7 @@
             "type": "IMAGE"
           },
           {
-            "id": 11,
+            "id": 10,
             "origin_id": -10,
             "origin_slot": 2,
             "target_id": 4,
@@ -11097,7 +12060,7 @@
             "type": "VAE"
           },
           {
-            "id": 12,
+            "id": 11,
             "origin_id": -10,
             "origin_slot": 3,
             "target_id": 2,
@@ -11105,7 +12068,7 @@
             "type": "MODEL"
           },
           {
-            "id": 13,
+            "id": 12,
             "origin_id": -10,
             "origin_slot": 4,
             "target_id": 3,
@@ -11113,7 +12076,7 @@
             "type": "MODEL"
           },
           {
-            "id": 14,
+            "id": 13,
             "origin_id": -10,
             "origin_slot": 5,
             "target_id": 1,
@@ -11121,7 +12084,7 @@
             "type": "CONDITIONING"
           },
           {
-            "id": 15,
+            "id": 14,
             "origin_id": -10,
             "origin_slot": 6,
             "target_id": 1,
@@ -11129,7 +12092,7 @@
             "type": "CONDITIONING"
           },
           {
-            "id": 16,
+            "id": 15,
             "origin_id": -10,
             "origin_slot": 7,
             "target_id": 1,
@@ -11137,7 +12100,7 @@
             "type": "INT"
           },
           {
-            "id": 17,
+            "id": 16,
             "origin_id": -10,
             "origin_slot": 8,
             "target_id": 1,
@@ -11145,7 +12108,7 @@
             "type": "INT"
           },
           {
-            "id": 18,
+            "id": 17,
             "origin_id": -10,
             "origin_slot": 9,
             "target_id": 1,
@@ -11153,60 +12116,52 @@
             "type": "INT"
           },
           {
-            "id": 19,
+            "id": 18,
             "origin_id": -10,
             "origin_slot": 10,
-            "target_id": 5,
-            "target_slot": 2,
-            "type": "FLOAT"
-          },
-          {
-            "id": 20,
-            "origin_id": -10,
-            "origin_slot": 11,
             "target_id": 2,
             "target_slot": 5,
             "type": "INT"
           },
           {
-            "id": 21,
+            "id": 19,
             "origin_id": -10,
-            "origin_slot": 12,
+            "origin_slot": 11,
             "target_id": 3,
             "target_slot": 4,
             "type": "INT"
           },
           {
-            "id": 22,
+            "id": 20,
             "origin_id": -10,
-            "origin_slot": 13,
+            "origin_slot": 12,
             "target_id": 2,
             "target_slot": 6,
             "type": "FLOAT"
           },
           {
-            "id": 23,
+            "id": 21,
             "origin_id": -10,
-            "origin_slot": 14,
+            "origin_slot": 13,
             "target_id": 3,
             "target_slot": 5,
             "type": "FLOAT"
           },
           {
-            "id": 24,
+            "id": 22,
             "origin_id": -10,
-            "origin_slot": 15,
+            "origin_slot": 14,
             "target_id": 2,
             "target_slot": 4,
             "type": "INT"
           },
           {
-            "id": 25,
-            "origin_id": 5,
+            "id": 23,
+            "origin_id": 4,
             "origin_slot": 0,
             "target_id": -20,
             "target_slot": 0,
-            "type": "VIDEO"
+            "type": "IMAGE"
           }
         ],
         "extra": {
@@ -11220,8 +12175,8 @@
         "version": 1,
         "state": {
           "lastGroupId": 0,
-          "lastNodeId": 5,
-          "lastLinkId": 26,
+          "lastNodeId": 4,
+          "lastLinkId": 24,
           "lastRerouteId": 0
         },
         "revision": 0,
@@ -11247,11 +12202,11 @@
         },
         "inputs": [
           {
-            "id": "eb2da949-0e5d-42cc-91f8-eb539768aedc",
+            "id": "c85e62d5-911c-4ac7-a8f8-aa16d6ad826f",
             "name": "vae_image",
             "type": "VAE",
             "linkIds": [
-              9
+              8
             ],
             "localized_name": "vae_image",
             "pos": [
@@ -11260,11 +12215,11 @@
             ]
           },
           {
-            "id": "1a8564f6-053e-477c-b846-b626d8c7a99d",
+            "id": "13ba2566-991e-4e07-bec1-22e171a0a423",
             "name": "start_image",
             "type": "IMAGE",
             "linkIds": [
-              10
+              9
             ],
             "localized_name": "首帧",
             "pos": [
@@ -11273,11 +12228,11 @@
             ]
           },
           {
-            "id": "baf8b936-8a36-4b6d-92ef-aaada6d0433d",
+            "id": "4cf0b5bc-ee98-4e33-bf78-96c14fcda556",
             "name": "end_image",
             "type": "IMAGE",
             "linkIds": [
-              11
+              10
             ],
             "localized_name": "尾帧",
             "pos": [
@@ -11286,11 +12241,11 @@
             ]
           },
           {
-            "id": "48253358-7514-493d-a5c2-6339c599f681",
+            "id": "28862844-9a4f-4ed9-a4ed-89c724252273",
             "name": "vae_decode",
             "type": "VAE",
             "linkIds": [
-              12
+              11
             ],
             "localized_name": "vae_decode",
             "pos": [
@@ -11299,11 +12254,11 @@
             ]
           },
           {
-            "id": "904e1af6-b6f6-4f2a-bc59-af8f564a94e3",
+            "id": "bdacb978-5756-46c8-8d8f-9761a2827865",
             "name": "model_high",
             "type": "MODEL",
             "linkIds": [
-              13
+              12
             ],
             "localized_name": "model_high",
             "pos": [
@@ -11312,11 +12267,11 @@
             ]
           },
           {
-            "id": "a91f990e-21fc-42b8-a7e5-141e0e87fb4e",
+            "id": "e279c41a-798e-4444-af42-3a1708e002ae",
             "name": "model_low",
             "type": "MODEL",
             "linkIds": [
-              14
+              13
             ],
             "localized_name": "model_low",
             "pos": [
@@ -11325,11 +12280,11 @@
             ]
           },
           {
-            "id": "7b942b94-0005-49cc-86d6-221ea261094e",
+            "id": "5fb40408-a292-48a0-9695-2a0412567327",
             "name": "positive",
             "type": "CONDITIONING",
             "linkIds": [
-              15
+              14
             ],
             "localized_name": "positive",
             "pos": [
@@ -11338,11 +12293,11 @@
             ]
           },
           {
-            "id": "af6b18f1-0b80-4f2c-9a75-415c95bc2d4f",
+            "id": "cebff5bc-542c-410d-961e-ea65b0890c97",
             "name": "negative",
             "type": "CONDITIONING",
             "linkIds": [
-              16
+              15
             ],
             "localized_name": "negative",
             "pos": [
@@ -11351,11 +12306,11 @@
             ]
           },
           {
-            "id": "92d533eb-13ee-43fe-a85d-236cbcb57ff3",
+            "id": "f64e4e27-9f0f-43c9-9a3a-cd8548a95b5a",
             "name": "width",
             "type": "INT",
             "linkIds": [
-              17
+              16
             ],
             "localized_name": "宽",
             "pos": [
@@ -11364,11 +12319,11 @@
             ]
           },
           {
-            "id": "5b08bbdb-3cba-4b78-a844-549dad2f4dba",
+            "id": "e0321334-8703-4054-9682-e58d2b51aa09",
             "name": "height",
             "type": "INT",
             "linkIds": [
-              18
+              17
             ],
             "localized_name": "高",
             "pos": [
@@ -11377,11 +12332,11 @@
             ]
           },
           {
-            "id": "6bb5a11b-57a3-43bb-9edb-e7534eae5480",
+            "id": "e073e960-a8b2-4fee-bdba-be52e2e7c9e2",
             "name": "length",
             "type": "INT",
             "linkIds": [
-              19
+              18
             ],
             "localized_name": "帧数",
             "pos": [
@@ -11390,24 +12345,24 @@
             ]
           },
           {
-            "id": "93947d6e-3476-42ee-9f57-2272a71fb92d",
-            "name": "fps",
-            "type": "FLOAT",
+            "id": "218fdaff-8941-451d-916b-b82690636312",
+            "name": "steps_high",
+            "type": "INT",
             "linkIds": [
-              20
+              19
             ],
-            "localized_name": "帧率",
+            "localized_name": "步数",
             "pos": [
               -200,
               540
             ]
           },
           {
-            "id": "620ebcd0-6ae3-424e-b19b-7e6c1283f771",
-            "name": "steps_high",
+            "id": "3ba8c757-e7fa-49fd-b8af-1879a6802652",
+            "name": "steps_low",
             "type": "INT",
             "linkIds": [
-              21
+              20
             ],
             "localized_name": "步数",
             "pos": [
@@ -11416,24 +12371,24 @@
             ]
           },
           {
-            "id": "f7ed69dc-4985-4dce-be36-2f87bbeb21f7",
-            "name": "steps_low",
-            "type": "INT",
+            "id": "afdb5d9f-ad23-4cd5-8dcb-f31bc298bc4c",
+            "name": "cfg_high",
+            "type": "FLOAT",
             "linkIds": [
-              22
+              21
             ],
-            "localized_name": "步数",
+            "localized_name": "CFG",
             "pos": [
               -200,
               620
             ]
           },
           {
-            "id": "c37e50da-9aaa-4aff-af41-dbf46406821c",
-            "name": "cfg_high",
+            "id": "66992db4-8037-4673-8c42-e134000e7302",
+            "name": "cfg_low",
             "type": "FLOAT",
             "linkIds": [
-              23
+              22
             ],
             "localized_name": "CFG",
             "pos": [
@@ -11442,41 +12397,28 @@
             ]
           },
           {
-            "id": "726451c9-4b30-4e4f-b427-c743d2b86814",
-            "name": "cfg_low",
-            "type": "FLOAT",
-            "linkIds": [
-              24
-            ],
-            "localized_name": "CFG",
-            "pos": [
-              -200,
-              700
-            ]
-          },
-          {
-            "id": "f509238f-7cf4-4588-9a09-953b2218a1d4",
+            "id": "1d36186c-1a28-42a7-a81d-2bed622e1c3b",
             "name": "seed",
             "type": "INT",
             "linkIds": [
-              25
+              23
             ],
             "localized_name": "种子",
             "pos": [
               -200,
-              740
+              700
             ]
           }
         ],
         "outputs": [
           {
-            "id": "25b157b6-3121-4bc9-b22f-be417abcc5dd",
-            "name": "video",
-            "type": "VIDEO",
+            "id": "45611af8-6813-4943-9cec-c608252312e3",
+            "name": "frames",
+            "type": "IMAGE",
             "linkIds": [
-              26
+              24
             ],
-            "localized_name": "video",
+            "localized_name": "帧",
             "pos": [
               1400,
               100
@@ -11504,19 +12446,19 @@
                 "localized_name": "positive",
                 "name": "positive",
                 "type": "CONDITIONING",
-                "link": 15
+                "link": 14
               },
               {
                 "localized_name": "negative",
                 "name": "negative",
                 "type": "CONDITIONING",
-                "link": 16
+                "link": 15
               },
               {
                 "localized_name": "vae",
                 "name": "vae",
                 "type": "VAE",
-                "link": 9
+                "link": 8
               },
               {
                 "localized_name": "clip_vision_start_image",
@@ -11534,13 +12476,13 @@
                 "localized_name": "start_image",
                 "name": "start_image",
                 "type": "IMAGE",
-                "link": 10
+                "link": 9
               },
               {
                 "localized_name": "end_image",
                 "name": "end_image",
                 "type": "IMAGE",
-                "link": 11
+                "link": 10
               },
               {
                 "localized_name": "宽",
@@ -11549,7 +12491,7 @@
                 "widget": {
                   "name": "width"
                 },
-                "link": 17
+                "link": 16
               },
               {
                 "localized_name": "高",
@@ -11558,7 +12500,7 @@
                 "widget": {
                   "name": "height"
                 },
-                "link": 18
+                "link": 17
               },
               {
                 "localized_name": "帧数",
@@ -11567,7 +12509,7 @@
                 "widget": {
                   "name": "length"
                 },
-                "link": 19
+                "link": 18
               }
             ],
             "outputs": [
@@ -11629,7 +12571,7 @@
                 "localized_name": "model",
                 "name": "model",
                 "type": "MODEL",
-                "link": 13
+                "link": 12
               },
               {
                 "localized_name": "positive",
@@ -11656,7 +12598,7 @@
                 "widget": {
                   "name": "noise_seed"
                 },
-                "link": 25
+                "link": 23
               },
               {
                 "localized_name": "步数",
@@ -11665,7 +12607,7 @@
                 "widget": {
                   "name": "steps"
                 },
-                "link": 21
+                "link": 19
               },
               {
                 "localized_name": "CFG",
@@ -11674,7 +12616,7 @@
                 "widget": {
                   "name": "cfg"
                 },
-                "link": 23
+                "link": 21
               }
             ],
             "outputs": [
@@ -11724,7 +12666,7 @@
                 "localized_name": "model",
                 "name": "model",
                 "type": "MODEL",
-                "link": 14
+                "link": 13
               },
               {
                 "localized_name": "positive",
@@ -11751,7 +12693,7 @@
                 "widget": {
                   "name": "steps"
                 },
-                "link": 22
+                "link": 20
               },
               {
                 "localized_name": "CFG",
@@ -11760,7 +12702,7 @@
                 "widget": {
                   "name": "cfg"
                 },
-                "link": 24
+                "link": 22
               }
             ],
             "outputs": [
@@ -11816,7 +12758,7 @@
                 "localized_name": "vae",
                 "name": "vae",
                 "type": "VAE",
-                "link": 12
+                "link": 11
               }
             ],
             "outputs": [
@@ -11824,70 +12766,13 @@
                 "localized_name": "IMAGE",
                 "name": "IMAGE",
                 "type": "IMAGE",
-                "links": [
-                  8
-                ]
+                "links": null
               }
             ],
             "properties": {
               "cnr_id": "comfy-core",
               "Node name for S&R": "VAEDecode"
             }
-          },
-          {
-            "id": 5,
-            "type": "CreateVideo",
-            "pos": [
-              1560,
-              80
-            ],
-            "size": [
-              300,
-              110
-            ],
-            "flags": {},
-            "order": 4,
-            "mode": 0,
-            "inputs": [
-              {
-                "localized_name": "images",
-                "name": "images",
-                "type": "IMAGE",
-                "link": 8
-              },
-              {
-                "localized_name": "audio",
-                "name": "audio",
-                "type": "AUDIO",
-                "link": null
-              },
-              {
-                "localized_name": "帧率",
-                "name": "fps",
-                "type": "FLOAT",
-                "widget": {
-                  "name": "fps"
-                },
-                "link": 20
-              }
-            ],
-            "outputs": [
-              {
-                "localized_name": "VIDEO",
-                "name": "VIDEO",
-                "type": "VIDEO",
-                "links": null
-              }
-            ],
-            "properties": {
-              "cnr_id": "comfy-core",
-              "Node name for S&R": "CreateVideo"
-            },
-            "widgets_values": [
-              16,
-              "auto",
-              "sRGB"
-            ]
           }
         ],
         "groups": [],
@@ -11950,14 +12835,6 @@
           },
           {
             "id": 8,
-            "origin_id": 4,
-            "origin_slot": 0,
-            "target_id": 5,
-            "target_slot": 0,
-            "type": "IMAGE"
-          },
-          {
-            "id": 9,
             "origin_id": -10,
             "origin_slot": 0,
             "target_id": 1,
@@ -11965,7 +12842,7 @@
             "type": "VAE"
           },
           {
-            "id": 10,
+            "id": 9,
             "origin_id": -10,
             "origin_slot": 1,
             "target_id": 1,
@@ -11973,7 +12850,7 @@
             "type": "IMAGE"
           },
           {
-            "id": 11,
+            "id": 10,
             "origin_id": -10,
             "origin_slot": 2,
             "target_id": 1,
@@ -11981,7 +12858,7 @@
             "type": "IMAGE"
           },
           {
-            "id": 12,
+            "id": 11,
             "origin_id": -10,
             "origin_slot": 3,
             "target_id": 4,
@@ -11989,7 +12866,7 @@
             "type": "VAE"
           },
           {
-            "id": 13,
+            "id": 12,
             "origin_id": -10,
             "origin_slot": 4,
             "target_id": 2,
@@ -11997,7 +12874,7 @@
             "type": "MODEL"
           },
           {
-            "id": 14,
+            "id": 13,
             "origin_id": -10,
             "origin_slot": 5,
             "target_id": 3,
@@ -12005,7 +12882,7 @@
             "type": "MODEL"
           },
           {
-            "id": 15,
+            "id": 14,
             "origin_id": -10,
             "origin_slot": 6,
             "target_id": 1,
@@ -12013,7 +12890,7 @@
             "type": "CONDITIONING"
           },
           {
-            "id": 16,
+            "id": 15,
             "origin_id": -10,
             "origin_slot": 7,
             "target_id": 1,
@@ -12021,7 +12898,7 @@
             "type": "CONDITIONING"
           },
           {
-            "id": 17,
+            "id": 16,
             "origin_id": -10,
             "origin_slot": 8,
             "target_id": 1,
@@ -12029,7 +12906,7 @@
             "type": "INT"
           },
           {
-            "id": 18,
+            "id": 17,
             "origin_id": -10,
             "origin_slot": 9,
             "target_id": 1,
@@ -12037,7 +12914,7 @@
             "type": "INT"
           },
           {
-            "id": 19,
+            "id": 18,
             "origin_id": -10,
             "origin_slot": 10,
             "target_id": 1,
@@ -12045,60 +12922,52 @@
             "type": "INT"
           },
           {
-            "id": 20,
+            "id": 19,
             "origin_id": -10,
             "origin_slot": 11,
-            "target_id": 5,
-            "target_slot": 2,
-            "type": "FLOAT"
-          },
-          {
-            "id": 21,
-            "origin_id": -10,
-            "origin_slot": 12,
             "target_id": 2,
             "target_slot": 5,
             "type": "INT"
           },
           {
-            "id": 22,
+            "id": 20,
             "origin_id": -10,
-            "origin_slot": 13,
+            "origin_slot": 12,
             "target_id": 3,
             "target_slot": 4,
             "type": "INT"
           },
           {
-            "id": 23,
+            "id": 21,
             "origin_id": -10,
-            "origin_slot": 14,
+            "origin_slot": 13,
             "target_id": 2,
             "target_slot": 6,
             "type": "FLOAT"
           },
           {
-            "id": 24,
+            "id": 22,
             "origin_id": -10,
-            "origin_slot": 15,
+            "origin_slot": 14,
             "target_id": 3,
             "target_slot": 5,
             "type": "FLOAT"
           },
           {
-            "id": 25,
+            "id": 23,
             "origin_id": -10,
-            "origin_slot": 16,
+            "origin_slot": 15,
             "target_id": 2,
             "target_slot": 4,
             "type": "INT"
           },
           {
-            "id": 26,
-            "origin_id": 5,
+            "id": 24,
+            "origin_id": 4,
             "origin_slot": 0,
             "target_id": -20,
             "target_slot": 0,
-            "type": "VIDEO"
+            "type": "IMAGE"
           }
         ],
         "extra": {
@@ -12112,8 +12981,8 @@
         "version": 1,
         "state": {
           "lastGroupId": 0,
-          "lastNodeId": 6,
-          "lastLinkId": 14,
+          "lastNodeId": 5,
+          "lastLinkId": 12,
           "lastRerouteId": 0
         },
         "revision": 0,
@@ -12139,11 +13008,11 @@
         },
         "inputs": [
           {
-            "id": "76a635e3-bc19-4edf-803b-77fb915c7c88",
+            "id": "dbdc14cd-3c51-4f1a-9b22-a8e384150076",
             "name": "positive",
             "type": "CONDITIONING",
             "linkIds": [
-              7
+              6
             ],
             "localized_name": "positive",
             "pos": [
@@ -12152,11 +13021,11 @@
             ]
           },
           {
-            "id": "e260a032-c1ea-4fcb-85ff-69cca1a44b0b",
+            "id": "716b2f48-da36-43a9-8696-7cb4bc081b45",
             "name": "negative",
             "type": "CONDITIONING",
             "linkIds": [
-              8
+              7
             ],
             "localized_name": "negative",
             "pos": [
@@ -12165,11 +13034,11 @@
             ]
           },
           {
-            "id": "7722a93f-9775-4391-af36-2f168286fa26",
+            "id": "08ca849d-ee74-43a1-ae3f-0bd6093e87d0",
             "name": "width",
             "type": "INT",
             "linkIds": [
-              9
+              8
             ],
             "localized_name": "宽",
             "pos": [
@@ -12178,11 +13047,11 @@
             ]
           },
           {
-            "id": "be79f519-5767-42b6-be0c-ce79ca213879",
+            "id": "317e0eb8-1f62-4420-8629-5d50eb3d7189",
             "name": "height",
             "type": "INT",
             "linkIds": [
-              10
+              9
             ],
             "localized_name": "高",
             "pos": [
@@ -12191,11 +13060,11 @@
             ]
           },
           {
-            "id": "373fd4cc-d24c-499d-b973-9aa6633a66b7",
+            "id": "7a603b4b-3c68-4049-b21f-79a1c3f86e80",
             "name": "length",
             "type": "INT",
             "linkIds": [
-              11
+              10
             ],
             "localized_name": "帧数",
             "pos": [
@@ -12204,41 +13073,28 @@
             ]
           },
           {
-            "id": "07631d9a-6ac8-4e9d-b7ac-e4fb635b2cbd",
-            "name": "fps",
-            "type": "FLOAT",
-            "linkIds": [
-              12
-            ],
-            "localized_name": "帧率",
-            "pos": [
-              -200,
-              300
-            ]
-          },
-          {
-            "id": "134ae1a0-177e-4efc-a8ae-e2fb13eae39a",
+            "id": "8dae4931-be4a-4e20-8ac9-3449194a5bf8",
             "name": "seed",
             "type": "INT",
             "linkIds": [
-              13
+              11
             ],
             "localized_name": "种子",
             "pos": [
               -200,
-              340
+              300
             ]
           }
         ],
         "outputs": [
           {
-            "id": "554a18af-5dae-4958-819d-8d7bdb7ff318",
-            "name": "video",
-            "type": "VIDEO",
+            "id": "46cf5da1-5772-4b77-b57a-aaeeb29bff83",
+            "name": "frames",
+            "type": "IMAGE",
             "linkIds": [
-              14
+              12
             ],
-            "localized_name": "video",
+            "localized_name": "帧",
             "pos": [
               1400,
               100
@@ -12357,7 +13213,7 @@
                 "widget": {
                   "name": "width"
                 },
-                "link": 9
+                "link": 8
               },
               {
                 "localized_name": "高",
@@ -12366,7 +13222,7 @@
                 "widget": {
                   "name": "height"
                 },
-                "link": 10
+                "link": 9
               },
               {
                 "localized_name": "帧数",
@@ -12375,7 +13231,7 @@
                 "widget": {
                   "name": "length"
                 },
-                "link": 11
+                "link": 10
               }
             ],
             "outputs": [
@@ -12424,13 +13280,13 @@
                 "localized_name": "positive",
                 "name": "positive",
                 "type": "CONDITIONING",
-                "link": 7
+                "link": 6
               },
               {
                 "localized_name": "negative",
                 "name": "negative",
                 "type": "CONDITIONING",
-                "link": 8
+                "link": 7
               },
               {
                 "localized_name": "latent_image",
@@ -12445,7 +13301,7 @@
                 "widget": {
                   "name": "seed"
                 },
-                "link": 13
+                "link": 11
               }
             ],
             "outputs": [
@@ -12506,70 +13362,13 @@
                 "localized_name": "IMAGE",
                 "name": "IMAGE",
                 "type": "IMAGE",
-                "links": [
-                  6
-                ]
+                "links": null
               }
             ],
             "properties": {
               "cnr_id": "comfy-core",
               "Node name for S&R": "VAEDecode"
             }
-          },
-          {
-            "id": 6,
-            "type": "CreateVideo",
-            "pos": [
-              1960,
-              80
-            ],
-            "size": [
-              300,
-              110
-            ],
-            "flags": {},
-            "order": 5,
-            "mode": 0,
-            "inputs": [
-              {
-                "localized_name": "images",
-                "name": "images",
-                "type": "IMAGE",
-                "link": 6
-              },
-              {
-                "localized_name": "audio",
-                "name": "audio",
-                "type": "AUDIO",
-                "link": null
-              },
-              {
-                "localized_name": "帧率",
-                "name": "fps",
-                "type": "FLOAT",
-                "widget": {
-                  "name": "fps"
-                },
-                "link": 12
-              }
-            ],
-            "outputs": [
-              {
-                "localized_name": "VIDEO",
-                "name": "VIDEO",
-                "type": "VIDEO",
-                "links": null
-              }
-            ],
-            "properties": {
-              "cnr_id": "comfy-core",
-              "Node name for S&R": "CreateVideo"
-            },
-            "widgets_values": [
-              16,
-              "auto",
-              "sRGB"
-            ]
           }
         ],
         "groups": [],
@@ -12616,14 +13415,6 @@
           },
           {
             "id": 6,
-            "origin_id": 5,
-            "origin_slot": 0,
-            "target_id": 6,
-            "target_slot": 0,
-            "type": "IMAGE"
-          },
-          {
-            "id": 7,
             "origin_id": -10,
             "origin_slot": 0,
             "target_id": 4,
@@ -12631,7 +13422,7 @@
             "type": "CONDITIONING"
           },
           {
-            "id": 8,
+            "id": 7,
             "origin_id": -10,
             "origin_slot": 1,
             "target_id": 4,
@@ -12639,7 +13430,7 @@
             "type": "CONDITIONING"
           },
           {
-            "id": 9,
+            "id": 8,
             "origin_id": -10,
             "origin_slot": 2,
             "target_id": 3,
@@ -12647,7 +13438,7 @@
             "type": "INT"
           },
           {
-            "id": 10,
+            "id": 9,
             "origin_id": -10,
             "origin_slot": 3,
             "target_id": 3,
@@ -12655,7 +13446,7 @@
             "type": "INT"
           },
           {
-            "id": 11,
+            "id": 10,
             "origin_id": -10,
             "origin_slot": 4,
             "target_id": 3,
@@ -12663,28 +13454,20 @@
             "type": "INT"
           },
           {
-            "id": 12,
+            "id": 11,
             "origin_id": -10,
             "origin_slot": 5,
-            "target_id": 6,
-            "target_slot": 2,
-            "type": "FLOAT"
-          },
-          {
-            "id": 13,
-            "origin_id": -10,
-            "origin_slot": 6,
             "target_id": 4,
             "target_slot": 4,
             "type": "INT"
           },
           {
-            "id": 14,
-            "origin_id": 6,
+            "id": 12,
+            "origin_id": 5,
             "origin_slot": 0,
             "target_id": -20,
             "target_slot": 0,
-            "type": "VIDEO"
+            "type": "IMAGE"
           }
         ],
         "extra": {
@@ -12692,6 +13475,725 @@
         },
         "category": "总控台",
         "description": "Wan 合并模型单次采样"
+      },
+      {
+        "id": "0b7a1c10-0001-4a01-9c01-00000000000a",
+        "version": 1,
+        "state": {
+          "lastGroupId": 0,
+          "lastNodeId": 4,
+          "lastLinkId": 9,
+          "lastRerouteId": 0
+        },
+        "revision": 0,
+        "config": {},
+        "name": "视频高清化",
+        "inputNode": {
+          "id": -10,
+          "bounding": [
+            -320,
+            60,
+            120,
+            60
+          ]
+        },
+        "outputNode": {
+          "id": -20,
+          "bounding": [
+            1500,
+            60,
+            120,
+            60
+          ]
+        },
+        "inputs": [
+          {
+            "id": "c482dc23-18e2-42b3-ace9-4f4595b16160",
+            "name": "frames",
+            "type": "IMAGE",
+            "linkIds": [
+              4
+            ],
+            "localized_name": "帧",
+            "pos": [
+              -200,
+              100
+            ]
+          },
+          {
+            "id": "2e5ecb5e-4273-48c5-9548-50530719a505",
+            "name": "factor",
+            "type": "FLOAT",
+            "linkIds": [
+              5
+            ],
+            "localized_name": "目标倍数",
+            "pos": [
+              -200,
+              140
+            ]
+          },
+          {
+            "id": "68d94600-19a8-482a-a22f-2886c4cdcd77",
+            "name": "base",
+            "type": "FLOAT",
+            "linkIds": [
+              6
+            ],
+            "localized_name": "放大模型倍率",
+            "pos": [
+              -200,
+              180
+            ]
+          },
+          {
+            "id": "b0add05b-354f-4291-ac91-b41c2ddaf3f8",
+            "name": "batch",
+            "type": "INT",
+            "linkIds": [
+              7
+            ],
+            "localized_name": "每批帧数",
+            "pos": [
+              -200,
+              220
+            ]
+          },
+          {
+            "id": "d3cb7568-97da-42d5-9de8-ba75f04326bb",
+            "name": "tile",
+            "type": "INT",
+            "linkIds": [
+              8
+            ],
+            "localized_name": "分块大小（0=自动）",
+            "pos": [
+              -200,
+              260
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "id": "c541ea63-be5c-42ef-b20e-c1af40022e7b",
+            "name": "frames",
+            "type": "IMAGE",
+            "linkIds": [
+              9
+            ],
+            "localized_name": "帧",
+            "pos": [
+              1400,
+              100
+            ]
+          }
+        ],
+        "widgets": [],
+        "nodes": [
+          {
+            "id": 1,
+            "type": "UpscaleModelLoader",
+            "pos": [
+              80,
+              80
+            ],
+            "size": [
+              430,
+              70
+            ],
+            "flags": {},
+            "order": 0,
+            "mode": 0,
+            "inputs": [],
+            "outputs": [
+              {
+                "localized_name": "UPSCALE_MODEL",
+                "name": "UPSCALE_MODEL",
+                "type": "UPSCALE_MODEL",
+                "links": [
+                  1
+                ]
+              }
+            ],
+            "properties": {
+              "cnr_id": "comfy-core",
+              "Node name for S&R": "UpscaleModelLoader"
+            },
+            "title": "放大模型（4x）",
+            "widgets_values": [
+              "4xUltrasharp_4xUltrasharpV10.pt"
+            ]
+          },
+          {
+            "id": 2,
+            "type": "UpscaleWithModelAdvanced",
+            "pos": [
+              560,
+              80
+            ],
+            "size": [
+              360,
+              240
+            ],
+            "flags": {},
+            "order": 1,
+            "mode": 0,
+            "inputs": [
+              {
+                "localized_name": "upscale_model",
+                "name": "upscale_model",
+                "type": "UPSCALE_MODEL",
+                "link": 1
+              },
+              {
+                "localized_name": "image",
+                "name": "image",
+                "type": "IMAGE",
+                "link": 4
+              },
+              {
+                "localized_name": "每批帧数",
+                "name": "max_batch_size",
+                "type": "INT",
+                "widget": {
+                  "name": "max_batch_size"
+                },
+                "link": 7
+              },
+              {
+                "localized_name": "分块大小（0=自动）",
+                "name": "tile_size",
+                "type": "INT",
+                "widget": {
+                  "name": "tile_size"
+                },
+                "link": 8
+              }
+            ],
+            "outputs": [
+              {
+                "localized_name": "IMAGE",
+                "name": "IMAGE",
+                "type": "IMAGE",
+                "links": [
+                  2
+                ]
+              }
+            ],
+            "properties": {
+              "cnr_id": "comfy-core",
+              "Node name for S&R": "UpscaleWithModelAdvanced"
+            },
+            "title": "逐帧放大（分批 / 分块）",
+            "widgets_values": [
+              4,
+              0,
+              false,
+              "fp32"
+            ]
+          },
+          {
+            "id": 3,
+            "type": "CM_FloatBinaryOperation JK",
+            "pos": [
+              980,
+              100
+            ],
+            "size": [
+              330,
+              150
+            ],
+            "flags": {},
+            "order": 2,
+            "mode": 0,
+            "inputs": [
+              {
+                "localized_name": "目标倍数",
+                "name": "a",
+                "type": "FLOAT",
+                "widget": {
+                  "name": "a"
+                },
+                "link": 5
+              },
+              {
+                "localized_name": "模型倍率",
+                "name": "b",
+                "type": "FLOAT",
+                "widget": {
+                  "name": "b"
+                },
+                "link": 6
+              }
+            ],
+            "outputs": [
+              {
+                "localized_name": "FLOAT",
+                "name": "FLOAT",
+                "type": "FLOAT",
+                "links": [
+                  3
+                ]
+              }
+            ],
+            "properties": {
+              "cnr_id": "comfy-core",
+              "Node name for S&R": "CM_FloatBinaryOperation JK"
+            },
+            "title": "缩放系数 = 目标倍数 ÷ 模型倍率",
+            "widgets_values": [
+              "Div",
+              2.0,
+              4.0
+            ]
+          },
+          {
+            "id": 4,
+            "type": "ImageScaleBy",
+            "pos": [
+              1370,
+              80
+            ],
+            "size": [
+              340,
+              160
+            ],
+            "flags": {},
+            "order": 3,
+            "mode": 0,
+            "inputs": [
+              {
+                "localized_name": "image",
+                "name": "image",
+                "type": "IMAGE",
+                "link": 2
+              },
+              {
+                "localized_name": "缩放系数",
+                "name": "scale_by",
+                "type": "FLOAT",
+                "widget": {
+                  "name": "scale_by"
+                },
+                "link": 3
+              }
+            ],
+            "outputs": [
+              {
+                "localized_name": "IMAGE",
+                "name": "IMAGE",
+                "type": "IMAGE",
+                "links": null
+              }
+            ],
+            "properties": {
+              "cnr_id": "comfy-core",
+              "Node name for S&R": "ImageScaleBy"
+            },
+            "title": "缩到目标尺寸",
+            "widgets_values": [
+              "lanczos",
+              0.5
+            ]
+          }
+        ],
+        "groups": [],
+        "links": [
+          {
+            "id": 1,
+            "origin_id": 1,
+            "origin_slot": 0,
+            "target_id": 2,
+            "target_slot": 0,
+            "type": "UPSCALE_MODEL"
+          },
+          {
+            "id": 2,
+            "origin_id": 2,
+            "origin_slot": 0,
+            "target_id": 4,
+            "target_slot": 0,
+            "type": "IMAGE"
+          },
+          {
+            "id": 3,
+            "origin_id": 3,
+            "origin_slot": 0,
+            "target_id": 4,
+            "target_slot": 1,
+            "type": "FLOAT"
+          },
+          {
+            "id": 4,
+            "origin_id": -10,
+            "origin_slot": 0,
+            "target_id": 2,
+            "target_slot": 1,
+            "type": "IMAGE"
+          },
+          {
+            "id": 5,
+            "origin_id": -10,
+            "origin_slot": 1,
+            "target_id": 3,
+            "target_slot": 0,
+            "type": "FLOAT"
+          },
+          {
+            "id": 6,
+            "origin_id": -10,
+            "origin_slot": 2,
+            "target_id": 3,
+            "target_slot": 1,
+            "type": "FLOAT"
+          },
+          {
+            "id": 7,
+            "origin_id": -10,
+            "origin_slot": 3,
+            "target_id": 2,
+            "target_slot": 2,
+            "type": "INT"
+          },
+          {
+            "id": 8,
+            "origin_id": -10,
+            "origin_slot": 4,
+            "target_id": 2,
+            "target_slot": 3,
+            "type": "INT"
+          },
+          {
+            "id": 9,
+            "origin_id": 4,
+            "origin_slot": 0,
+            "target_id": -20,
+            "target_slot": 0,
+            "type": "IMAGE"
+          }
+        ],
+        "extra": {
+          "workflowRendererVersion": "LG"
+        },
+        "category": "总控台",
+        "description": "逐帧 4x 放大 → 缩到目标倍数（纯像素操作，不采样、不偏色）"
+      },
+      {
+        "id": "0b7a1c10-0001-4a01-9c01-00000000000b",
+        "version": 1,
+        "state": {
+          "lastGroupId": 0,
+          "lastNodeId": 3,
+          "lastLinkId": 7,
+          "lastRerouteId": 0
+        },
+        "revision": 0,
+        "config": {},
+        "name": "视频补帧",
+        "inputNode": {
+          "id": -10,
+          "bounding": [
+            -320,
+            60,
+            120,
+            60
+          ]
+        },
+        "outputNode": {
+          "id": -20,
+          "bounding": [
+            1500,
+            60,
+            120,
+            60
+          ]
+        },
+        "inputs": [
+          {
+            "id": "7276fabf-8561-488a-a07d-6a60090e67ca",
+            "name": "frames",
+            "type": "IMAGE",
+            "linkIds": [
+              2
+            ],
+            "localized_name": "帧",
+            "pos": [
+              -200,
+              100
+            ]
+          },
+          {
+            "id": "16bf6678-8bc4-4712-a65a-d2be4c65194e",
+            "name": "fps",
+            "type": "FLOAT",
+            "linkIds": [
+              3
+            ],
+            "localized_name": "帧率",
+            "pos": [
+              -200,
+              140
+            ]
+          },
+          {
+            "id": "2f1912a0-5936-412a-8c4f-adc6f8efa786",
+            "name": "multiplier",
+            "type": "FLOAT",
+            "linkIds": [
+              4,
+              5
+            ],
+            "localized_name": "补帧倍数",
+            "pos": [
+              -200,
+              180
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "id": "c61c5d49-36b0-44ea-9d2c-12badb0e6ec1",
+            "name": "frames",
+            "type": "IMAGE",
+            "linkIds": [
+              6
+            ],
+            "localized_name": "帧",
+            "pos": [
+              1400,
+              100
+            ]
+          },
+          {
+            "id": "77154aa8-ca15-469c-9e22-1eb4e6326565",
+            "name": "fps",
+            "type": "FLOAT",
+            "linkIds": [
+              7
+            ],
+            "localized_name": "帧率",
+            "pos": [
+              1400,
+              140
+            ]
+          }
+        ],
+        "widgets": [],
+        "nodes": [
+          {
+            "id": 1,
+            "type": "RIFE_VFI_Opt",
+            "pos": [
+              80,
+              80
+            ],
+            "size": [
+              400,
+              300
+            ],
+            "flags": {},
+            "order": 0,
+            "mode": 0,
+            "inputs": [
+              {
+                "localized_name": "frames",
+                "name": "frames",
+                "type": "IMAGE",
+                "link": 2
+              },
+              {
+                "localized_name": "补帧倍数",
+                "name": "multiplier",
+                "type": "INT",
+                "widget": {
+                  "name": "multiplier"
+                },
+                "link": 1
+              }
+            ],
+            "outputs": [
+              {
+                "localized_name": "IMAGE",
+                "name": "IMAGE",
+                "type": "IMAGE",
+                "links": null
+              }
+            ],
+            "properties": {
+              "cnr_id": "comfy-core",
+              "Node name for S&R": "RIFE_VFI_Opt"
+            },
+            "title": "RIFE 插帧",
+            "widgets_values": [
+              "rife47.pth",
+              2,
+              1.0,
+              true,
+              10
+            ]
+          },
+          {
+            "id": 2,
+            "type": "CM_FloatBinaryOperation JK",
+            "pos": [
+              560,
+              80
+            ],
+            "size": [
+              330,
+              150
+            ],
+            "flags": {},
+            "order": 1,
+            "mode": 0,
+            "inputs": [
+              {
+                "localized_name": "帧率",
+                "name": "a",
+                "type": "FLOAT",
+                "widget": {
+                  "name": "a"
+                },
+                "link": 3
+              },
+              {
+                "localized_name": "倍数",
+                "name": "b",
+                "type": "FLOAT",
+                "widget": {
+                  "name": "b"
+                },
+                "link": 4
+              }
+            ],
+            "outputs": [
+              {
+                "localized_name": "FLOAT",
+                "name": "FLOAT",
+                "type": "FLOAT",
+                "links": null
+              }
+            ],
+            "properties": {
+              "cnr_id": "comfy-core",
+              "Node name for S&R": "CM_FloatBinaryOperation JK"
+            },
+            "title": "帧率 × 倍数（播放速度才不变）",
+            "widgets_values": [
+              "Mul",
+              16.0,
+              2.0
+            ]
+          },
+          {
+            "id": 3,
+            "type": "CM_FloatToInt JK",
+            "pos": [
+              560,
+              300
+            ],
+            "size": [
+              330,
+              90
+            ],
+            "flags": {},
+            "order": 2,
+            "mode": 0,
+            "inputs": [
+              {
+                "localized_name": "倍数",
+                "name": "a",
+                "type": "FLOAT",
+                "widget": {
+                  "name": "a"
+                },
+                "link": 5
+              }
+            ],
+            "outputs": [
+              {
+                "localized_name": "INT",
+                "name": "INT",
+                "type": "INT",
+                "links": [
+                  1
+                ]
+              }
+            ],
+            "properties": {
+              "cnr_id": "comfy-core",
+              "Node name for S&R": "CM_FloatToInt JK"
+            },
+            "title": "倍数 → 整数（RIFE 只吃整数）",
+            "widgets_values": [
+              2
+            ]
+          }
+        ],
+        "groups": [],
+        "links": [
+          {
+            "id": 1,
+            "origin_id": 3,
+            "origin_slot": 0,
+            "target_id": 1,
+            "target_slot": 1,
+            "type": "INT"
+          },
+          {
+            "id": 2,
+            "origin_id": -10,
+            "origin_slot": 0,
+            "target_id": 1,
+            "target_slot": 0,
+            "type": "IMAGE"
+          },
+          {
+            "id": 3,
+            "origin_id": -10,
+            "origin_slot": 1,
+            "target_id": 2,
+            "target_slot": 0,
+            "type": "FLOAT"
+          },
+          {
+            "id": 4,
+            "origin_id": -10,
+            "origin_slot": 2,
+            "target_id": 2,
+            "target_slot": 1,
+            "type": "FLOAT"
+          },
+          {
+            "id": 5,
+            "origin_id": -10,
+            "origin_slot": 2,
+            "target_id": 3,
+            "target_slot": 0,
+            "type": "FLOAT"
+          },
+          {
+            "id": 6,
+            "origin_id": 1,
+            "origin_slot": 0,
+            "target_id": -20,
+            "target_slot": 0,
+            "type": "IMAGE"
+          },
+          {
+            "id": 7,
+            "origin_id": 2,
+            "origin_slot": 0,
+            "target_id": -20,
+            "target_slot": 1,
+            "type": "FLOAT"
+          }
+        ],
+        "extra": {
+          "workflowRendererVersion": "LG"
+        },
+        "category": "总控台",
+        "description": "RIFE 插帧：补中间帧，帧率同步 ×倍数，回放速度不变"
       }
     ]
   }

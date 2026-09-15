@@ -26,10 +26,10 @@ import { app } from "../../scripts/app.js";
 
 const ROOT_ID = "cc-dock-root";
 const LS_KEY = "cc_dock_ui_v1";
-const CC_DASHBOARD_VERSION = "1.3.0";   // 与 __init__.py / pyproject.toml 保持一致
+const CC_DASHBOARD_VERSION = "1.4.0";   // 与 __init__.py / pyproject.toml 保持一致
 // 与 blueprint/generator.py 的 BLUEPRINT_REV 一致：蓝图结构一改就两边一起 +1，
 // 面板靠它 + 高清链结构两道判断认出「画布上跑的还是旧蓝图」
-const BLUEPRINT_REV = 3;
+const BLUEPRINT_REV = 4;
 const UPSCALE_CHAIN_NODES = ["CR Upscale Image", "KSampler", "VAEEncode",
   "VAEDecode", "UltimateSDUpscaleNoUpscale", "ColorMatch"];
 const API_BASE = "/cc_dashboard";
@@ -48,6 +48,8 @@ const MODULES = [
   ["pose", "姿势"],
   ["detailer", "脸手眼矫正"],
   ["upscale", "高清化"],
+  ["vupscale", "视频高清化"],
+  ["vfi", "视频补帧"],
 ];
 const PROMPTS = [
   ["image_pos", "图像 · 正向", "masterpiece, best quality, ...", "image", true],
@@ -68,7 +70,8 @@ const PIPE_KIND = {
 const PIPE_MODULES = {
   t2i: ["pose", "detailer", "upscale"],
   i2i: ["detailer", "upscale"],
-  i2v: [], flf2v: [], t2v: [],
+  // 视频管线：高清化 → 补帧（先放大再补帧，省一半时间 / 显存）
+  i2v: ["vupscale", "vfi"], flf2v: ["vupscale", "vfi"], t2v: ["vupscale", "vfi"],
 };
 
 // ---------------------------------------------- 分辨率下拉（v6.5）
@@ -281,7 +284,40 @@ const VID_PARAMS = [
     { combo: "scheduler", media: "video" }],
   ["video_seed", "种子", 1, "视频种子，跟图像那套一样由「🎲 随机」开关控制"],
 ];
-const VID_PARAM_SECTIONS = [{ id: "video", title: "视频参数", params: VID_PARAMS }];
+// 视频补帧（RIFE）：只加中间帧、不改总时长 —— 帧率跟着 ×倍数，播放速度不变
+const VFI_PARAMS = [
+  ["vfi_multiplier", "补帧倍数", 1,
+    "RIFE 插帧倍率。2 = 相邻两帧之间插 1 帧（帧数 ×2、帧率也 ×2，"
+    + "16fps 的 81 帧 → 161 帧 / 32fps，**播放速度不变**）；4 = 插 3 帧。"
+    + "补帧只是让运动更顺，源素材本身糊的地方补完还是糊；"
+    + "倍数越高越慢，常规 2 倍就够。改完看下面那行只读提示能立刻看到补完的帧数 / 帧率"],
+  ["__ro_vfi", "补帧后", 0,
+    "补帧后的帧数 / 帧率 = 上面的帧数 × 补帧倍数（帧率同步跟上去，所以不会变速）"],
+];
+// 视频高清化：逐帧 4x 放大模型 → 缩到目标倍数（纯像素操作，不做扩散采样）
+const VUPSCALE_PARAMS = [
+  ["video_upscale_factor", "目标倍数", 0.25,
+    "最终尺寸 ÷ 原始尺寸：填 2 就是 640×640 → 1280×1280，填 1.5 就是 960×960。"
+    + "跟图像那套一样「填几就是几倍」——链子是「先按放大模型放大、再缩回来」，"
+    + "中间那层 4 倍大图很吃内存（81 帧 2560×2560 要 6G 出头），嫌慢就把倍数降到 1.5"],
+  ["video_upscale_base", "放大模型倍率", 1,
+    "磁盘上那个放大模型自带几倍，必须跟模型对上：4xUltrasharp 填 4。"
+    + "换成 2x 模型就改成 2，缩放系数会按「目标倍数 ÷ 模型倍率」自动重算"],
+  ["__ro_vup", "输出尺寸", 0,
+    "高清化后的实际像素 = 视频宽高 × 目标倍数，缩回系数 = 目标倍数 ÷ 模型倍率"],
+  ["video_upscale_batch", "每批帧数", 1,
+    "一次送几帧去放大（显存保险丝）。默认 4；报显存不足就降到 2 或 1，"
+    + "显存富裕可以往上加，越大越快，填 0 = 不限制（81 帧一把梭基本必炸）"],
+  ["video_upscale_tile", "分块大小", 32,
+    "放大时每块的像素边长，0 = 自动（从 512 起，显存不够自己减半）。"
+    + "块越大越快但越吃显存；报 OOM 就填 256 / 384 往下压"],
+];
+const VID_PARAM_SECTIONS = [
+  { id: "video", title: "视频生成参数", params: VID_PARAMS },
+  { id: "vfi", title: "视频补帧参数", module: "vfi", params: VFI_PARAMS },
+  { id: "vupscale", title: "视频高清参数", module: "vupscale",
+    params: VUPSCALE_PARAMS },
+];
 // 参数页里这几个旋钮一旦超出「安全区」，怪图基本都是它们造成的：
 // 值 ≥ 阈值时在那一行下面挂一句醒目提示（键 = 参数 key，值 = [阈值, 提示]）。
 const PARAM_WARN = {
@@ -296,6 +332,12 @@ const PARAM_WARN = {
     + "缩回去贴回原处 —— 看起来就是脸被贴上去。512 最稳"],
   detailer_crop: [3.2,
     "≥3.2 裁剪范围太大：会连带改掉背景和头发，建议 2.5 上下"],
+  vfi_multiplier: [4,
+    "≥4 倍补帧：每两帧之间硬塞 3 帧，源素材本身糊 / 抖动的地方会被抹成拖影，"
+    + "而且慢一倍以上。常规 2 倍就够"],
+  video_upscale_factor: [3,
+    "≥3 倍目标：中间那层 4 倍大图会非常吃内存（81 帧 2560×2560 约 6G），"
+    + "而且 4x 模型缩回小比例反而更软。视频 1.5~2 倍最实用"],
 };
 const LORA_GROUPS = [
   ["image", "图像 LoRA（文生图 + 图生图共用）"],
@@ -328,6 +370,8 @@ const PARAM_DEFAULTS = {
   detailer_guide: 512, detailer_max_size: 1024, detailer_crop: 2.5,
   video_width: 640, video_height: 640, video_length: 81, video_fps: 16,
   video_steps: 4, video_cfg: 1.0, video_seed: 246813579,
+  vfi_multiplier: 2, video_upscale_factor: 2.0, video_upscale_base: 4.0,
+  video_upscale_batch: 4, video_upscale_tile: 0,
 };
 
 // 高清分块：跟着分辨率自动算（会话内开关，默认开；取消就用手填的「分块大小」）
@@ -371,12 +415,15 @@ const HANDLED = {
     "detailer_denoise_hand", "detailer_denoise_eye",
     "detailer_guide", "detailer_max_size", "detailer_crop",
     "video_width", "video_height", "video_length", "video_fps",
-    "video_steps", "video_cfg", "video_seed"],
+    "video_steps", "video_cfg", "video_seed",
+    "vfi_multiplier", "video_upscale_factor", "video_upscale_base",
+    "video_upscale_batch", "video_upscale_tile"],
   family: ["clip", "vae"],
   lora_group: ["image", "video_high", "video_low"],
   source_image: ["i2i", "i2v", "flf_start", "flf_end"],
   pipeline: ["t2i", "i2i", "i2v", "flf2v", "t2v"],
-  module: ["pose_sdxl", "pose_anima", "detailer", "upscale"],
+  module: ["pose_sdxl", "pose_anima", "detailer", "upscale",
+    "vupscale", "vfi"],
   save: ["t2i", "i2i", "i2v", "flf2v", "t2v"],
   // v6.5：子图内部的三级矫正 / SAM 开关（写的是子图定义里那几个节点的 mode）
   detailer_stage: ["face", "hand", "eye"],
@@ -1679,7 +1726,9 @@ function build() {
     VID_PARAM_SECTIONS);
   const modHint = el("p", {
     class: "ccd-hint ccd-hide",
-    text: "该管线没有图像模块：姿势 / 脸手眼矫正 / 高清化都在图像管线上，切回文生图或图生图就能看到。",
+    text: "视频后处理：先「视频高清化」再「视频补帧」（顺序是写死的 —— 先放大再补帧，"
+      + "同样一遍 4x 放大，81 帧比补完的 161 帧省一半时间和显存）。两个都关着就直接输出原始帧。"
+      + "参数页里这两块跟着模块开关出现。",
   });
   const parStatus = el("span", { class: "ccd-par-status" });
   const parBar = el("div", { class: "ccd-par-bar" }, [
@@ -1778,7 +1827,8 @@ function build() {
       "· 种子 🎲 随机默认开（每次出图换新种子），不勾就按输入框里的数字细调；旁边那个 🎲 按钮只随机一次。" }),
     el("p", { class: "ccd-hint", text:
       "· 参数按模块分区：生成参数 / 姿势参数 / 脸手眼矫正参数 / 高清参数 / 视频参数，"
-      + "每一块只在对应模块开着时才显示，关掉模块那块自动收起来；重绘强度只在图生图显示。" }),
+      + "视频那边还有视频补帧参数 / 视频高清参数；每一块只在对应模块开着时才显示，"
+      + "关掉模块那块自动收起来；重绘强度只在图生图显示。" }),
     el("p", { class: "ccd-hint", text:
       "· 脸手眼矫正最上面那四个勾是分级的：脸那级检测器最准；手（hand_yolov8s）和眼（Eyes.pt）"
       + "在多人交叠 / 复杂花纹上容易误检，误检一小块再重画就是「凭空长出多余的肢体 / 一片假眼」，"
@@ -1794,6 +1844,16 @@ function build() {
       "· 出图「像很多张拼起来」（分块痕迹）：先降「整体细化强度」到 0.08~0.10，"
       + "再降「分块精修强度」到 0.08~0.10，把「接缝修复强度」加到 0.35~0.40；"
       + "还重就把高清倍数降到 1.5，或直接关掉高清化模块。" }),
+    el("p", { class: "ccd-hint", text:
+      "· 视频补帧（RIFE）：把相邻两帧之间补出新帧，帧数 ×倍数、帧率也 ×倍数，"
+      + "所以总时长不变（16fps 81 帧 →×2 是 161 帧 / 32fps）。只在帧数不够、动作发顿的时候开；"
+      + "源素材本身糊的地方补完还是糊，倍数填 2 最实用。它挂在 I2V / 首尾帧 / 文生视频三条管线上。" }),
+    el("p", { class: "ccd-hint", text:
+      "· 视频高清化：逐帧过一遍 4x 放大模型（4xUltrasharp），再缩到你要的目标倍数，"
+      + "纯像素操作、不做扩散采样，所以不会像图像高清链那样把颜色带偏。"
+      + "「目标倍数」填几就是几倍（2 = 640×640 → 1280×1280）；换 2x 放大模型时把"
+      + "「放大模型倍率」改成 2。报显存不足就把「每批帧数」降到 2、"
+      + "「分块大小」填 256 / 384（0 = 自动）。" }),
     el("p", { class: "ccd-hint", text:
       "· LoRA 行下面的状态：触发词（要写进提示词才锁得稳）、⚠ 已选但未启用、⚠ 与当前模型族可能不匹配。" }),
     el("p", { class: "ccd-hint", text:
@@ -2509,6 +2569,36 @@ function updateRoFields() {
       ? tile + "×" + tile + (TILE_AUTO.on ? "（自动）" : "（手动）")
       : "—";
   }
+  // 补帧后的帧数 / 帧率：RIFE 的 N 倍 = 每两帧之间插 N-1 帧 → 总帧数 (n-1)×N+1
+  if (f.__ro_vfi) {
+    const len = paramNum("video_length"), fps = paramNum("video_fps");
+    const m = paramNum("vfi_multiplier");
+    if (len !== null && fps !== null && m !== null && m >= 1) {
+      const outLen = Math.round((len - 1) * m + 1);
+      const outFps = Math.round(fps * m * 100) / 100;
+      f.__ro_vfi.textContent = outLen + " 帧 / " + outFps + " fps（"
+        + len + " 帧 ×" + m + "，时长不变）";
+    } else {
+      f.__ro_vfi.textContent = "—";
+    }
+  }
+  // 视频高清化后的尺寸 + 实际缩回系数（目标倍数 ÷ 放大模型倍率）
+  if (f.__ro_vup) {
+    const vw = paramNum("video_width"), vh = paramNum("video_height");
+    const vf = paramNum("video_upscale_factor");
+    const vb = paramNum("video_upscale_base");
+    if (vw && vh && vf) {
+      let txt = Math.round(vw * vf) + "×" + Math.round(vh * vf)
+        + "（" + vw + "×" + vh + " × " + vf + "）";
+      if (vb) {
+        txt += " · 缩回系数 " + (Math.round(vf / vb * 1000) / 1000)
+          + "（中间那层 = 原尺寸 × " + vb + "）";
+      }
+      f.__ro_vup.textContent = txt;
+    } else {
+      f.__ro_vup.textContent = "—";
+    }
+  }
 }
 
 /** 分块大小落地：自动按「原图 × 倍数」算，手填就照参数写进分块精修节点。
@@ -2684,6 +2774,7 @@ function refreshCombos(force) {
     }
   }
   syncCombos();
+  updateRoFields();
 }
 
 /** 把画布上的真实值回填到下拉（每秒跟着 sync 跑，不抢焦点） */

@@ -53,11 +53,16 @@ M_WAN_CKPT = "smoothMixWan22I2VT2V_i2vHigh.safetensors"
 M_CN_UNION = "diffusion_pytorch_model_promax.safetensors"
 M_LLLITE = "anima-lllite-pose-1.safetensors"
 M_UPSCALE = "4xUltrasharp_4xUltrasharpV10.pt"
+M_RIFE = "rife47.pth"            # RIFE 补帧权重（frame-interpolation base pack 里那份）
 
 # 蓝图版本号：面板靠它一眼看出「画布上这份是不是旧蓝图」。
 # 只要改了会影响到出图结果的结构（节点/连线/参数语义），就 +1。
-BLUEPRINT_REV = 3
-BLUEPRINT_TAG = "detailer-tuned-sam"
+BLUEPRINT_REV = 4
+BLUEPRINT_TAG = "video-post-vfi-upscale"
+
+# 视频后处理默认值：高清化（逐帧放大）→ 补帧（RIFE）
+VID_UPSCALE_BATCH = 4        # 每批帧数（0 = 一把梭，81 帧很容易炸显存）
+VID_UPSCALE_TILE = 0         # 分块大小，0 = 自动（显存不够自己往下降）
 
 POSE_REF_IMAGE = "ComfyUI_00521_.png"     # ComfyUI/input/
 LATEST_OUTPUT = "ComfyUI_00626_.png"      # ComfyUI/output/
@@ -769,10 +774,6 @@ def _sg_wan_video(g, first_last):
     g.add(4, "VAEDecode", (1280, 80), (240, 80),
           inputs=[("samples", "LATENT"), ("vae", "VAE")],
           outputs=[("IMAGE", "IMAGE")])
-    g.add(5, "CreateVideo", (1560, 80), (300, 110), [16, "auto", "sRGB"],
-          inputs=[("images", "IMAGE"), ("audio", "AUDIO")],
-          outputs=[("VIDEO", "VIDEO")],
-          wconvert=[("fps", "FLOAT", "帧率")])
     g.connect(1, 2, 2, 3)
     g.connect(1, 0, 2, 1)
     g.connect(1, 1, 2, 2)
@@ -780,7 +781,8 @@ def _sg_wan_video(g, first_last):
     g.connect(1, 0, 3, 1)
     g.connect(1, 1, 3, 2)
     g.connect(3, 0, 4, 0)
-    g.connect(4, 0, 5, 0)
+    # 这里只输出「解出来的帧」，封装成视频文件搬到顶层了：帧要先过
+    # 视频高清化 / 视频补帧两个后处理模块，最后才 CreateVideo → SaveVideo。
     g.expose_in(1, "vae", "vae_image")
     if first_last:
         g.expose_in(1, "start_image", "start_image", "首帧")
@@ -795,13 +797,12 @@ def _sg_wan_video(g, first_last):
     g.expose_in(1, "width", "width", "宽", 640)
     g.expose_in(1, "height", "height", "高", 640)
     g.expose_in(1, "length", "length", "帧数", 81)
-    g.expose_in(5, "fps", "fps", "帧率", 16)
     g.expose_in(2, "steps", "steps_high", "步数", 4)
     g.expose_in(3, "steps", "steps_low", "步数", 4)
     g.expose_in(2, "cfg", "cfg_high", "CFG", 1.0)
     g.expose_in(3, "cfg", "cfg_low", "CFG", 1.0)
     g.expose_in(2, "noise_seed", "seed", "种子", 111111111111111)
-    g.expose_out(5, "VIDEO", "video")
+    g.expose_out(4, "IMAGE", "frames", "帧")
 
 
 # ------------------------------------------------------------ 视频：文生视频
@@ -826,24 +827,19 @@ def sg_t2v(g):
     g.add(5, "VAEDecode", (1680, 80), (240, 80),
           inputs=[("samples", "LATENT"), ("vae", "VAE")],
           outputs=[("IMAGE", "IMAGE")])
-    g.add(6, "CreateVideo", (1960, 80), (300, 110), [16, "auto", "sRGB"],
-          inputs=[("images", "IMAGE"), ("audio", "AUDIO")],
-          outputs=[("VIDEO", "VIDEO")],
-          wconvert=[("fps", "FLOAT", "帧率")])
     g.connect(1, 0, 2, 0)
     g.connect(2, 0, 4, 0)
     g.connect(3, 0, 4, 3)
     g.connect(4, 0, 5, 0)
     g.connect(1, 2, 5, 1)
-    g.connect(5, 0, 6, 0)
+    # 同上：封装成视频搬到顶层，这里只给帧
     g.expose_in(4, "positive", "positive")
     g.expose_in(4, "negative", "negative")
     g.expose_in(3, "width", "width", "宽", 640)
     g.expose_in(3, "height", "height", "高", 640)
     g.expose_in(3, "length", "length", "帧数", 81)
-    g.expose_in(6, "fps", "fps", "帧率", 16)
     g.expose_in(4, "seed", "seed", "种子", SEED_VIDEO)
-    g.expose_out(6, "VIDEO", "video")
+    g.expose_out(5, "IMAGE", "frames", "帧")
 
 
 # ------------------------------------------------------------- subgraph ids
@@ -856,6 +852,75 @@ SG_UPSCALE = "0b7a1c10-0001-4a01-9c01-000000000006"
 SG_I2V = "0b7a1c10-0001-4a01-9c01-000000000007"
 SG_FLF2V = "0b7a1c10-0001-4a01-9c01-000000000008"
 SG_T2V = "0b7a1c10-0001-4a01-9c01-000000000009"
+SG_VIDEO_UPSCALE = "0b7a1c10-0001-4a01-9c01-00000000000a"
+SG_VFI = "0b7a1c10-0001-4a01-9c01-00000000000b"
+
+
+# ------------------------------------------------- 模块：视频高清化（逐帧放大）
+def sg_video_upscale(g):
+    """帧序列 → 4x 放大模型 → 缩到目标倍数。
+
+    纯像素操作，不做扩散采样，所以不会像图像高清链那样把颜色带偏，
+    也就不需要色彩回正那一步。
+    「目标倍数」是相对原始尺寸说的：4x 模型配 2 倍目标，缩回系数 = 2 ÷ 4 = 0.5。
+    """
+    g.add(1, "UpscaleModelLoader", (80, 80), (430, 70), [M_UPSCALE],
+          title="放大模型（4x）", outputs=[("UPSCALE_MODEL", "UPSCALE_MODEL")])
+    # 用 whiterabbit 的高级版而不是核心那版：多了 max_batch_size / tile_size
+    # 两个保命参数 —— 81 帧一次过放大必定炸显存，所以按批 + 分块走。
+    g.add(2, "UpscaleWithModelAdvanced", (560, 80), (360, 240),
+          [VID_UPSCALE_BATCH, VID_UPSCALE_TILE, False, "fp32"],
+          title="逐帧放大（分批 / 分块）",
+          inputs=[("upscale_model", "UPSCALE_MODEL"), ("image", "IMAGE")],
+          outputs=[("IMAGE", "IMAGE")],
+          wconvert=[("max_batch_size", "INT", "每批帧数"),
+                    ("tile_size", "INT", "分块大小（0=自动）")])
+    g.add(3, "CM_FloatBinaryOperation JK", (980, 100), (330, 150),
+          ["Div", 2.0, 4.0], title="缩放系数 = 目标倍数 ÷ 模型倍率",
+          outputs=[("FLOAT", "FLOAT")],
+          wconvert=[("a", "FLOAT", "目标倍数"), ("b", "FLOAT", "模型倍率")])
+    g.add(4, "ImageScaleBy", (1370, 80), (340, 160), ["lanczos", 0.5],
+          title="缩到目标尺寸",
+          inputs=[("image", "IMAGE")], outputs=[("IMAGE", "IMAGE")],
+          wconvert=[("scale_by", "FLOAT", "缩放系数")])
+    g.connect(1, 0, 2, 0)
+    g.connect(2, 0, 4, 0)
+    g.connect(3, 0, 4, 1)
+    g.expose_in(2, "image", "frames", "帧")
+    g.expose_in(3, "a", "factor", "目标倍数", 2.0)
+    g.expose_in(3, "b", "base", "放大模型倍率", 4.0)
+    g.expose_in(2, "max_batch_size", "batch", "每批帧数", VID_UPSCALE_BATCH)
+    g.expose_in(2, "tile_size", "tile", "分块大小（0=自动）", VID_UPSCALE_TILE)
+    g.expose_out(4, "IMAGE", "frames", "帧")
+
+
+# ------------------------------------------------------ 模块：视频补帧（RIFE）
+def sg_vfi(g):
+    """帧序列 → RIFE 插帧，同时把帧率一起乘上去。
+
+    补帧只加中间帧、不改总时长：16fps × 2 → 32fps，回放速度不变。
+    fps 的乘法就放在这个子图里，所以模块一关，fps 原样透传（不会变速）。
+    """
+    g.add(1, "RIFE_VFI_Opt", (80, 80), (400, 300),
+          [M_RIFE, 2, 1.0, True, 10], title="RIFE 插帧",
+          inputs=[("frames", "IMAGE")], outputs=[("IMAGE", "IMAGE")],
+          wconvert=[("multiplier", "INT", "补帧倍数")])
+    g.add(2, "CM_FloatBinaryOperation JK", (560, 80), (330, 150),
+          ["Mul", 16.0, 2.0], title="帧率 × 倍数（播放速度才不变）",
+          outputs=[("FLOAT", "FLOAT")],
+          wconvert=[("a", "FLOAT", "帧率"), ("b", "FLOAT", "倍数")])
+    g.add(3, "CM_FloatToInt JK", (560, 300), (330, 90), [2],
+          title="倍数 → 整数（RIFE 只吃整数）",
+          outputs=[("INT", "INT")], wconvert=[("a", "FLOAT", "倍数")])
+    g.connect(3, 0, 1, 1)
+    # 输出顺序定死：输出[0]=帧(IMAGE) 对齐 输入[0]=帧，输出[1]=帧率(FLOAT)
+    # 对齐 输入[1]=帧率 —— 这样面板关掉这个模块时，旁路透传不会串味。
+    g.expose_in(1, "frames", "frames", "帧")
+    g.expose_in(2, "a", "fps", "帧率", 16.0)
+    g.expose_in_many([(2, "b"), (3, "a")], "multiplier", "补帧倍数", 2.0)
+    g.expose_out(1, "IMAGE", "frames", "帧")
+    g.expose_out(2, "FLOAT", "fps", "帧率")
+
 
 SUBGRAPH_SPECS = [
     (SG_T2I, "文生图", sg_t2i, "文生图（采样 + 解码）"),
@@ -871,6 +936,10 @@ SUBGRAPH_SPECS = [
     (SG_FLF2V, "首尾帧 FLF2V", lambda g: _sg_wan_video(g, True),
      "Wan2.2 首尾帧过渡：high/low 双模型 4 步加速"),
     (SG_T2V, "文生视频 T2V", sg_t2v, "Wan 合并模型单次采样"),
+    (SG_VIDEO_UPSCALE, "视频高清化", sg_video_upscale,
+     "逐帧 4x 放大 → 缩到目标倍数（纯像素操作，不采样、不偏色）"),
+    (SG_VFI, "视频补帧", sg_vfi,
+     "RIFE 插帧：补中间帧，帧率同步 ×倍数，回放速度不变"),
 ]
 
 CUSTOM_TYPES = {
@@ -881,6 +950,8 @@ CUSTOM_TYPES = {
     "CR Clip Input Switch", "CR VAE Input Switch",
     "CR Text Input Switch JK",
     "YogurtStringConcat",
+    "RIFE_VFI_Opt", "UpscaleWithModelAdvanced",
+    "CM_FloatBinaryOperation JK", "CM_FloatToInt JK",
 }
 
 
@@ -1126,7 +1197,8 @@ HELP = """## ComfyUI 总控台 v6
 - **模型**：下拉即换 checkpoint，Illustrious / ANIMA 都在这里切；
   选到 ANIMA 会自动变成 30 步 / CFG 4.5 / 不走 CLIP 取层 / 姿势换成 LLLite，
   并把 CLIP、VAE 切到 ANIMA 专用那两路（Qwen3-0.6B 文本编码器 + Wan 2.1 VAE）
-- **模块**：姿势 / 脸手眼矫正 / 高清化，随时开关。姿势开关按当前模型族自动选 SDXL 或 ANIMA 那套
+- **模块**：图像那边是 姿势 / 脸手眼矫正 / 高清化；视频那边是 视频高清化 / 视频补帧，
+  切到哪条管线就显示哪几个，随时开关。姿势开关按当前模型族自动选 SDXL 或 ANIMA 那套
 
 面板右上角有四个页签，点开才展开，不占地方：
 
@@ -1171,6 +1243,14 @@ HELP = """## ComfyUI 总控台 v6
     分块默认**自动跟着分辨率走**（精修尺寸的长边切 2 块，对齐 64、限 1024~1536），
     取消「自动」就能自己钉一个固定值
   - **视频参数**：宽 / 高 / 帧数 / 帧率 / 步数 / CFG / 种子 + 🎲 随机
+  - **视频补帧参数**（补帧模块开着才有）：`补帧倍数`——2 = 相邻两帧之间插 1 帧
+    （帧数 ×2、帧率也 ×2，**播放速度不变**）；4 = 插 3 帧。16fps 的 81 帧 →×2 变 161 帧 / 32fps。
+    底下那行只读提示会算出补完的帧数 / 帧率。源素材本身糊的地方补完还是糊，常规 2 倍就够
+  - **视频高清参数**（视频高清化模块开着才有）：`目标倍数`是**相对原始尺寸**说的，
+    填 2 就是 640×640 → 1280×1280；`放大模型倍率`跟磁盘上那个放大模型对齐（4xUltrasharp 就是 4），
+    换 2x 模型时改成 2，缩放系数会自动按「目标 ÷ 模型倍率」重算；`每批帧数`是显存保险丝
+    （一次放大太多帧会炸，默认 4）；`分块大小`填 0 = 自动，显存不够就填 256 / 384 往下压。
+    整条链是「先整帧放大、再缩到目标尺寸」，中间那层大图很吃内存，嫌慢就把目标倍数降到 1.5
   - **🎲 随机（默认开）**：开着每张图 / 每段视频都是新种子；关掉就按下面那个数字出，方便微调。
     这个开关是「这次打开页面」的事，刷新后回到默认开，不记进浏览器里
   - 旁边那个 **🎲 按钮**是「只随机这一次」，点一下换个种子，不动上面的开关
@@ -1191,6 +1271,7 @@ HELP = """## ComfyUI 总控台 v6
 [文生图]  文生图 → 姿势 → 脸手眼矫正 → 高清化 → output/refined_*
 [图生图]  取图 → 图生图精修 → 脸手眼矫正 → 高清化 → output/refine_*
 [视频]    视频提示词 → 视频地基（UNET high/low + LoRA 组）→ I2V / FLF2V / T2V
+              → 视频高清化 → 视频补帧 → 封装 → output/video/total_*
 ```
 
 - 文生图和图生图**共用**模型槽、提示词、LoRA 组
@@ -1199,6 +1280,9 @@ HELP = """## ComfyUI 总控台 v6
 - 取图节点在画布上是可见的：图生图用 `output/` 里的图，I2V 也用 `output/`，刷新列表即可选到上一轮出的图
 - 管线切换是「静音其它 Save 节点」，不会白跑别的管线
 - 模块关掉靠旁路透传，不会断线也不会报错
+- 视频后处理（高清化 / 补帧）在三条视频管线上各挂了一份，默认关着；
+  链子顺序是 **视频高清化 → 视频补帧**（先放大再补帧：同样一遍 4x 放大，
+  81 帧比补完的 161 帧省一半时间和显存），两个都关掉就直接输出原始帧
 
 ### 其它
 
@@ -1460,6 +1544,17 @@ def build():
         (426, "PrimitiveFloat", "视频 CFG", "video_cfg", 1.0, (1800, 7120)),
         (427, "PrimitiveInt", "视频种子", "video_seed", SEED_VIDEO,
          (2140, 7120)),
+        # 视频后处理（v6.6）：高清化 → 补帧。默认都旁路，面板上点开才跑。
+        (481, "PrimitiveFloat", "补帧 · 倍数", "vfi_multiplier", 2.0,
+         (100, 7240)),
+        (482, "PrimitiveFloat", "视频高清 · 目标倍数（相对原尺寸）",
+         "video_upscale_factor", 2.0, (440, 7240)),
+        (483, "PrimitiveFloat", "视频高清 · 放大模型倍率（换模型才要改）",
+         "video_upscale_base", 4.0, (780, 7240)),
+        (484, "PrimitiveInt", "视频高清 · 每批帧数（0 = 不限制）",
+         "video_upscale_batch", VID_UPSCALE_BATCH, (1120, 7240)),
+        (485, "PrimitiveInt", "视频高清 · 分块大小（0 = 自动）",
+         "video_upscale_tile", VID_UPSCALE_TILE, (1460, 7240)),
     ]
     for nid, ntype, title, key, val, pos in vid_params:
         if ntype == "PrimitiveInt":
@@ -1471,24 +1566,33 @@ def build():
                         "INT" if ntype == "PrimitiveInt" else "FLOAT")],
               props=props_for(ntype, "param", key))
 
-    inst(SG_I2V, 431, (100, 7340), (550, 470), "图生视频 I2V",
-         role="pipeline", key="i2v")
-    r.add(432, "SaveVideo", (700, 7340), (340, 160),
-          ["video/total_i2v", "auto", "auto", "auto"], title="出视频 i2v",
-          inputs=[("video", "VIDEO")], outputs=[("VIDEO", "VIDEO")],
-          mode=2, props=props_for("SaveVideo", "save", "i2v"))
-    inst(SG_FLF2V, 441, (1100, 7340), (590, 520), "首尾帧过渡 FLF2V",
-         role="pipeline", key="flf2v")
-    r.add(442, "SaveVideo", (1740, 7340), (340, 160),
-          ["video/total_flf2v", "auto", "auto", "auto"], title="出视频 flf2v",
-          inputs=[("video", "VIDEO")], outputs=[("VIDEO", "VIDEO")],
-          mode=2, props=props_for("SaveVideo", "save", "flf2v"))
-    inst(SG_T2V, 451, (2140, 7340), (550, 470), "文生视频 T2V",
-         role="pipeline", key="t2v")
-    r.add(452, "SaveVideo", (2740, 7340), (340, 160),
-          ["video/total_t2v", "auto", "auto", "auto"], title="出视频 t2v",
-          inputs=[("video", "VIDEO")], outputs=[("VIDEO", "VIDEO")],
-          mode=2, props=props_for("SaveVideo", "save", "t2v"))
+    # 三条视频管线各挂一套后处理：视频高清化 → 视频补帧 → 封装 → 存盘。
+    # 一行一条管线，互不干扰；两个模块默认旁路（mode=4），要用就在面板上点开。
+    vid_rows = [
+        (SG_I2V, 431, 492, 491, 497, 432, "i2v", 7340, 550,
+         "图生视频 I2V", "video/total_i2v", "出视频 i2v"),
+        (SG_FLF2V, 441, 494, 493, 498, 442, "flf2v", 7900, 590,
+         "首尾帧过渡 FLF2V", "video/total_flf2v", "出视频 flf2v"),
+        (SG_T2V, 451, 496, 495, 499, 452, "t2v", 8460, 550,
+         "文生视频 T2V", "video/total_t2v", "出视频 t2v"),
+    ]
+    for sg_id, pipe_id, up_id, vfi_id, cv_id, save_id, key, y, pw, \
+            ptitle, prefix, stitle in vid_rows:
+        inst(sg_id, pipe_id, (100, y), (pw, 470), ptitle,
+             role="pipeline", key=key)
+        inst(SG_VIDEO_UPSCALE, up_id, (700, y), (400, 260), "视频高清化",
+             role="module", key="vupscale", mode=4)
+        inst(SG_VFI, vfi_id, (1140, y), (360, 240), "视频补帧",
+             role="module", key="vfi", mode=4)
+        r.add(cv_id, "CreateVideo", (1540, y), (300, 110), [16, "auto", "sRGB"],
+              title="封装 " + key.upper(), inputs=[("images", "IMAGE")],
+              outputs=[("VIDEO", "VIDEO")],
+              wconvert=[("fps", "FLOAT", "帧率")],
+              props=props_for("CreateVideo"))
+        r.add(save_id, "SaveVideo", (1880, y), (340, 160),
+              [prefix, "auto", "auto", "auto"], title=stitle,
+              inputs=[("video", "VIDEO")], outputs=[("VIDEO", "VIDEO")],
+              mode=2, props=props_for("SaveVideo", "save", key))
 
     r.add(901, "MarkdownNote", (5200, 120), (680, 1000), [HELP],
           props={})
@@ -1512,7 +1616,9 @@ def build():
          [401, 402, 403, 404, 405, 406, 407, 408, 409, 410, 411, 412,
           461, 462, 463, 464, 465, 466, 467, 468,
           413, 414, 415, 421, 422, 423, 424, 425, 426, 427,
-          431, 432, 441, 442, 451, 452]),
+          481, 482, 483, 484, 485,
+          431, 432, 441, 442, 451, 452,
+          491, 492, 493, 494, 495, 496, 497, 498, 499]),
         (5, "A2 ANIMA 文本编码器 / VAE（跟随模型族自动切）", "#8b5ea8",
          [106, 107, 110, 111, 112, 113]),
     ]
@@ -1641,7 +1747,6 @@ def wire_root(r):
         C(421, 0, dst, "width")
         C(422, 0, dst, "height")
         C(423, 0, dst, "length")
-        C(424, 0, dst, "fps")
         C(425, 0, dst, "steps_high")
         C(425, 0, dst, "steps_low")
         C(426, 0, dst, "cfg_high")
@@ -1652,14 +1757,29 @@ def wire_root(r):
     C(421, 0, 451, "width")
     C(422, 0, 451, "height")
     C(423, 0, 451, "length")
-    C(424, 0, 451, "fps")
     C(427, 0, 451, "seed")
     C(413, 0, 431, "start_image")
     C(414, 0, 441, "start_image")
     C(415, 0, 441, "end_image")
-    C(431, 0, 432, "video")
-    C(441, 0, 442, "video")
-    C(451, 0, 452, "video")
+
+    # 视频后处理链：管线 → 视频高清化 → 视频补帧 → 封装 → 存盘。
+    # 高清放在补帧前面：同样一遍 4x 放大，81 帧比补完的 161 帧省一半时间和显存。
+    # 帧率只在补帧那一步乘（模块关掉就原样透传），所以回放速度永远对得上。
+    for pipe_id, up_id, vfi_id, cv_id, save_id in (
+            (431, 492, 491, 497, 432),
+            (441, 494, 493, 498, 442),
+            (451, 496, 495, 499, 452)):
+        C(pipe_id, 0, up_id, "frames")
+        C(up_id, 0, vfi_id, "frames")
+        C(424, 0, vfi_id, "fps")
+        C(481, 0, vfi_id, "multiplier")
+        C(vfi_id, 0, cv_id, "images")
+        C(vfi_id, 1, cv_id, "fps")
+        C(cv_id, 0, save_id, "video")
+        C(482, 0, up_id, "factor")
+        C(483, 0, up_id, "base")
+        C(484, 0, up_id, "batch")
+        C(485, 0, up_id, "tile")
 
 
 WIDGET_CARRY = {
@@ -1671,6 +1791,7 @@ WIDGET_CARRY = {
     # 301 / 413 是 LoadImageOutput：第 0 格是文件名，第 1 格 control_after_refresh
     301: [0], 413: [0],
     421: [0], 422: [0], 423: [0], 424: [0], 425: [0], 426: [0], 427: [0],
+    481: [0], 482: [0], 483: [0], 484: [0], 485: [0],
 }
 LORA_CARRY = [102, 408, 409]
 PROMPT_CARRY = [104, 105, 401, 402]

@@ -10,7 +10,8 @@
    → 图生视频 / 首尾帧 / 文生视频（Wan 2.2）
 ```
 
-每条管线上都能挂三个模块（**姿势 / 脸手眼矫正 / 高清化**），随时开关；
+图像管线能挂三个模块（**姿势 / 脸手眼矫正 / 高清化**），视频管线能挂两个
+（**视频高清化 / 视频补帧**），随时开关；
 提示词、LoRA、参数全部收在一个**可拖动、可缩放、可弹出成独立窗口**的浮动面板上。
 
 - 不联网、不下载权重、不调用任何外部 API
@@ -33,9 +34,11 @@
 | `ColorMatch` | comfyui-kjnodes |
 | `CR Upscale Image` / `CR Clip Input Switch` / `CR VAE Input Switch` | ComfyUI_Comfyroll_CustomNodes |
 | `CR Text Input Switch JK` | ComfyUI-JakeUpgrade |
+| `CM_FloatBinaryOperation JK` / `CM_FloatToInt JK` | ComfyUI-JakeUpgrade |
 | `UltimateSDUpscaleNoUpscale` | ComfyUI_UltimateSDUpscale |
 | `YogurtStringConcat` | yogurtnodes |
 | `OpenposePreprocessor` | comfyui_controlnet_aux |
+| `RIFE_VFI_Opt` / `UpscaleWithModelAdvanced` | comfyui-WhiteRabbit（`https://github.com/Artificial-Sweetener/comfyui-WhiteRabbit`） |
 
 > 不知道缺哪个？打开蓝图时**面板顶上会有一条黄条**，点一下复制缺件清单，
 > 再到 ComfyUI Manager → `Install Missing Custom Nodes` 一键装齐。
@@ -53,7 +56,8 @@
 | ANIMA 文本编码器 | `models/text_encoders/` | `qwen_3_06b_base.safetensors` |
 | 姿势控制（SDXL） | `models/controlnet/` | `diffusion_pytorch_model_promax.safetensors`（ControlNet Union SDXL 1.0 Promax） |
 | 姿势控制（ANIMA） | `models/model_patches/` | `anima-lllite-pose-1.safetensors` |
-| 放大模型 | `models/upscale_models/` | `4xUltrasharp_4xUltrasharpV10.pt` |
+| 放大模型（图像高清化 + 视频高清化共用） | `models/upscale_models/` | `4xUltrasharp_4xUltrasharpV10.pt` |
+| 补帧权重（RIFE） | `custom_nodes/comfyui-frame-interpolation/ckpts/rife/` | `rife47.pth`（约 21 MB，装 WhiteRabbit 时缺了自己会去 GitHub release 拉那份） |
 | 视频主模型（Wan 2.2 I2V） | `models/diffusion_models/` | `wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors` + `wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors` |
 | 视频加速 LoRA | `models/loras/` | `wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors` + `..._low_noise.safetensors` |
 | 视频文本编码器 | `models/text_encoders/` | `umt5_xxl_fp8_e4m3fn_scaled.safetensors` |
@@ -92,7 +96,7 @@ ComfyUI Manager → `Install via Git URL` → 填
 |---|---|
 | 顶栏 5 个管线按钮 | 文生图 / 图生图精修 / 图生视频 / 首尾帧 / 文生视频。只让选中的那条 Save 出图，其它静音不白跑 |
 | 模型下拉 | 覆盖 Illustrious / ANIMA / 其它 ckpt。切到名字含 `anima` 的模型会自动套 30 步 / CFG 4.5 / 不取层 / 姿势换 LLLite |
-| 模块按钮 ×3 | 姿势 / 脸手眼矫正 / 高清化。内部走子图旁路，关掉不断链、不报错 |
+| 模块按钮 ×5 | 图像管线显示 姿势 / 脸手眼矫正 / 高清化，视频管线显示 视频高清化 / 视频补帧。内部走子图旁路，关掉不断链、不报错 |
 | 脸手眼矫正 · 三级开关 | 参数页最上面那排勾：**脸 / 手 / 眼** 单独开关（关掉的那级走旁路，不检测不重绘）。手（hand_yolov8s）和眼（Eyes.pt）在多人交叠 / 复杂花纹上容易误检，误检一小块再重画就是「凭空长出多余的肢体 / 一片假眼」，遇到怪图先关这两个。旁边「SAM 轮廓遮罩」用 `models/sams/` 的 SAM 把检测框细化成贴合人物轮廓的遮罩（取消就回矩形遮罩） |
 | 脸手眼矫正 · 尺寸 | 检测框放大尺寸（默认 512，Impact 默认值）/ 放大上限（1024）/ 裁剪倍率（2.5）。填 1024 会把 400px 的脸放大 2.5 倍再采样，模型在裁剪区里画「整张脸 + 头发 + 肩膀」，缩回去贴回原处 —— 看起来就是「脸被贴上去」，所以别往大调 |
 | `⟳ 取图` / `↻ 同步` | 把最后产出的图传给下游（文生图 → 图生图 / 图生视频 / 首尾帧） |
@@ -101,14 +105,46 @@ ComfyUI Manager → `Install via Git URL` → 填
 | `📌` | 在「浮动窗」和「钉回窗口顶部通栏」之间切换 |
 | 提示词页 | 正向 8 段可拼接，每段「手填 / 插件输入」二选一，`⌖` 跳到那一段去连线；负向就是一个整框 |
 | LoRA 页 | 图像一份（文生图 + 图生图共用），视频 high / low 各一份；行数跟画布节点走，显示触发词与未启用提醒 |
-| 参数页 | 按模块分区（生成 / 姿势 / 脸手眼矫正 / 高清 / 视频），**模块开着才显示**；鼠标悬停有说明；`↺ 重置默认值` 一键回默认 |
+| 参数页 | 按模块分区（生成 / 姿势 / 脸手眼矫正 / 高清 / 视频生成 / 视频补帧 / 视频高清），**模块开着才显示**；鼠标悬停有说明；`↺ 重置默认值` 一键回默认 |
 | 分辨率下拉 | 每个模型族的「★ 推荐」= 训练分辨率（SDXL / Illustrious / ANIMA 1024×1024、SD1.5 512×512），另收 SDXL 官方训练桶与主流 16:9 / 9:16；`⇄` 一键横竖互换，选「自定义」就手填宽高 |
 | 采样器 / 调度器下拉 | 值直接从 KSampler 定义里拉（装了什么就有什么）；图像一套写文生图 + 图生图，视频一套写 I2V / 首尾帧 / T2V，各改各的、互不串味 |
 | 说明页 | 每个模块的原理、参数怎么调、以及生成 / 更新蓝图按钮 |
 
 ---
 
-## 五、生成 / 更新蓝图
+## 五、视频后处理：高清化 → 补帧
+
+三条视频管线（图生视频 / 首尾帧 / 文生视频）在采样结束之后各挂了一行后处理，
+都是子图模块，**默认关着**，面板上点一下就开：
+
+```
+采样出帧 → [视频高清化] → [视频补帧] → 合成视频 → 保存
+```
+
+顺序是写死的：**先放大再补帧**。反过来的话补出来的帧也要一起过 4 倍放大，
+时间差不多翻倍、显存也顶不住。
+
+| 模块 | 面板参数 | 说明 |
+|---|---|---|
+| 视频高清化 | 目标倍数（默认 2）、放大模型倍率（默认 4）、每批帧数（默认 4）、分块大小（0=自动） | 逐帧用放大模型（和图像高清化共用 `4xUltrasharp`）放大，再按 `目标倍数 ÷ 放大模型倍率` 缩回。纯像素操作，**不做扩散采样**，所以不会像图像高清化那样把画面重构掉，也不吃 CFG |
+| 视频补帧 | 补帧倍数（默认 2） | RIFE 在相邻两帧之间插帧（`rife47.pth`）。2 倍 = 每两帧插 1 帧，帧数和帧率一起翻倍，**播放速度和时长都不变**（16fps 81 帧 → 32fps 161 帧） |
+
+几个容易踩的点：
+
+- 「目标倍数」跟图像那套一样是**填几就是几倍**：填 2 就是 640×640 → 1280×1280。
+  面板上「视频高清参数 → 输出尺寸」会直接报出最终尺寸和实际缩回系数。
+- 高清化只补像素不补细节。源素材本身就糊的地方，放大完还是糊——
+  真要清晰得从采样那头加步数 / 降分辨率压力。
+- 补帧同理：源素材抖动、糊帧的地方，插出来的中间帧只会把抖动抹成拖影。
+  常规 2 倍就够，`≥4` 面板会给橙字提醒。
+- **显存不够**（OOM / 卡在放大那段）：先把「每批帧数」从 4 降到 2 或 1，
+  再不行把「分块大小」从 0 改成 512 / 256。慢一点但不会炸。
+- 补帧后帧率由面板自动写进合成节点，不用手动改；`视频生成参数 → 帧率`
+  只管采样的帧率。
+
+---
+
+## 六、生成 / 更新蓝图
 
 三种入口，效果一样（写盘前都会先备份旧版）：
 
@@ -127,7 +163,7 @@ python tools/gen_dashboard.py --out D:\somewhere\wf.json
 
 ---
 
-## 六、常见问题
+## 七、常见问题
 
 **面板没出现？**
 确认 `custom_nodes/cc_dashboard/web/dock.js` 在，然后 `Ctrl+Shift+R`。面板只认带
@@ -179,9 +215,18 @@ python tools/gen_dashboard.py --out D:\somewhere\wf.json
 **每次出图种子都一样？**
 参数页「种子」右边的 `🎲 随机` 默认是开的；关掉它就按输入框里的数字慢慢调。
 
+**补帧 / 视频高清化按钮点了没反应？**
+这两个模块只属于视频管线：切到「图生视频 / 首尾帧 / 文生视频」才会出现。
+在图像管线（文生图 / 图生图）下面它们是不显示的。
+
+**补帧要另外下模型吗？**
+不要。RIFE 的 `rife47.pth` 是 `comfyui-frame-interpolation` 自带的，
+已经在 `custom_nodes/comfyui-frame-interpolation/ckpts/rife/` 里（21 MB）。
+视频高清化复用的是图像那套 `models/upscale_models/` 放大模型，不用额外下东西。
+
 ---
 
-## 七、目录结构 / 维护脚本
+## 八、目录结构 / 维护脚本
 
 ```
 cc_dashboard/
@@ -214,6 +259,6 @@ node   tools/t_dock.mjs
 
 ---
 
-## 八、许可
+## 九、许可
 
 MIT，见 [LICENSE](LICENSE)。

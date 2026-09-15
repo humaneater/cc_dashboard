@@ -3,13 +3,15 @@
 
 不需要启动 ComfyUI。用于验证 00_总控台.json 在各场景下的执行集合：
   默认文生图 / 文生图全模块 / 切 ANIMA / 图生图 / I2V / FLF2V / T2V /
-  图生图+视频 / LoRA 行开关 / 模块旁路
+  视频后处理（视频高清化 → 视频补帧）/ 图生图+视频 / LoRA 行开关 / 模块旁路 /
+  面板默认值（重置默认值写回画布的那一套）
 
 运行： python tools/t_sim.py
 """
 import copy
 import json
 import os
+import re
 import sys
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -23,6 +25,9 @@ WF_PATH = paths.workflow_path()
 OI_PATH = paths.object_info_path()
 
 WIDGET_TYPES = {"INT", "FLOAT", "STRING", "BOOLEAN"}
+
+# 面板上所有模块开关（图像三个 + 视频后处理两个）。每个场景都从「全关」起步。
+MOD_KEYS = ("pose_sdxl", "pose_anima", "detailer", "upscale", "vfi", "vupscale")
 
 PROBLEMS = []
 
@@ -430,8 +435,14 @@ def main():
     # 画布文件里存着上次用的状态（停在图生图 / 开着某个模块），
     # 下面每条场景都从「文生图 + 模块全关」这个干净基线出发
     pick_pipeline(wf, "t2i")
-    for _k in ("pose_sdxl", "pose_anima", "detailer", "upscale"):
+    for _k in MOD_KEYS:
         set_module(wf, _k, False)
+
+    def modules_all_off(w):
+        for k2 in MOD_KEYS:
+            set_module(w, k2, False)
+        return w
+
     bad = 0
     print("=" * 66)
 
@@ -441,7 +452,7 @@ def main():
     w0 = copy.deepcopy(wf)
     apply_model_preset(w0, oi, "waiIllustriousSDXL_v170.safetensors")
     pick_pipeline(w0, "t2i")
-    for key in ("pose_sdxl", "pose_anima", "detailer", "upscale"):
+    for key in MOD_KEYS:
         set_module(w0, key, False)
     p, ok = sim(w0, oi, "默认文生图")
     bad += not ok
@@ -608,6 +619,162 @@ def main():
         print("      ! T2V 不该用分离式 UNET")
         bad += 1
 
+    # 7b 视频后处理（v6.6）：视频高清化 → 视频补帧 → 封装 → 存盘
+    # 全关时：两张后处理节点一个都不该跑，帧 / 帧率原样透传到封装步
+    w7b = modules_all_off(copy.deepcopy(wf))
+    pick_pipeline(w7b, "i2v")
+    p_off, ok = sim(w7b, oi, "I2V · 后处理全关")
+    bad += not ok
+    for c in ("RIFE_VFI_Opt", "UpscaleWithModelAdvanced", "ImageScaleBy",
+              "UpscaleModelLoader", "CM_FloatToInt JK"):
+        if count(p_off, c):
+            print("      ! 后处理关着时不该跑 %s（实际 %d 个）"
+                  % (c, count(p_off, c)))
+            bad += 1
+    if count(p_off, "CreateVideo") != 1 or count(p_off, "SaveVideo") != 1:
+        print("      ! 后处理关着时也该有 1 个封装 + 1 个存盘，实际 %d / %d"
+              % (count(p_off, "CreateVideo"), count(p_off, "SaveVideo")))
+        bad += 1
+    else:
+        cv = entry_of(p_off, "CreateVideo")[1]
+        if cv["inputs"].get("images") != ["431:4", 0]:
+            print("      ! 旁路时封装该直接吃管线解出来的帧，实际 %s"
+                  % cv["inputs"].get("images"))
+            bad += 1
+        if cv["inputs"].get("fps") != ["424", 0]:
+            print("      ! 旁路时帧率该原样透传参数 424，实际 %s"
+                  % cv["inputs"].get("fps"))
+            bad += 1
+
+    # 7c 两个模块全开：高清（逐帧放大 + 缩回目标）→ 补帧（插帧 + 帧率×倍数）
+    w7c = modules_all_off(copy.deepcopy(wf))
+    pick_pipeline(w7c, "i2v")
+    set_module(w7c, "vupscale", True)
+    set_module(w7c, "vfi", True)
+    p_on, ok = sim(w7c, oi, "I2V + 视频高清化 + 视频补帧")
+    bad += not ok
+    for c in ("UpscaleModelLoader", "UpscaleWithModelAdvanced", "ImageScaleBy",
+              "RIFE_VFI_Opt", "CM_FloatBinaryOperation JK", "CM_FloatToInt JK",
+              "CreateVideo", "SaveVideo"):
+        if count(p_on, c) == 0:
+            print("      ! 缺 %s" % c)
+            bad += 1
+    if count(p_on, "RIFE_VFI_Opt") != 1 or count(p_on, "UpscaleWithModelAdvanced") != 1:
+        print("      ! 只该跑 1 套后处理，实际 RIFE=%d 放大=%d"
+              % (count(p_on, "RIFE_VFI_Opt"),
+                 count(p_on, "UpscaleWithModelAdvanced")))
+        bad += 1
+    # 高清链：帧 → 逐帧放大 → 缩到目标（系数 = 目标倍数 ÷ 模型倍率）
+    up = p_on.get("492:2")
+    if not up or up["class_type"] != "UpscaleWithModelAdvanced":
+        print("      ! 找不到视频放大节点")
+        bad += 1
+    else:
+        ui = up["inputs"]
+        if ui.get("image") != ["431:4", 0]:
+            print("      ! 放大该吃管线解出来的帧，实际 %s" % ui.get("image"))
+            bad += 1
+        for name, pid in (("max_batch_size", 484), ("tile_size", 485)):
+            if ui.get(name) != [str(pid), 0]:
+                print("      ! %s 该接参数节点 %d，实际 %s" % (name, pid, ui.get(name)))
+                bad += 1
+    sc = p_on.get("492:3")
+    if not sc or sc["class_type"] != "CM_FloatBinaryOperation JK":
+        print("      ! 缩放系数该由浮点运算节点算出来")
+        bad += 1
+    else:
+        si = sc["inputs"]
+        if si.get("op") != "Div" or si.get("a") != ["482", 0] \
+                or si.get("b") != ["483", 0]:
+            print("      ! 缩放系数应是「目标倍数(482) ÷ 模型倍率(483)」，实际 %s" % si)
+            bad += 1
+    rs = p_on.get("492:4")
+    if not rs or rs["class_type"] != "ImageScaleBy" \
+            or rs["inputs"].get("scale_by") != ["492:3", 0]:
+        print("      ! 缩到目标尺寸该吃缩放系数节点，实际 %s"
+              % ((rs or {}).get("inputs") or {}).get("scale_by"))
+        bad += 1
+    # 补帧链：吃高清化的输出 → RIFE；倍数经「浮点→整数」转换（RIFE 只吃整数）
+    rf = p_on.get("491:1")
+    if not rf or rf["class_type"] != "RIFE_VFI_Opt":
+        print("      ! 找不到 RIFE 节点")
+        bad += 1
+    else:
+        ri = rf["inputs"]
+        if ri.get("frames") != ["492:4", 0]:
+            print("      ! 补帧该吃高清化出来的帧，实际 %s" % ri.get("frames"))
+            bad += 1
+        if ri.get("multiplier") != ["491:3", 0]:
+            print("      ! 补帧倍数该由 491:3 转成整数，实际 %s" % ri.get("multiplier"))
+            bad += 1
+        if ri.get("ckpt_name") != "rife47.pth":
+            print("      ! RIFE 权重应默认 rife47.pth，实际 %s" % ri.get("ckpt_name"))
+            bad += 1
+    conv = p_on.get("491:3")
+    if not conv or conv["inputs"].get("a") != ["481", 0]:
+        print("      ! 倍数转换节点该吃参数 481，实际 %s"
+              % ((conv or {}).get("inputs") or {}).get("a"))
+        bad += 1
+    # 帧率：× 倍数由浮点乘法算，参数 424 与 481 一起进去；封装吃这个结果
+    mul = p_on.get("491:2")
+    if not mul or mul["class_type"] != "CM_FloatBinaryOperation JK" \
+            or mul["inputs"].get("op") != "Mul" \
+            or mul["inputs"].get("a") != ["424", 0] \
+            or mul["inputs"].get("b") != ["481", 0]:
+        print("      ! 帧率该 = 424（帧率）× 481（倍数），实际 %s"
+              % ((mul or {}).get("inputs") or {}))
+        bad += 1
+    cv_on = entry_of(p_on, "CreateVideo")[1]
+    if cv_on["inputs"].get("images") != ["491:1", 0]:
+        print("      ! 封装该吃补完帧的输出，实际 %s" % cv_on["inputs"].get("images"))
+        bad += 1
+    if cv_on["inputs"].get("fps") != ["491:2", 0]:
+        print("      ! 封装帧率该吃「帧率 × 倍数」，实际 %s"
+              % cv_on["inputs"].get("fps"))
+        bad += 1
+    # 补帧只在链子上下游乘一次，参数节点本身（424）不该被改写
+    if one(w7c, "param", "video_fps")["widgets_values"][0] != 16.0:
+        print("      ! 视频帧率参数不该被补帧改写")
+        bad += 1
+
+    # 7d 只开补帧 / 只开高清化：两条链互不牵连
+    w7d = modules_all_off(copy.deepcopy(wf))
+    pick_pipeline(w7d, "flf2v")
+    set_module(w7d, "vfi", True)
+    p_vfi, ok = sim(w7d, oi, "首尾帧 · 只开补帧")
+    bad += not ok
+    if count(p_vfi, "RIFE_VFI_Opt") != 1 or count(p_vfi, "UpscaleWithModelAdvanced"):
+        print("      ! 只开补帧时该跑 1 个 RIFE、0 个放大，实际 %d / %d"
+              % (count(p_vfi, "RIFE_VFI_Opt"),
+                 count(p_vfi, "UpscaleWithModelAdvanced")))
+        bad += 1
+    if p_vfi.get("493:1", {}).get("inputs", {}).get("frames") != ["441:4", 0]:
+        print("      ! 高清关着时补帧该直接吃管线的帧，实际 %s"
+              % (p_vfi.get("493:1", {}).get("inputs", {}).get("frames")))
+        bad += 1
+    if entry_of(p_vfi, "CreateVideo")[1]["inputs"].get("fps") != ["493:2", 0]:
+        print("      ! 只开补帧时帧率也要走 × 倍数")
+        bad += 1
+    w7e = modules_all_off(copy.deepcopy(wf))
+    pick_pipeline(w7e, "t2v")
+    set_module(w7e, "vupscale", True)
+    p_up, ok = sim(w7e, oi, "文生视频 · 只开视频高清化")
+    bad += not ok
+    if count(p_up, "UpscaleWithModelAdvanced") != 1 or count(p_up, "RIFE_VFI_Opt"):
+        print("      ! 只开高清时该跑 1 个放大、0 个 RIFE，实际 %d / %d"
+              % (count(p_up, "UpscaleWithModelAdvanced"),
+                 count(p_up, "RIFE_VFI_Opt")))
+        bad += 1
+    # 补帧关着 → 帧率不走乘法，直接透传 424（否则视频会变速）
+    if entry_of(p_up, "CreateVideo")[1]["inputs"].get("fps") != ["424", 0]:
+        print("      ! 补帧关着时帧率必须原样透传，实际 %s"
+              % entry_of(p_up, "CreateVideo")[1]["inputs"].get("fps"))
+        bad += 1
+    if entry_of(p_up, "CreateVideo")[1]["inputs"].get("images") != ["496:4", 0]:
+        print("      ! 高清开着时封装该吃放大后的帧，实际 %s"
+              % entry_of(p_up, "CreateVideo")[1]["inputs"].get("images"))
+        bad += 1
+
     # 8 图生图 + 视频 同开
     w8 = copy.deepcopy(wf)
     for n in by_role(w8, "save"):
@@ -667,11 +834,6 @@ def main():
         bad += 1
 
     # 10 模块逐个开关
-    def modules_all_off(w):
-        for k2 in ("pose_sdxl", "pose_anima", "detailer", "upscale"):
-            set_module(w, k2, False)
-        return w
-
     # 基线用「模块全关」，不跟着画布上当前留着哪些模块转
     base = sim(modules_all_off(copy.deepcopy(wf)), oi, "基线（模块全关）")[0]
     for key in ("pose_sdxl", "detailer", "upscale"):
@@ -753,13 +915,20 @@ def main():
                 print("      ! %s 的放大上限 %s 偏大，应 ≤ 1536" % (title, ms))
                 bad += 1
             dn = linked_value(p10b, e, "denoise") if "denoise" in ins else None
-            if isinstance(dn, (int, float)) and float(dn) > 0.55:
-                print("      ! %s 的重绘强度 %s 太高" % (title, dn))
+            # 画布上的值会被结转（用户自己调过），所以只卡「极端值」；
+            # 常规安全区由面板默认值那道检查（见 [13]）负责
+            if isinstance(dn, (int, float)) and float(dn) > 0.80:
+                print("      ! %s 的重绘强度 %s 高到会改内容了（>0.80）" % (title, dn))
                 bad += 1
+            elif isinstance(dn, (int, float)) and float(dn) > 0.55:
+                print("      [提示] %s 的重绘强度 %s 偏高（>0.55 开始会改内容）"
+                      % (title, dn))
             ft = linked_value(p10b, e, "feather") if "feather" in ins else None
-            if isinstance(ft, (int, float)) and float(ft) < 16:
-                print("      ! %s 的羽化 %s 太硬（会出现方块拼接痕），应 ≥ 16" % (title, ft))
+            if isinstance(ft, (int, float)) and float(ft) < 8:
+                print("      ! %s 的羽化 %s 硬到会露出方块拼接痕（<8）" % (title, ft))
                 bad += 1
+            elif isinstance(ft, (int, float)) and float(ft) < 16:
+                print("      [提示] %s 的羽化 %s 偏硬（<16 容易出现方块痕）" % (title, ft))
         if count(p10b, "ColorMatch") != 1:
             print("      ! 脸手眼矫正子图里该有 1 个色彩回正，实际 %d"
                   % count(p10b, "ColorMatch"))
@@ -1150,6 +1319,82 @@ def main():
         print("      ! 视频负面同样该是单框：%r"
               % (vneg.get("class_type") if isinstance(vneg, dict) else vneg))
         bad += 1
+
+    # 13 面板默认值：这才是「出厂配方」，画布上被结转的用户值不在这条线上
+    # （用户自己调过的值上面只给提示，见 10b）。
+    print()
+    print("[13] 面板默认值（重置默认值写回画布的那一套）")
+    dock_path = os.path.join(os.path.dirname(HERE), "web", "dock.js")
+    try:
+        with open(dock_path, encoding="utf-8") as fh:
+            dock = fh.read()
+    except Exception:
+        dock = ""
+    m = re.search(r"const PARAM_DEFAULTS = \{(.*?)\n\};", dock, re.S)
+    if not m:
+        print("      ! 读不到 dock.js 的 PARAM_DEFAULTS")
+        bad += 1
+    else:
+        defs = {k: float(v) for k, v in
+                re.findall(r"(\w+):\s*(-?\d+(?:\.\d+)?)", m.group(1))}
+        # 脸手眼 / 高清 / 视频后处理的安全区（[下限, 上限]）
+        band = [
+            ("detailer_feather", 16, 40, "羽化低于 16 会露方块拼接痕"),
+            ("detailer_denoise_face", 0.10, 0.35, "脸重绘 >0.35 会改长相"),
+            ("detailer_denoise_hand", 0.10, 0.35, "手重绘 >0.35 会重画内容"),
+            ("detailer_denoise_eye", 0.10, 0.30, "眼重绘 >0.30 会糊成一块"),
+            ("detailer_threshold", 0.45, 0.70, "检测阈值"),
+            ("detailer_threshold_eye", 0.55, 0.90, "眼检测阈值"),
+            ("detailer_guide", 384, 768, "检测框放大尺寸 >768 = 脸被贴上去"),
+            ("detailer_max_size", 512, 1536, "放大上限"),
+            ("detailer_crop", 2.0, 3.0, "裁剪倍率 >3 会改到背景"),
+            ("upscale_whole_denoise", 0.05, 0.20, "整体细化强度"),
+            ("upscale_denoise", 0.05, 0.20, "分块精修强度"),
+            ("upscale_seam_fix", 0.15, 0.50, "接缝修复强度"),
+            ("upscale_factor", 1.0, 3.0, "图像高清倍数"),
+            ("pose_strength", 0.50, 1.0, "姿势强度"),
+            ("denoise", 0.30, 0.70, "图生图重绘强度"),
+            ("vfi_multiplier", 1, 4, "补帧倍数（>4 只会更糊更慢）"),
+            ("video_upscale_factor", 1.0, 3.0, "视频高清目标倍数"),
+            ("video_upscale_base", 1.0, 8.0, "放大模型倍率"),
+            ("video_upscale_batch", 1, 64, "每批帧数（0 会有炸显存风险）"),
+            ("video_upscale_tile", 0, 2048, "分块大小（0 = 自动）"),
+            ("video_fps", 8, 60, "视频帧率"),
+            ("video_length", 17, 257, "视频帧数（Wan 要 4n+1）"),
+        ]
+        miss = [k for k, lo, hi, _t in band if k not in defs]
+        if miss:
+            print("      ! 面板默认值缺这些键：%s" % miss)
+            bad += 1
+        bad_default = []
+        for k, lo, hi, tip in band:
+            if k not in defs:
+                continue
+            if not (lo <= defs[k] <= hi):
+                bad_default.append("%s=%s 超出 %s~%s（%s）"
+                                   % (k, defs[k], lo, hi, tip))
+        if bad_default:
+            print("      ! 默认值越界：")
+            for line in bad_default:
+                print("        - %s" % line)
+            bad += 1
+        else:
+            print("      ok   共 %d 项默认值都在安全区（脸手眼 / 高清 / 视频后处理）"
+                  % len(band))
+        # 视频后处理的三件套语义：目标倍数 ÷ 模型倍率 = 缩回系数，
+        # 默认 2 ÷ 4 = 0.5（也就是「填 2 出 2 倍」，不是 4 倍）
+        got = defs.get("video_upscale_factor", 0) / (defs.get("video_upscale_base") or 1)
+        if abs(got - 0.5) > 1e-6:
+            print("      ! 默认「目标 2 倍 ÷ 4x 模型」应缩回 0.5，实际 %s" % got)
+            bad += 1
+        else:
+            print("      ok   默认缩放系数 = 目标 %s ÷ 模型 %s = %s（填几就是几倍）"
+                  % (defs.get("video_upscale_factor"),
+                     defs.get("video_upscale_base"), got))
+        if int(defs.get("vfi_multiplier", 0)) != 2:
+            print("      ! 补帧倍数默认该是 2（每两帧插 1 帧），实际 %s"
+                  % defs.get("vfi_multiplier"))
+            bad += 1
 
     print("=" * 66)
     print("场景矩阵：%s" % ("全部通过" if bad == 0 else "%d 项失败" % bad))
