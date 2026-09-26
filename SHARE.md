@@ -7,6 +7,10 @@
 
 ## 0. 发之前先自检
 
+> **发布节奏（约定）**：改完先跑自检，再让用户在 ComfyUI 里**实测跑通**，
+> 确认没问题之后才 commit / push / 打 tag / 发 Release。
+> 没测过就只留在本地 —— 本地改动本来也不需要联网。
+
 在 `<ComfyUI>/custom_nodes/cc_dashboard/` 目录下跑：
 
 ```bash
@@ -14,9 +18,12 @@ python tools/t_plugin.py        # 版本号一致 / 预置蓝图没落后 / 接�
 python tools/check_dashboard.py # 蓝图结构、旁路端口、面板契约
 python tools/t_sim.py           # 各管线各模块的执行集合
 node   tools/t_dock.mjs         # 面板行为（需要 node，没有就跳过）
+python tools/t_translate.py     # 翻译自检（装了 Opus-MT 才跑；没装可跳过）
+python tools/t_modelinfo.py     # 模型头部探测（架构族 / 训练分辨率 / 缺不缺 TE·VAE）
+python tools/t_lorainfo.py      # LoRA 清单（名字 + 文件时间 + 刷新重扫）
 ```
 
-四条全绿再往外发。`t_plugin.py` 还会提醒你「预置蓝图落后于生成器」——
+全绿再往外发。`t_plugin.py` 还会提醒你「预置蓝图落后于生成器」——
 那说明你改了生成器但没刷新 `blueprint/00_总控台.json`，跑一次下面这条即可：
 
 ```bash
@@ -81,7 +88,7 @@ git push -u origin main --tags
    - `__init__.py` 里的 `__version__`
    - `web/dock.js` 里的 `CC_DASHBOARD_VERSION`
    - `pyproject.toml` 里的 `version`
-3. 跑第 0 节的四条自检
+3. 跑第 0 节的自检（全绿）
 4. 提交并打新 tag：
 
 ```bash
@@ -102,8 +109,17 @@ git tag v1.0.1 && git push && git push --tags
 
 1. **第三方节点包**：见 `README.md` 第一节；最省事的办法是打开蓝图后
    点面板顶上的**黄条**复制缺件清单 → Manager → `Install Missing Custom Nodes`
-2. **模型权重**：见 `README.md` 第二节；文件名不一样没关系，
-   在画布上把下拉换成他们自己的即可
+2. **ANIMA 2.9B 兼容补丁（无节点，黄条检测不到）**：装
+   `ComfyUI-Anima-LoRA-ControlNet-Patch`
+   （`https://github.com/INuBq8/ComfyUI-Anima-LoRA-ControlNet-Patch`）。
+   28 块的 ANIMA LoRA / LLLite 放到 40 块的 2.9B 模型上不会报错，但会静默落到错误的层
+   （表现是「LoRA 完全没生效」）；这个补丁在加载时自动做 28↔40↔52 双向重映射，
+   装完重启一次，控制台会打印 `[Anima LoRA/ControlNet Patch] ... installed`。
+3. **模型权重**：见 `README.md` 第二节；文件名不一样没关系，
+   在画布上把下拉换成他们自己的即可。**外挂的 文本编码器 / VAE 也算权重**：
+   ANIMA 那类裸 DiT 要 `models/text_encoders/qwen_3_06b_base.safetensors` +
+   `models/vae/qwen_image_vae.safetensors`，Wan 2.2 要 `umt5_xxl_...safetensors` +
+   `wan_2.1_vae.safetensors`（面板那一行「外挂资源」会自己认，缺件时自动预填）
 
 ---
 
@@ -123,7 +139,12 @@ git tag v1.0.1 && git push && git push --tags
 
 - **不要提交** `tools/_object_info.json`（那台机器上装了哪些节点，别人没用）、
   备份目录、`dist/`、`__pycache__/`（`.gitignore` 已经挡掉）
-- **不要打包模型权重**：几十 GB，别人自己下
+- **不要打包模型权重**：几十 GB，别人自己下。中→英的可选 Opus-MT 模型
+  （约 300 MB，装在 `<ComfyUI>/models/cc_dashboard/opus-mt-zh-en`）同理**不进 zip**，
+  对方跑一次 `python tools/install_translate.py` 就有（不装就自动用内置词典）
+- 外挂的 **文本编码器 / VAE**（`models/text_encoders/`、`models/vae/` 里那几份，
+  Qwen3-0.6B 1.1 GB、qwen_image_vae 242 MB、umt5 / wan_2.1_vae）同样**不进 zip**，
+  对方按 `README.md` 第二节里的命令行自己下
 - 蓝图里存的是**模型文件名**和提示词，不含绝对路径、不含你的账号信息，可以放心分享；
   但如果你在提示词里写了私人内容，发之前自己扫一眼
 
@@ -133,7 +154,8 @@ git tag v1.0.1 && git push && git push --tags
 
 ```bash
 python tools/t_plugin.py && python tools/check_dashboard.py && python tools/t_sim.py \
-  && node tools/t_dock.mjs && python tools/make_zip.py
+  && node tools/t_dock.mjs && python tools/t_translate.py && python tools/t_modelinfo.py \
+  && python tools/t_lorainfo.py && python tools/make_zip.py
 ```
 
 跑完把 `dist/cc_dashboard-*.zip` 发出去，或者 `git push` —— 对方解压/装完重启就能用。

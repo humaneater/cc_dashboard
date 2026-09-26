@@ -48,7 +48,9 @@ VIDEO_NEG = ("色调艳丽，过曝，静态，细节模糊不清，字幕，风
 M_ILLUSTRIOUS = "waiIllustriousSDXL_v170.safetensors"
 M_ANIMA = "oneObsession_anima29BV1.safetensors"
 M_ANIMA_TE = "qwen_3_06b_base.safetensors"      # ANIMA 文本编码器（Qwen3-0.6B）
-M_ANIMA_VAE = "wan_2.1_vae.safetensors"         # ANIMA 潜空间 = Wan21，16 通道
+# ANIMA 潜空间 = Wan21 那套 16 通道；官方 split_files 里配的是 qwen_image_vae
+# （和 wan_2.1_vae 结构一样、权重不同），裸 DiT 模型用这它最稳
+M_ANIMA_VAE = "qwen_image_vae.safetensors"
 M_WAN_CKPT = "smoothMixWan22I2VT2V_i2vHigh.safetensors"
 M_CN_UNION = "diffusion_pytorch_model_promax.safetensors"
 M_LLLITE = "anima-lllite-pose-1.safetensors"
@@ -57,8 +59,8 @@ M_RIFE = "rife47.pth"            # RIFE 补帧权重（frame-interpolation base 
 
 # 蓝图版本号：面板靠它一眼看出「画布上这份是不是旧蓝图」。
 # 只要改了会影响到出图结果的结构（节点/连线/参数语义），就 +1。
-BLUEPRINT_REV = 4
-BLUEPRINT_TAG = "video-post-vfi-upscale"
+BLUEPRINT_REV = 7
+BLUEPRINT_TAG = "external-te-vae-slots"
 
 # 视频后处理默认值：高清化（逐帧放大）→ 补帧（RIFE）
 VID_UPSCALE_BATCH = 4        # 每批帧数（0 = 一把梭，81 帧很容易炸显存）
@@ -532,6 +534,48 @@ def sg_i2i(g):
     g.expose_out(3, "IMAGE", "image")
 
 
+# -------------------------------------- 图像：图生图（固定分辨率）子图
+def sg_i2i_fit(g):
+    """P 图向的图生图：先把源图缩到面板分辨率（等比 + 中心裁剪），再走
+    VAE 编码 / 重绘 / 解码。输出尺寸永远等于面板上的宽 × 高，不是原图尺寸。"""
+    g.add(1, "ImageScale", (80, 80), (330, 150),
+          ["lanczos", 1216, 832, "center"],
+          title="缩放到固定分辨率（中心裁剪）",
+          inputs=[("image", "IMAGE")],
+          outputs=[("IMAGE", "IMAGE")],
+          wconvert=[("width", "INT", "宽"), ("height", "INT", "高")])
+    g.add(2, "VAEEncode", (500, 80), (240, 80),
+          inputs=[("pixels", "IMAGE"), ("vae", "VAE")],
+          outputs=[("LATENT", "LATENT")])
+    g.add(3, "KSampler", (820, 80), (310, 300),
+          [SEED_IMG, "randomize", 28, 5.5, "dpmpp_2m", "karras", 0.5],
+          title="图生图采样",
+          inputs=[("model", "MODEL"), ("positive", "CONDITIONING"),
+                  ("negative", "CONDITIONING"), ("latent_image", "LATENT")],
+          outputs=[("LATENT", "LATENT")],
+          wconvert=[("seed", "INT", "种子"), ("steps", "INT", "步数"),
+                    ("cfg", "FLOAT", "CFG"), ("denoise", "FLOAT", "重绘强度")])
+    g.add(4, "VAEDecode", (1220, 80), (240, 80),
+          inputs=[("samples", "LATENT"), ("vae", "VAE")],
+          outputs=[("IMAGE", "IMAGE")])
+    g.connect(1, 0, 2, 0)
+    g.connect(2, 0, 3, 3)
+    g.connect(3, 0, 4, 0)
+    g.expose_in(1, "image", "source_image", "源图")
+    g.expose_in(1, "width", "width", "宽", 1216)
+    g.expose_in(1, "height", "height", "高", 832)
+    g.expose_in(2, "vae", "vae_encode")
+    g.expose_in(4, "vae", "vae_decode")
+    g.expose_in(3, "model", "model")
+    g.expose_in(3, "positive", "positive")
+    g.expose_in(3, "negative", "negative")
+    g.expose_in(3, "seed", "seed", "种子", SEED_IMG)
+    g.expose_in(3, "steps", "steps", "步数", 28)
+    g.expose_in(3, "cfg", "cfg", "CFG", 5.5)
+    g.expose_in(3, "denoise", "denoise", "重绘强度", 0.5)
+    g.expose_out(4, "IMAGE", "image")
+
+
 # ------------------------------------------------------- 模块：姿势 · SDXL
 def sg_pose_sdxl(g):
     g.add(1, "ControlNetLoader", (80, 80), (430, 70), [M_CN_UNION],
@@ -854,6 +898,7 @@ SG_FLF2V = "0b7a1c10-0001-4a01-9c01-000000000008"
 SG_T2V = "0b7a1c10-0001-4a01-9c01-000000000009"
 SG_VIDEO_UPSCALE = "0b7a1c10-0001-4a01-9c01-00000000000a"
 SG_VFI = "0b7a1c10-0001-4a01-9c01-00000000000b"
+SG_I2I_FIT = "0b7a1c10-0001-4a01-9c01-00000000000c"
 
 
 # ------------------------------------------------- 模块：视频高清化（逐帧放大）
@@ -925,6 +970,8 @@ def sg_vfi(g):
 SUBGRAPH_SPECS = [
     (SG_T2I, "文生图", sg_t2i, "文生图（采样 + 解码）"),
     (SG_I2I, "图生图精修", sg_i2i, "图生图精修（VAE 编码 + 重绘）"),
+    (SG_I2I_FIT, "图生图（固定分辨率）", sg_i2i_fit,
+     "图生图：缩放到固定分辨率 → 中心裁剪 → 重绘（P 图向）"),
     (SG_POSE_SDXL, "姿势 · SDXL", sg_pose_sdxl, "ControlNet Union + OpenPose"),
     (SG_POSE_ANIMA, "姿势 · ANIMA", sg_pose_anima, "Anima LLLite 姿势软先验"),
     (SG_DETAILER, "脸手眼矫正", sg_detailer,
@@ -1191,12 +1238,25 @@ HELP = """## ComfyUI 总控台 v6
 - **📌**：钉回窗口顶部通栏（旧版的样子），再点一下恢复浮动
 - **◎**：跟随执行，**默认开**——跑图时自动切进正在执行的子图并聚焦那个节点；自己拖画布时会先让一让
 
-- **管线**：文生图 / 图生图精修 / 图生视频 / 首尾帧 / 文生视频，点一个切一个
+- **管线**：文生图 / 图生图精修 / 图生图 / 图生视频 / 首尾帧 / 文生视频，点一个切一个
+  - **图生图精修**：在源图的原始分辨率上继续重绘，不改变尺寸，用来微调已经满意的图
+  - **图生图**：先把源图缩到面板分辨率（等比缩放 + 中心裁剪，不变形）再重绘，
+    输出尺寸永远等于面板上选的宽 × 高，适合 P 图 / 统一出图尺寸；
+    两条图生图共用同一套模型、提示词、LoRA 和重绘强度，区别只在「改不改尺寸」
   切完之后，面板下面只显示这条管线用得上的东西：图像管线给图像提示词 + 图像参数 + 图像 LoRA，
   视频管线的三兄弟给视频提示词 + 视频参数 + 视频 high/low LoRA，模块按钮也跟着换；不用自己找
 - **模型**：下拉即换 checkpoint，Illustrious / ANIMA 都在这里切；
   选到 ANIMA 会自动变成 30 步 / CFG 4.5 / 不走 CLIP 取层 / 姿势换成 LLLite，
-  并把 CLIP、VAE 切到 ANIMA 专用那两路（Qwen3-0.6B 文本编码器 + Wan 2.1 VAE）
+  并把 CLIP、VAE 切到外挂那两路（Qwen3-0.6B 文本编码器 + Qwen-Image VAE）
+- **外挂资源**（模型下面那一行）：**面板自己读模型头部**判断这个 ckpt 自带不带文本编码器 / VAE ——
+  - 自带 → 这一行收起来，不用管；想强行换成外挂（比如给 SDXL 换 `sdxlVAE`）点右边的 `🛠 外挂` 展开
+  - 不带（ANIMA 那类只有 `model.diffusion_model.*` 的裸 DiT）→ 自动出现，缺哪项显示哪项，
+    并先填好 `qwen_3_06b_base.safetensors` + `qwen_image_vae.safetensors`，不满意直接在下拉里换；
+    选谁就写进画布 110 / 111，同时把 112 / 113 两个来源开关切到外挂
+  - 每个模型名记住你选过的那份，切回来自动还原；下拉里是 `models/text_encoders`、
+    `models/vae` 的全部文件，新丢进去的文件点 `⟳` 就能看到（不用重启）
+  - 读不到头部（`.gguf` / `.ckpt` / 接口还没重启）→ 退回按名字判断：名字含 anima 就当外挂，
+    其它当自带；出图不受影响
 - **模块**：图像那边是 姿势 / 脸手眼矫正 / 高清化；视频那边是 视频高清化 / 视频补帧，
   切到哪条管线就显示哪几个，随时开关。姿势开关按当前模型族自动选 SDXL 或 ANIMA 那套
 
@@ -1217,7 +1277,7 @@ HELP = """## ComfyUI 总控台 v6
     `environment` / `character` / `action` / `positive` / `negative` 的 `prompt` 口），回来勾上「插件输入」就能用。
     没连线的会显示 `插件：未连线`，照着提示去连一下
   - 每段的文字保存在「第 N 段（手填 / 插件）」节点上；拼接器节点里那 8 格是**只读镜像**，只为在画布上瞄一眼
-- **LoRA**：图像组给文生图 + 图生图共用；视频组给 I2V / FLF2V 的 high、low 两条链共用。
+- **LoRA**：图像组给文生图 / 图生图精修 / 图生图共用；视频组给 I2V / FLF2V 的 high、low 两条链共用。
   每行一个开关 + 一个下拉 + 强度，下面还有一行状态：
   - `触发词: …` — 从 LoRA 元数据里读出来的训练触发词，**要锁角色/画风就把这词写进提示词**，不写的话很多时候看着像没生效
   - `⚠ 已选但未启用` — 选了 LoRA 但左边开关没勾，后端会直接跳过这个 LoRA，勾上再出图
@@ -1225,7 +1285,8 @@ HELP = """## ComfyUI 总控台 v6
   - 行数跟画布节点一致，在画布节点上点 “➕ Add Lora” 加行，面板自动跟上。
     视频组第一行默认挂着 `lightx2v_4steps` 加速 LoRA（4 步 / CFG 1 的配方要它），不用就在面板上关掉
 - **参数**：按模块分区，**模块开着才显示那一块**（关掉模块那块自动收起来）
-  - **生成参数**：宽 / 高 / 步数 / CFG / 种子 + 🎲 随机；`重绘强度` 只在图生图精修时出现。
+  - **生成参数**：宽 / 高 / 步数 / CFG / 种子 + 🎲 随机；`重绘强度` 只在两条图生图管线里出现
+    （图生图精修 = 原分辨率重绘；图生图 = 缩到固定分辨率后重绘）。
     「高」右边那个 **⇄** 是长宽一键互换（1216×832 ↔ 832×1216）：想要竖图点一下就行，
     视频那条也有自己的一个，两边互不影响
   - **姿势参数**：姿势强度（姿势模块开着才有）
@@ -1269,15 +1330,27 @@ HELP = """## ComfyUI 总控台 v6
 [图像共用前端] 模型槽 → 图像 LoRA 组 → CLIP 取层 → 文本编码
         ↓
 [文生图]  文生图 → 姿势 → 脸手眼矫正 → 高清化 → output/refined_*
-[图生图]  取图 → 图生图精修 → 脸手眼矫正 → 高清化 → output/refine_*
+[图生图精修]  取图 → 原分辨率重绘 → 脸手眼矫正 → 高清化 → output/refine_*
+[图生图]      取图 → 缩到固定分辨率（等比 + 中心裁剪）→ 采样 → 脸手眼矫正 → 高清化
+                  → output/i2ifixed_*
 [视频]    视频提示词 → 视频地基（UNET high/low + LoRA 组）→ I2V / FLF2V / T2V
               → 视频高清化 → 视频补帧 → 封装 → output/video/total_*
 ```
 
-- 文生图和图生图**共用**模型槽、提示词、LoRA 组
-- 提示词是「一处来源」：面板上的正向 8 段拼完再分发给文生图 / 图生图（负向就是一个单框，视频那套同理），
+- 文生图和两条图生图**共用**模型槽、提示词、LoRA 组
+- **模型分两套**：面板顶栏的「图像模型」就是 101 模型槽（Illustrious / ANIMA / 任意 ckpt，管文生图 + 两条图生图）；
+  「视频模型」是 406 / 407 那一对加载器（high noise / low noise，管 I2V / FLF2V / T2V）：
+  safetensors 走 `UNETLoader`、GGUF 走 `UnetLoaderGGUF`，面板按文件后缀自己换，下游连线不动。
+  Wan 2.2 这类模型是「两个专家」拼出来的，high 管前几步、low 管后几步，两个都要对；
+  面板里勾着「⇄ 成对」时改一个会自动把另一个换成配对的（`high_noise` ↔ `low_noise`、
+  `highQ80` ↔ `lowQ80`、`Q8H` ↔ `Q8L` 这些写法都认；另一半不在清单里就不动），
+  两边的族名对不上会在面板上直接提示。切到视频管线就只看得到视频模型，图像管线只看得到图像模型。
+  视频模型那一行下面还有一条「外挂资源」：视频模型是**分离式**的，UNETLoader 只给模型本体，
+  文本编码器（403，默认 `umt5_xxl_fp8_e4m3fn_scaled.safetensors`）和 VAE（412，默认 `wan_2.1_vae.safetensors`）
+  必须外挂，同样在下拉里换文件
+- 提示词是「一处来源」：面板上的正向 8 段拼完再分发给文生图 / 图生图精修 / 图生图（负向就是一个单框，视频那套同理），
   不是每个模型各写一份
-- 取图节点在画布上是可见的：图生图用 `output/` 里的图，I2V 也用 `output/`，刷新列表即可选到上一轮出的图
+- 取图节点在画布上是可见的：图生图精修 / 图生图 / I2V / 首尾帧都用 `output/` 里的图，刷新列表即可选到上一轮出的图
 - 管线切换是「静音其它 Save 节点」，不会白跑别的管线
 - 模块关掉靠旁路透传，不会断线也不会报错
 - 视频后处理（高清化 / 补帧）在三条视频管线上各挂了一份，默认关着；
@@ -1290,8 +1363,11 @@ HELP = """## ComfyUI 总控台 v6
   种子节点上的控制项（`randomize` / `fixed`）就是面板那个 🎲 随机开关写的，两边是同一个东西
 - 视频的 4 步是加速 LoRA 绑定的，想改步数就双击进 I2V / FLF2V 子图改
 - ANIMA 的裸 DiT（只含 `model.diffusion_model.*`，没有文本编码器 / VAE）已经接好了：
-  A2 区 `110 CLIPLoader` + `111 VAELoader` 补料，`112 / 113` 两个开关跟模型族自动切；
-  面板没加载时，手动把这两个开关设成 `2` 即可
+  A2 区 `110 CLIPLoader` + `111 VAELoader` 补料，`112 / 113` 两个开关切「ckpt 自带 / 外挂」；
+  面板顶栏的「外挂资源」行就是改这两个 loader 的文件，面板没加载时手动把这两个开关设成 `2` 即可。
+  两份官方文件：`models/text_encoders/qwen_3_06b_base.safetensors`（1137 MB，Qwen3-0.6B）
+  与 `models/vae/qwen_image_vae.safetensors`（242 MB）；官方仓库 `circlestone-labs/Anima`
+  的 `split_files/` 里就是这两份，国内可以用 `hf-mirror.com` 或 ModelScope 下
 - 想接 Krea2 这类分离式权重：同样按 A2 区的接法，换成它自己的 `UNETLoader` + `CLIPLoader` + `VAELoader`
 - IPAdapter 参考图需求已删除（无节点、无权重）
 """
@@ -1367,15 +1443,17 @@ def build():
           outputs=[("IMAGE", "IMAGE"), ("POSE_KEYPOINT", "POSE_KEYPOINT")],
           props=props_for("OpenposePreprocessor"))
 
-    # ANIMA 外挂：裸 DiT 没有文本编码器 / VAE，用这两个 loader 补上，
-    # 再由 112 / 113 两个开关与 ckpt 自带的那份二选一（面板自动切）。
+    # 外挂资源：裸 DiT（ANIMA 那种只有 model.diffusion_model.* 的）没有文本编码器 /
+    # VAE，用这两个 loader 补上，再由 112 / 113 两个开关与 ckpt 自带的那份二选一。
+    # 面板顶栏「外挂资源」行直接改这两个文件（role=te_slot / vae_slot）。
     r.add(110, "CLIPLoader", (4380, 140), (560, 90),
           [M_ANIMA_TE, "stable_diffusion", "default"],
-          title="ANIMA 文本编码器（Qwen3-0.6B，按张量自动识别）",
-          outputs=[("CLIP", "CLIP")], props=props_for("CLIPLoader"))
+          title="文本编码器（外挂 · 裸模型用）",
+          outputs=[("CLIP", "CLIP")],
+          props=props_for("CLIPLoader", "te_slot", "image"))
     r.add(111, "VAELoader", (4380, 280), (430, 80), [M_ANIMA_VAE],
-          title="ANIMA VAE（Wan 2.1 / 16ch）", outputs=[("VAE", "VAE")],
-          props=props_for("VAELoader"))
+          title="VAE（外挂 · 裸模型用）", outputs=[("VAE", "VAE")],
+          props=props_for("VAELoader", "vae_slot", "image"))
     r.add(112, "CR Clip Input Switch", (4380, 430), (400, 160), [1],
           title="CLIP 来源（1 = ckpt 自带 / 2 = ANIMA）",
           inputs=[("clip1", "CLIP"), ("clip2", "CLIP")],
@@ -1471,6 +1549,22 @@ def build():
            title="出图 refine_*", inputs=[("images", "IMAGE")], mode=2,
            props=props_for("SaveImage", "save", "i2i"))
 
+    # ------------------------------- C2 图生图（固定分辨率，P 图向）
+    r.add(311, "LoadImageOutput", (100, 4400), (400, 520),
+          [LATEST_OUTPUT + " [output]", "image", "refresh", "image"],
+          title="取图（output 里的图）",
+          outputs=[("IMAGE", "IMAGE"), ("MASK", "MASK")],
+          props=props_for("LoadImageOutput", "source_image", "i2i_fixed"))
+    inst(SG_I2I_FIT, 312, (600, 4400), (540, 560), "图生图（固定分辨率）",
+         role="pipeline", key="i2i_fixed")
+    inst(SG_DETAILER, 313, (1220, 4400), (430, 430), "脸手眼矫正",
+         role="module", key="detailer", mode=4)
+    inst(SG_UPSCALE, 314, (1740, 4400), (450, 450), "高清化",
+         role="module", key="upscale", mode=4)
+    r.add(315, "SaveImage", (2280, 4370), (490, 700), ["i2ifixed"],
+          title="出图 i2ifixed_*", inputs=[("images", "IMAGE")], mode=2,
+          props=props_for("SaveImage", "save", "i2i_fixed"))
+
     # --------------------------------------------------------------- D 视频
     add_prompt_group(r, 401, "video_pos", "视频提示词 · 正向（8 段拼接）",
                      (100, 5200), VIDEO_POS, "视频·正向")
@@ -1478,7 +1572,8 @@ def build():
                    (100, 5560), VIDEO_NEG)
     r.add(403, "CLIPLoader", (2600, 6060), (600, 90),
           [WAN_CLIP, "wan", "default"], title="Wan 文本编码器",
-          outputs=[("CLIP", "CLIP")], props=props_for("CLIPLoader"))
+          outputs=[("CLIP", "CLIP")],
+          props=props_for("CLIPLoader", "te_slot", "video"))
     r.add(404, "CLIPTextEncode", (2600, 6200), (500, 200), [VIDEO_POS],
           title="视频正向编码", inputs=[("clip", "CLIP")],
           outputs=[("CONDITIONING", "CONDITIONING")],
@@ -1491,10 +1586,10 @@ def build():
           props=props_for("CLIPTextEncode", "clip_encode", "video_neg"))
     r.add(406, "UNETLoader", (100, 5920), (430, 80), [WAN_HIGH, "default"],
           title="Wan high noise", outputs=[("MODEL", "MODEL")],
-          props=props_for("UNETLoader"))
+          props=props_for("UNETLoader", "unet_slot", "video_high"))
     r.add(407, "UNETLoader", (100, 6040), (430, 80), [WAN_LOW, "default"],
           title="Wan low noise", outputs=[("MODEL", "MODEL")],
-          props=props_for("UNETLoader"))
+          props=props_for("UNETLoader", "unet_slot", "video_low"))
     r.add(408, "Power Lora Loader (rgthree)", (580, 5920), (420, 520),
           lora_rows(preset=[(WAN_LORA_HIGH, 1.0)]),
           title="视频 LoRA 组 · high（I2V / FLF2V 共用）",
@@ -1517,7 +1612,7 @@ def build():
           outputs=[("MODEL", "MODEL")], props=props_for("ModelSamplingSD3"))
     r.add(412, "VAELoader", (1840, 5920), (430, 80), [WAN_VAE],
           title="Wan VAE", outputs=[("VAE", "VAE")],
-          props=props_for("VAELoader"))
+          props=props_for("VAELoader", "vae_slot", "video"))
     r.add(413, "LoadImageOutput", (100, 6500), (400, 520),
           [LATEST_OUTPUT + " [output]", "image", "refresh", "image"],
           title="I2V 取图（output 里的图）",
@@ -1612,6 +1707,8 @@ def build():
         (2, "B 文生图（多模型分类）", "#3d7f6e",
          [201, 202, 203, 204, 205, 206]),
         (3, "C 图生图精修", "#8f6f3d", [301, 302, 303, 304, 305]),
+        (6, "C2 图生图（固定分辨率 · P 图）", "#a06a3c",
+         [311, 312, 313, 314, 315]),
         (4, "D 视频（I2V / 首尾帧 / 文生视频）", "#4a9e6b",
          [401, 402, 403, 404, 405, 406, 407, 408, 409, 410, 411, 412,
           461, 462, 463, 464, 465, 466, 467, 468,
@@ -1695,17 +1792,22 @@ def wire_root(r):
     C(127, 0, 203, "strength")
     C(128, 0, 205, "factor")
     C(128, 0, 304, "factor")
+    C(128, 0, 314, "factor")
     C(129, 0, 205, "denoise")
     C(129, 0, 304, "denoise")
+    C(129, 0, 314, "denoise")
     C(1291, 0, 205, "seam_fix_denoise")
     C(1291, 0, 304, "seam_fix_denoise")
+    C(1291, 0, 314, "seam_fix_denoise")
     C(1292, 0, 205, "whole_denoise")
     C(1292, 0, 304, "whole_denoise")
-    # 分块大小：一个参数喂两条图像管线的分块精修（面板按分辨率自动算好）
+    C(1292, 0, 314, "whole_denoise")
+    # 分块大小：一个参数喂三条图像管线的分块精修（面板按分辨率自动算好）
     C(1293, 0, 205, "tile")
     C(1293, 0, 304, "tile")
-    # 脸手眼矫正参数：两条图像管线的矫正模块共用同一组值
-    for dst in (204, 303):
+    C(1293, 0, 314, "tile")
+    # 脸手眼矫正参数：三条图像管线的矫正模块共用同一组值
+    for dst in (204, 303, 313):
         C(130, 0, dst, "bbox_threshold")
         C(1295, 0, dst, "bbox_threshold_eye")
         C(131, 0, dst, "feather")
@@ -1725,6 +1827,26 @@ def wire_root(r):
     C(302, 0, 303, "image")
     C(303, 0, 304, "image")
     C(304, 0, 305, "images")
+
+    # C2 图生图（固定分辨率）：取图 → 缩放 → 重绘 → 模块 → 存图
+    C(311, 0, 312, "source_image")
+    C(312, 0, 313, "image")
+    C(313, 0, 314, "image")
+    C(314, 0, 315, "images")
+    C(121, 0, 312, "width")
+    C(122, 0, 312, "height")
+    C(123, 0, 312, "steps")
+    C(124, 0, 312, "cfg")
+    C(125, 0, 312, "seed")
+    C(126, 0, 312, "denoise")
+    for dst in (312, 313, 314):
+        C(106, 0, dst, "positive")
+        C(107, 0, dst, "negative")
+        C(102, 0, dst, "model")
+    for dst, name in ((312, "vae_encode"), (312, "vae_decode"),
+                      (313, "vae"), (314, "vae")):
+        C(113, 0, dst, name)
+    C(103, 0, 313, "clip")
 
     # D 视频
     C(401, 0, 404, "text")
@@ -1790,6 +1912,9 @@ WIDGET_CARRY = {
     137: [0], 138: [0], 139: [0],
     # 301 / 413 是 LoadImageOutput：第 0 格是文件名，第 1 格 control_after_refresh
     301: [0], 413: [0],
+    # 视频那套加载器（v1.5.0）：high / low 模型槽 + 文本编码器 + VAE 也结转，
+    # 免得重建蓝图时把你挑好的视频权重弹回默认
+    403: [0], 406: [0], 407: [0], 412: [0],
     421: [0], 422: [0], 423: [0], 424: [0], 425: [0], 426: [0], 427: [0],
     481: [0], 482: [0], 483: [0], 484: [0], 485: [0],
 }
@@ -1957,6 +2082,55 @@ def migrate_stale_defaults(wf):
     return n
 
 
+# 按 node id 升级「还停在旧默认值」的文件槽（v1.9.0）：111 原来是 wan_2.1_vae，
+# 官方 ANIMA 那份是 qwen_image_vae；只在还是旧默认时才换，用户挑过的不动。
+FILE_MIGRATE = {
+    111: [("wan_2.1_vae.safetensors", M_ANIMA_VAE)],
+}
+
+
+def migrate_resource_files(wf):
+    """外挂文件槽的默认值升级（见 FILE_MIGRATE）。"""
+    n = 0
+    by_id = {node.get("id"): node for node in wf.get("nodes") or []}
+    for nid, rules in FILE_MIGRATE.items():
+        node = by_id.get(nid)
+        wv = (node or {}).get("widgets_values")
+        if not isinstance(wv, list) or not wv:
+            continue
+        for old, new in rules:
+            if str(wv[0]) == old and old != new:
+                wv[0] = new
+                n += 1
+                break
+    return n
+
+
+def carry_video_loaders(wf, prev):
+    """视频模型槽（406 / 407）：上一份用的是 GGUF 加载器就还出 GGUF 节点。
+
+    面板上选 .gguf 会把 UNETLoader 换成 UnetLoaderGGUF，名字一样但节点类型不同；
+    重建蓝图时要是硬塞回 UNETLoader，那格就会挂上一个「清单里没有的文件」。
+    """
+    old_nodes = {n.get("id"): n for n in prev.get("nodes") or []}
+    new_nodes = {n.get("id"): n for n in wf.get("nodes") or []}
+    n = 0
+    for nid in (406, 407):
+        o, new = old_nodes.get(nid), new_nodes.get(nid)
+        if not (o and new):
+            continue
+        owv = o.get("widgets_values")
+        name = owv[0] if isinstance(owv, list) and owv and isinstance(owv[0], str) else ""
+        if not name:
+            continue
+        if o.get("type") != "UnetLoaderGGUF" and not name.lower().endswith(".gguf"):
+            continue
+        new["type"] = "UnetLoaderGGUF"
+        new["widgets_values"] = [name]          # GGUF 加载器没有 weight_dtype 那一格
+        n += 1
+    return n
+
+
 def carry_over(wf, prev):
     """把旧工作流里用户改过的值结转到这次重建的工作流上。
 
@@ -1967,7 +2141,9 @@ def carry_over(wf, prev):
         return 0
     old_nodes = {n.get("id"): n for n in prev.get("nodes") or []}
     new_nodes = {n.get("id"): n for n in wf.get("nodes") or []}
-    carried = 0
+    # 先定好视频模型槽的加载器类型（UNETLoader / UnetLoaderGGUF），
+    # 后面那些按「类型一致才结转」的规则才不会打架
+    carried = carry_video_loaders(wf, prev)
     for nid, idx in WIDGET_CARRY.items():
         o, n = old_nodes.get(nid), new_nodes.get(nid)
         if o and n and o.get("type") == n.get("type"):
@@ -2089,6 +2265,7 @@ def build_workflow(prev=None):
     }
     carried = carry_over(wf, prev)
     migrated = migrate_stale_defaults(wf)
+    migrated_files = migrate_resource_files(wf)
 
     live = [n["id"] for n in r.nodes if n.get("mode", 0) == 0]
     bypassed = [n["id"] for n in r.nodes if n.get("mode", 0) == 4]
@@ -2100,6 +2277,7 @@ def build_workflow(prev=None):
         "subgraphs": len(subs),
         "carried": carried,
         "migrated": migrated,
+        "migrated_files": migrated_files,
         "live": len(live),
         "bypassed": bypassed,
         "muted": muted,
@@ -2178,6 +2356,9 @@ def print_report(res):
     if rep.get("migrated"):
         print("升级了 %d 个还停在旧默认值的矫正参数（羽化 5→24、"
               "重绘 →0.25/0.25/0.20、阈值 →0.55/0.70）" % rep["migrated"])
+    if rep.get("migrated_files"):
+        print("外挂文件槽升级了 %d 个还停在旧默认值的"
+              "（111 VAE：wan_2.1_vae → qwen_image_vae）" % rep["migrated_files"])
     print("live=%d bypassed=%s muted=%s"
           % (rep.get("live", 0), rep.get("bypassed", []), rep.get("muted", [])))
     for sg in rep.get("subgraph_list", []):

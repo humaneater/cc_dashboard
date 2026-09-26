@@ -2,7 +2,7 @@
   "id": "0b7a1c10-0002-4a01-9c01-000000000010",
   "revision": 0,
   "last_node_id": 1295,
-  "last_link_id": 184,
+  "last_link_id": 222,
   "nodes": [
     {
       "id": 101,
@@ -92,7 +92,10 @@
             43,
             47,
             48,
-            49
+            49,
+            133,
+            136,
+            139
           ]
         },
         {
@@ -184,7 +187,8 @@
             22,
             23,
             59,
-            60
+            60,
+            144
           ]
         }
       ],
@@ -816,7 +820,10 @@
             29,
             37,
             39,
-            41
+            41,
+            131,
+            134,
+            137
           ]
         }
       ],
@@ -871,7 +878,10 @@
             30,
             38,
             40,
-            42
+            42,
+            132,
+            135,
+            138
           ]
         }
       ],
@@ -1006,9 +1016,11 @@
       ],
       "properties": {
         "cnr_id": "comfy-core",
-        "Node name for S&R": "CLIPLoader"
+        "Node name for S&R": "CLIPLoader",
+        "cc_dock_role": "te_slot",
+        "cc_dock_key": "image"
       },
-      "title": "ANIMA 文本编码器（Qwen3-0.6B，按张量自动识别）",
+      "title": "文本编码器（外挂 · 裸模型用）",
       "widgets_values": [
         "qwen_3_06b_base.safetensors",
         "stable_diffusion",
@@ -1042,11 +1054,13 @@
       ],
       "properties": {
         "cnr_id": "comfy-core",
-        "Node name for S&R": "VAELoader"
+        "Node name for S&R": "VAELoader",
+        "cc_dock_role": "vae_slot",
+        "cc_dock_key": "image"
       },
-      "title": "ANIMA VAE（Wan 2.1 / 16ch）",
+      "title": "VAE（外挂 · 裸模型用）",
       "widgets_values": [
-        "wan_2.1_vae.safetensors"
+        "qwen_image_vae.safetensors"
       ]
     },
     {
@@ -1143,7 +1157,11 @@
             55,
             56,
             57,
-            58
+            58,
+            140,
+            141,
+            142,
+            143
           ]
         },
         {
@@ -1184,7 +1202,8 @@
           "name": "INT",
           "type": "INT",
           "links": [
-            61
+            61,
+            125
           ]
         }
       ],
@@ -1221,7 +1240,8 @@
           "name": "INT",
           "type": "INT",
           "links": [
-            62
+            62,
+            126
           ]
         }
       ],
@@ -1259,7 +1279,8 @@
           "type": "INT",
           "links": [
             63,
-            66
+            66,
+            127
           ]
         }
       ],
@@ -1297,7 +1318,8 @@
           "type": "FLOAT",
           "links": [
             64,
-            67
+            67,
+            128
           ]
         }
       ],
@@ -1334,7 +1356,8 @@
           "type": "INT",
           "links": [
             65,
-            68
+            68,
+            129
           ]
         }
       ],
@@ -1371,7 +1394,8 @@
           "name": "FLOAT",
           "type": "FLOAT",
           "links": [
-            69
+            69,
+            130
           ]
         }
       ],
@@ -1445,7 +1469,8 @@
           "type": "FLOAT",
           "links": [
             72,
-            73
+            73,
+            74
           ]
         }
       ],
@@ -1481,8 +1506,9 @@
           "name": "FLOAT",
           "type": "FLOAT",
           "links": [
-            74,
-            75
+            75,
+            76,
+            77
           ]
         }
       ],
@@ -1518,8 +1544,9 @@
           "name": "FLOAT",
           "type": "FLOAT",
           "links": [
-            76,
-            77
+            78,
+            79,
+            80
           ]
         }
       ],
@@ -1555,8 +1582,9 @@
           "name": "FLOAT",
           "type": "FLOAT",
           "links": [
-            78,
-            79
+            81,
+            82,
+            83
           ]
         }
       ],
@@ -1592,8 +1620,9 @@
           "name": "INT",
           "type": "INT",
           "links": [
-            80,
-            81
+            84,
+            85,
+            86
           ]
         }
       ],
@@ -1630,8 +1659,9 @@
           "name": "FLOAT",
           "type": "FLOAT",
           "links": [
-            82,
-            91
+            87,
+            96,
+            105
           ]
         }
       ],
@@ -1667,8 +1697,9 @@
           "name": "FLOAT",
           "type": "FLOAT",
           "links": [
-            83,
-            92
+            88,
+            97,
+            106
           ]
         }
       ],
@@ -1704,8 +1735,9 @@
           "name": "INT",
           "type": "INT",
           "links": [
-            84,
-            93
+            89,
+            98,
+            107
           ]
         }
       ],
@@ -1742,8 +1774,9 @@
           "name": "FLOAT",
           "type": "FLOAT",
           "links": [
-            85,
-            94
+            90,
+            99,
+            108
           ]
         }
       ],
@@ -1779,8 +1812,9 @@
           "name": "FLOAT",
           "type": "FLOAT",
           "links": [
-            86,
-            95
+            91,
+            100,
+            109
           ]
         }
       ],
@@ -1816,8 +1850,9 @@
           "name": "FLOAT",
           "type": "FLOAT",
           "links": [
-            87,
-            96
+            92,
+            101,
+            110
           ]
         }
       ],
@@ -1853,8 +1888,9 @@
           "name": "FLOAT",
           "type": "FLOAT",
           "links": [
-            88,
-            97
+            93,
+            102,
+            111
           ]
         }
       ],
@@ -1890,8 +1926,9 @@
           "name": "FLOAT",
           "type": "FLOAT",
           "links": [
-            89,
-            98
+            94,
+            103,
+            112
           ]
         }
       ],
@@ -1927,8 +1964,9 @@
           "name": "FLOAT",
           "type": "FLOAT",
           "links": [
-            90,
-            99
+            95,
+            104,
+            113
           ]
         }
       ],
@@ -2034,7 +2072,7 @@
           "name": "image",
           "type": "IMAGE",
           "links": [
-            100
+            114
           ]
         }
       ],
@@ -2232,7 +2270,7 @@
           "localized_name": "image",
           "name": "image",
           "type": "IMAGE",
-          "link": 100
+          "link": 114
         },
         {
           "localized_name": "model",
@@ -2268,7 +2306,7 @@
           "localized_name": "脸重绘强度",
           "name": "denoise_face",
           "type": "FLOAT",
-          "link": 85,
+          "link": 90,
           "widget": {
             "name": "denoise_face"
           }
@@ -2277,7 +2315,7 @@
           "localized_name": "手重绘强度",
           "name": "denoise_hand",
           "type": "FLOAT",
-          "link": 86,
+          "link": 91,
           "widget": {
             "name": "denoise_hand"
           }
@@ -2286,7 +2324,7 @@
           "localized_name": "眼重绘强度",
           "name": "denoise_eye",
           "type": "FLOAT",
-          "link": 87,
+          "link": 92,
           "widget": {
             "name": "denoise_eye"
           }
@@ -2295,7 +2333,7 @@
           "localized_name": "检测阈值（脸 / 手）",
           "name": "bbox_threshold",
           "type": "FLOAT",
-          "link": 82,
+          "link": 87,
           "widget": {
             "name": "bbox_threshold"
           }
@@ -2304,7 +2342,7 @@
           "localized_name": "眼检测阈值",
           "name": "bbox_threshold_eye",
           "type": "FLOAT",
-          "link": 83,
+          "link": 88,
           "widget": {
             "name": "bbox_threshold_eye"
           }
@@ -2313,7 +2351,7 @@
           "localized_name": "羽化",
           "name": "feather",
           "type": "INT",
-          "link": 84,
+          "link": 89,
           "widget": {
             "name": "feather"
           }
@@ -2322,7 +2360,7 @@
           "localized_name": "检测框放大尺寸",
           "name": "guide",
           "type": "FLOAT",
-          "link": 88,
+          "link": 93,
           "widget": {
             "name": "guide"
           }
@@ -2331,7 +2369,7 @@
           "localized_name": "放大上限",
           "name": "max_size",
           "type": "FLOAT",
-          "link": 89,
+          "link": 94,
           "widget": {
             "name": "max_size"
           }
@@ -2340,7 +2378,7 @@
           "localized_name": "裁剪倍率",
           "name": "crop",
           "type": "FLOAT",
-          "link": 90,
+          "link": 95,
           "widget": {
             "name": "crop"
           }
@@ -2352,7 +2390,7 @@
           "name": "image",
           "type": "IMAGE",
           "links": [
-            101
+            115
           ]
         }
       ],
@@ -2422,7 +2460,7 @@
           "localized_name": "image",
           "name": "image",
           "type": "IMAGE",
-          "link": 101
+          "link": 115
         },
         {
           "localized_name": "model",
@@ -2461,7 +2499,7 @@
           "localized_name": "分块大小",
           "name": "tile",
           "type": "INT",
-          "link": 80,
+          "link": 84,
           "widget": {
             "name": "tile"
           }
@@ -2470,7 +2508,7 @@
           "localized_name": "整体细化强度",
           "name": "whole_denoise",
           "type": "FLOAT",
-          "link": 78,
+          "link": 81,
           "widget": {
             "name": "whole_denoise"
           }
@@ -2479,7 +2517,7 @@
           "localized_name": "精修强度",
           "name": "denoise",
           "type": "FLOAT",
-          "link": 74,
+          "link": 75,
           "widget": {
             "name": "denoise"
           }
@@ -2488,7 +2526,7 @@
           "localized_name": "接缝修复强度",
           "name": "seam_fix_denoise",
           "type": "FLOAT",
-          "link": 76,
+          "link": 78,
           "widget": {
             "name": "seam_fix_denoise"
           }
@@ -2500,7 +2538,7 @@
           "name": "image",
           "type": "IMAGE",
           "links": [
-            102
+            116
           ]
         }
       ],
@@ -2554,7 +2592,7 @@
           "localized_name": "images",
           "name": "images",
           "type": "IMAGE",
-          "link": 102
+          "link": 116
         }
       ],
       "outputs": [],
@@ -2590,7 +2628,7 @@
           "name": "IMAGE",
           "type": "IMAGE",
           "links": [
-            103
+            117
           ]
         },
         {
@@ -2633,7 +2671,7 @@
           "localized_name": "源图",
           "name": "source_image",
           "type": "IMAGE",
-          "link": 103
+          "link": 117
         },
         {
           "localized_name": "vae_encode",
@@ -2708,7 +2746,7 @@
           "name": "image",
           "type": "IMAGE",
           "links": [
-            104
+            118
           ]
         }
       ],
@@ -2758,7 +2796,7 @@
           "localized_name": "image",
           "name": "image",
           "type": "IMAGE",
-          "link": 104
+          "link": 118
         },
         {
           "localized_name": "model",
@@ -2794,7 +2832,7 @@
           "localized_name": "脸重绘强度",
           "name": "denoise_face",
           "type": "FLOAT",
-          "link": 94,
+          "link": 99,
           "widget": {
             "name": "denoise_face"
           }
@@ -2803,7 +2841,7 @@
           "localized_name": "手重绘强度",
           "name": "denoise_hand",
           "type": "FLOAT",
-          "link": 95,
+          "link": 100,
           "widget": {
             "name": "denoise_hand"
           }
@@ -2812,7 +2850,7 @@
           "localized_name": "眼重绘强度",
           "name": "denoise_eye",
           "type": "FLOAT",
-          "link": 96,
+          "link": 101,
           "widget": {
             "name": "denoise_eye"
           }
@@ -2821,7 +2859,7 @@
           "localized_name": "检测阈值（脸 / 手）",
           "name": "bbox_threshold",
           "type": "FLOAT",
-          "link": 91,
+          "link": 96,
           "widget": {
             "name": "bbox_threshold"
           }
@@ -2830,7 +2868,7 @@
           "localized_name": "眼检测阈值",
           "name": "bbox_threshold_eye",
           "type": "FLOAT",
-          "link": 92,
+          "link": 97,
           "widget": {
             "name": "bbox_threshold_eye"
           }
@@ -2839,7 +2877,7 @@
           "localized_name": "羽化",
           "name": "feather",
           "type": "INT",
-          "link": 93,
+          "link": 98,
           "widget": {
             "name": "feather"
           }
@@ -2848,7 +2886,7 @@
           "localized_name": "检测框放大尺寸",
           "name": "guide",
           "type": "FLOAT",
-          "link": 97,
+          "link": 102,
           "widget": {
             "name": "guide"
           }
@@ -2857,7 +2895,7 @@
           "localized_name": "放大上限",
           "name": "max_size",
           "type": "FLOAT",
-          "link": 98,
+          "link": 103,
           "widget": {
             "name": "max_size"
           }
@@ -2866,7 +2904,7 @@
           "localized_name": "裁剪倍率",
           "name": "crop",
           "type": "FLOAT",
-          "link": 99,
+          "link": 104,
           "widget": {
             "name": "crop"
           }
@@ -2878,7 +2916,7 @@
           "name": "image",
           "type": "IMAGE",
           "links": [
-            105
+            119
           ]
         }
       ],
@@ -2948,7 +2986,7 @@
           "localized_name": "image",
           "name": "image",
           "type": "IMAGE",
-          "link": 105
+          "link": 119
         },
         {
           "localized_name": "model",
@@ -2987,7 +3025,7 @@
           "localized_name": "分块大小",
           "name": "tile",
           "type": "INT",
-          "link": 81,
+          "link": 85,
           "widget": {
             "name": "tile"
           }
@@ -2996,7 +3034,7 @@
           "localized_name": "整体细化强度",
           "name": "whole_denoise",
           "type": "FLOAT",
-          "link": 79,
+          "link": 82,
           "widget": {
             "name": "whole_denoise"
           }
@@ -3005,7 +3043,7 @@
           "localized_name": "精修强度",
           "name": "denoise",
           "type": "FLOAT",
-          "link": 75,
+          "link": 76,
           "widget": {
             "name": "denoise"
           }
@@ -3014,7 +3052,7 @@
           "localized_name": "接缝修复强度",
           "name": "seam_fix_denoise",
           "type": "FLOAT",
-          "link": 77,
+          "link": 79,
           "widget": {
             "name": "seam_fix_denoise"
           }
@@ -3026,7 +3064,7 @@
           "name": "image",
           "type": "IMAGE",
           "links": [
-            106
+            120
           ]
         }
       ],
@@ -3080,7 +3118,7 @@
           "localized_name": "images",
           "name": "images",
           "type": "IMAGE",
-          "link": 106
+          "link": 120
         }
       ],
       "outputs": [],
@@ -3096,6 +3134,558 @@
       ]
     },
     {
+      "id": 311,
+      "type": "LoadImageOutput",
+      "pos": [
+        100,
+        4400
+      ],
+      "size": [
+        400,
+        520
+      ],
+      "flags": {},
+      "order": 53,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "localized_name": "IMAGE",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            121
+          ]
+        },
+        {
+          "localized_name": "MASK",
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "Node name for S&R": "LoadImageOutput",
+        "cc_dock_role": "source_image",
+        "cc_dock_key": "i2i_fixed"
+      },
+      "title": "取图（output 里的图）",
+      "widgets_values": [
+        "ComfyUI_00626_.png [output]",
+        "image",
+        "refresh",
+        "image"
+      ]
+    },
+    {
+      "id": 312,
+      "type": "0b7a1c10-0001-4a01-9c01-00000000000c",
+      "pos": [
+        600,
+        4400
+      ],
+      "size": [
+        540,
+        560
+      ],
+      "flags": {},
+      "order": 54,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "源图",
+          "name": "source_image",
+          "type": "IMAGE",
+          "link": 121
+        },
+        {
+          "localized_name": "宽",
+          "name": "width",
+          "type": "INT",
+          "link": 125,
+          "widget": {
+            "name": "width"
+          }
+        },
+        {
+          "localized_name": "高",
+          "name": "height",
+          "type": "INT",
+          "link": 126,
+          "widget": {
+            "name": "height"
+          }
+        },
+        {
+          "localized_name": "vae_encode",
+          "name": "vae_encode",
+          "type": "VAE",
+          "link": 140
+        },
+        {
+          "localized_name": "vae_decode",
+          "name": "vae_decode",
+          "type": "VAE",
+          "link": 141
+        },
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "MODEL",
+          "link": 133
+        },
+        {
+          "localized_name": "positive",
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 131
+        },
+        {
+          "localized_name": "negative",
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 132
+        },
+        {
+          "localized_name": "种子",
+          "name": "seed",
+          "type": "INT",
+          "link": 129,
+          "widget": {
+            "name": "seed"
+          }
+        },
+        {
+          "localized_name": "步数",
+          "name": "steps",
+          "type": "INT",
+          "link": 127,
+          "widget": {
+            "name": "steps"
+          }
+        },
+        {
+          "localized_name": "CFG",
+          "name": "cfg",
+          "type": "FLOAT",
+          "link": 128,
+          "widget": {
+            "name": "cfg"
+          }
+        },
+        {
+          "localized_name": "重绘强度",
+          "name": "denoise",
+          "type": "FLOAT",
+          "link": 130,
+          "widget": {
+            "name": "denoise"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "image",
+          "name": "image",
+          "type": "IMAGE",
+          "links": [
+            122
+          ]
+        }
+      ],
+      "properties": {
+        "proxyWidgets": [
+          [
+            "1",
+            "width"
+          ],
+          [
+            "1",
+            "height"
+          ],
+          [
+            "3",
+            "seed"
+          ],
+          [
+            "3",
+            "steps"
+          ],
+          [
+            "3",
+            "cfg"
+          ],
+          [
+            "3",
+            "denoise"
+          ]
+        ],
+        "cnr_id": "comfy-core",
+        "Node name for S&R": "图生图（固定分辨率）",
+        "cc_dock_role": "pipeline",
+        "cc_dock_key": "i2i_fixed"
+      },
+      "widgets_values": [],
+      "title": "图生图（固定分辨率）"
+    },
+    {
+      "id": 313,
+      "type": "0b7a1c10-0001-4a01-9c01-000000000005",
+      "pos": [
+        1220,
+        4400
+      ],
+      "size": [
+        430,
+        430
+      ],
+      "flags": {},
+      "order": 55,
+      "mode": 4,
+      "inputs": [
+        {
+          "localized_name": "image",
+          "name": "image",
+          "type": "IMAGE",
+          "link": 122
+        },
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "MODEL",
+          "link": 136
+        },
+        {
+          "localized_name": "clip",
+          "name": "clip",
+          "type": "CLIP",
+          "link": 144
+        },
+        {
+          "localized_name": "vae",
+          "name": "vae",
+          "type": "VAE",
+          "link": 142
+        },
+        {
+          "localized_name": "positive",
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 134
+        },
+        {
+          "localized_name": "negative",
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 135
+        },
+        {
+          "localized_name": "脸重绘强度",
+          "name": "denoise_face",
+          "type": "FLOAT",
+          "link": 108,
+          "widget": {
+            "name": "denoise_face"
+          }
+        },
+        {
+          "localized_name": "手重绘强度",
+          "name": "denoise_hand",
+          "type": "FLOAT",
+          "link": 109,
+          "widget": {
+            "name": "denoise_hand"
+          }
+        },
+        {
+          "localized_name": "眼重绘强度",
+          "name": "denoise_eye",
+          "type": "FLOAT",
+          "link": 110,
+          "widget": {
+            "name": "denoise_eye"
+          }
+        },
+        {
+          "localized_name": "检测阈值（脸 / 手）",
+          "name": "bbox_threshold",
+          "type": "FLOAT",
+          "link": 105,
+          "widget": {
+            "name": "bbox_threshold"
+          }
+        },
+        {
+          "localized_name": "眼检测阈值",
+          "name": "bbox_threshold_eye",
+          "type": "FLOAT",
+          "link": 106,
+          "widget": {
+            "name": "bbox_threshold_eye"
+          }
+        },
+        {
+          "localized_name": "羽化",
+          "name": "feather",
+          "type": "INT",
+          "link": 107,
+          "widget": {
+            "name": "feather"
+          }
+        },
+        {
+          "localized_name": "检测框放大尺寸",
+          "name": "guide",
+          "type": "FLOAT",
+          "link": 111,
+          "widget": {
+            "name": "guide"
+          }
+        },
+        {
+          "localized_name": "放大上限",
+          "name": "max_size",
+          "type": "FLOAT",
+          "link": 112,
+          "widget": {
+            "name": "max_size"
+          }
+        },
+        {
+          "localized_name": "裁剪倍率",
+          "name": "crop",
+          "type": "FLOAT",
+          "link": 113,
+          "widget": {
+            "name": "crop"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "image",
+          "name": "image",
+          "type": "IMAGE",
+          "links": [
+            123
+          ]
+        }
+      ],
+      "properties": {
+        "proxyWidgets": [
+          [
+            "11",
+            "denoise"
+          ],
+          [
+            "12",
+            "denoise"
+          ],
+          [
+            "13",
+            "denoise"
+          ],
+          [
+            "11",
+            "bbox_threshold"
+          ],
+          [
+            "13",
+            "bbox_threshold"
+          ],
+          [
+            "11",
+            "feather"
+          ],
+          [
+            "11",
+            "guide_size"
+          ],
+          [
+            "11",
+            "max_size"
+          ],
+          [
+            "11",
+            "bbox_crop_factor"
+          ]
+        ],
+        "cnr_id": "comfy-core",
+        "Node name for S&R": "脸手眼矫正",
+        "cc_dock_role": "module",
+        "cc_dock_key": "detailer"
+      },
+      "widgets_values": [],
+      "title": "脸手眼矫正"
+    },
+    {
+      "id": 314,
+      "type": "0b7a1c10-0001-4a01-9c01-000000000006",
+      "pos": [
+        1740,
+        4400
+      ],
+      "size": [
+        450,
+        450
+      ],
+      "flags": {},
+      "order": 56,
+      "mode": 4,
+      "inputs": [
+        {
+          "localized_name": "image",
+          "name": "image",
+          "type": "IMAGE",
+          "link": 123
+        },
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "MODEL",
+          "link": 139
+        },
+        {
+          "localized_name": "positive",
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 137
+        },
+        {
+          "localized_name": "negative",
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 138
+        },
+        {
+          "localized_name": "vae",
+          "name": "vae",
+          "type": "VAE",
+          "link": 143
+        },
+        {
+          "localized_name": "倍数",
+          "name": "factor",
+          "type": "FLOAT",
+          "link": 74,
+          "widget": {
+            "name": "factor"
+          }
+        },
+        {
+          "localized_name": "分块大小",
+          "name": "tile",
+          "type": "INT",
+          "link": 86,
+          "widget": {
+            "name": "tile"
+          }
+        },
+        {
+          "localized_name": "整体细化强度",
+          "name": "whole_denoise",
+          "type": "FLOAT",
+          "link": 83,
+          "widget": {
+            "name": "whole_denoise"
+          }
+        },
+        {
+          "localized_name": "精修强度",
+          "name": "denoise",
+          "type": "FLOAT",
+          "link": 77,
+          "widget": {
+            "name": "denoise"
+          }
+        },
+        {
+          "localized_name": "接缝修复强度",
+          "name": "seam_fix_denoise",
+          "type": "FLOAT",
+          "link": 80,
+          "widget": {
+            "name": "seam_fix_denoise"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "image",
+          "name": "image",
+          "type": "IMAGE",
+          "links": [
+            124
+          ]
+        }
+      ],
+      "properties": {
+        "proxyWidgets": [
+          [
+            "2",
+            "rescale_factor"
+          ],
+          [
+            "3",
+            "tile_width"
+          ],
+          [
+            "6",
+            "denoise"
+          ],
+          [
+            "3",
+            "denoise"
+          ],
+          [
+            "3",
+            "seam_fix_denoise"
+          ]
+        ],
+        "cnr_id": "comfy-core",
+        "Node name for S&R": "高清化",
+        "cc_dock_role": "module",
+        "cc_dock_key": "upscale"
+      },
+      "widgets_values": [],
+      "title": "高清化"
+    },
+    {
+      "id": 315,
+      "type": "SaveImage",
+      "pos": [
+        2280,
+        4370
+      ],
+      "size": [
+        490,
+        700
+      ],
+      "flags": {},
+      "order": 57,
+      "mode": 2,
+      "inputs": [
+        {
+          "localized_name": "images",
+          "name": "images",
+          "type": "IMAGE",
+          "link": 124
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "Node name for S&R": "SaveImage",
+        "cc_dock_role": "save",
+        "cc_dock_key": "i2i_fixed"
+      },
+      "title": "出图 i2ifixed_*",
+      "widgets_values": [
+        "i2ifixed"
+      ]
+    },
+    {
       "id": 401,
       "type": "YogurtStringConcat",
       "pos": [
@@ -3107,7 +3697,7 @@
         300
       ],
       "flags": {},
-      "order": 53,
+      "order": 58,
       "mode": 0,
       "inputs": [
         {
@@ -3189,7 +3779,7 @@
           "name": "STRING",
           "type": "STRING",
           "links": [
-            107
+            145
           ]
         }
       ],
@@ -3231,7 +3821,7 @@
         82
       ],
       "flags": {},
-      "order": 54,
+      "order": 59,
       "mode": 0,
       "inputs": [
         {
@@ -3282,7 +3872,7 @@
         82
       ],
       "flags": {},
-      "order": 55,
+      "order": 60,
       "mode": 0,
       "inputs": [
         {
@@ -3333,7 +3923,7 @@
         82
       ],
       "flags": {},
-      "order": 56,
+      "order": 61,
       "mode": 0,
       "inputs": [
         {
@@ -3384,7 +3974,7 @@
         82
       ],
       "flags": {},
-      "order": 57,
+      "order": 62,
       "mode": 0,
       "inputs": [
         {
@@ -3435,7 +4025,7 @@
         82
       ],
       "flags": {},
-      "order": 58,
+      "order": 63,
       "mode": 0,
       "inputs": [
         {
@@ -3486,7 +4076,7 @@
         82
       ],
       "flags": {},
-      "order": 59,
+      "order": 64,
       "mode": 0,
       "inputs": [
         {
@@ -3537,7 +4127,7 @@
         82
       ],
       "flags": {},
-      "order": 60,
+      "order": 65,
       "mode": 0,
       "inputs": [
         {
@@ -3588,7 +4178,7 @@
         82
       ],
       "flags": {},
-      "order": 61,
+      "order": 66,
       "mode": 0,
       "inputs": [
         {
@@ -3639,7 +4229,7 @@
         300
       ],
       "flags": {},
-      "order": 62,
+      "order": 67,
       "mode": 0,
       "inputs": [
         {
@@ -3658,7 +4248,7 @@
           "name": "STRING",
           "type": "STRING",
           "links": [
-            108
+            146
           ]
         }
       ],
@@ -3685,7 +4275,7 @@
         90
       ],
       "flags": {},
-      "order": 63,
+      "order": 68,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -3694,14 +4284,16 @@
           "name": "CLIP",
           "type": "CLIP",
           "links": [
-            109,
-            110
+            147,
+            148
           ]
         }
       ],
       "properties": {
         "cnr_id": "comfy-core",
-        "Node name for S&R": "CLIPLoader"
+        "Node name for S&R": "CLIPLoader",
+        "cc_dock_role": "te_slot",
+        "cc_dock_key": "video"
       },
       "title": "Wan 文本编码器",
       "widgets_values": [
@@ -3722,14 +4314,14 @@
         200
       ],
       "flags": {},
-      "order": 64,
+      "order": 69,
       "mode": 0,
       "inputs": [
         {
           "localized_name": "clip",
           "name": "clip",
           "type": "CLIP",
-          "link": 109
+          "link": 147
         },
         {
           "localized_name": "文本",
@@ -3738,7 +4330,7 @@
           "widget": {
             "name": "text"
           },
-          "link": 107
+          "link": 145
         }
       ],
       "outputs": [
@@ -3747,9 +4339,9 @@
           "name": "CONDITIONING",
           "type": "CONDITIONING",
           "links": [
-            119,
-            131,
-            143
+            157,
+            169,
+            181
           ]
         }
       ],
@@ -3776,14 +4368,14 @@
         210
       ],
       "flags": {},
-      "order": 65,
+      "order": 70,
       "mode": 0,
       "inputs": [
         {
           "localized_name": "clip",
           "name": "clip",
           "type": "CLIP",
-          "link": 110
+          "link": 148
         },
         {
           "localized_name": "文本",
@@ -3792,7 +4384,7 @@
           "widget": {
             "name": "text"
           },
-          "link": 108
+          "link": 146
         }
       ],
       "outputs": [
@@ -3801,9 +4393,9 @@
           "name": "CONDITIONING",
           "type": "CONDITIONING",
           "links": [
-            120,
-            132,
-            144
+            158,
+            170,
+            182
           ]
         }
       ],
@@ -3830,7 +4422,7 @@
         80
       ],
       "flags": {},
-      "order": 66,
+      "order": 71,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -3839,13 +4431,15 @@
           "name": "MODEL",
           "type": "MODEL",
           "links": [
-            111
+            149
           ]
         }
       ],
       "properties": {
         "cnr_id": "comfy-core",
-        "Node name for S&R": "UNETLoader"
+        "Node name for S&R": "UNETLoader",
+        "cc_dock_role": "unet_slot",
+        "cc_dock_key": "video_high"
       },
       "title": "Wan high noise",
       "widgets_values": [
@@ -3865,7 +4459,7 @@
         80
       ],
       "flags": {},
-      "order": 67,
+      "order": 72,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -3874,13 +4468,15 @@
           "name": "MODEL",
           "type": "MODEL",
           "links": [
-            112
+            150
           ]
         }
       ],
       "properties": {
         "cnr_id": "comfy-core",
-        "Node name for S&R": "UNETLoader"
+        "Node name for S&R": "UNETLoader",
+        "cc_dock_role": "unet_slot",
+        "cc_dock_key": "video_low"
       },
       "title": "Wan low noise",
       "widgets_values": [
@@ -3900,14 +4496,14 @@
         520
       ],
       "flags": {},
-      "order": 68,
+      "order": 73,
       "mode": 0,
       "inputs": [
         {
           "localized_name": "model",
           "name": "model",
           "type": "MODEL",
-          "link": 111
+          "link": 149
         },
         {
           "localized_name": "clip",
@@ -3922,7 +4518,7 @@
           "name": "MODEL",
           "type": "MODEL",
           "links": [
-            113
+            151
           ]
         },
         {
@@ -3993,14 +4589,14 @@
         520
       ],
       "flags": {},
-      "order": 69,
+      "order": 74,
       "mode": 0,
       "inputs": [
         {
           "localized_name": "model",
           "name": "model",
           "type": "MODEL",
-          "link": 112
+          "link": 150
         },
         {
           "localized_name": "clip",
@@ -4015,7 +4611,7 @@
           "name": "MODEL",
           "type": "MODEL",
           "links": [
-            114
+            152
           ]
         },
         {
@@ -4086,14 +4682,14 @@
         70
       ],
       "flags": {},
-      "order": 70,
+      "order": 75,
       "mode": 0,
       "inputs": [
         {
           "localized_name": "model",
           "name": "model",
           "type": "MODEL",
-          "link": 113
+          "link": 151
         }
       ],
       "outputs": [
@@ -4102,8 +4698,8 @@
           "name": "MODEL",
           "type": "MODEL",
           "links": [
-            115,
-            116
+            153,
+            154
           ]
         }
       ],
@@ -4128,14 +4724,14 @@
         70
       ],
       "flags": {},
-      "order": 71,
+      "order": 76,
       "mode": 0,
       "inputs": [
         {
           "localized_name": "model",
           "name": "model",
           "type": "MODEL",
-          "link": 114
+          "link": 152
         }
       ],
       "outputs": [
@@ -4144,8 +4740,8 @@
           "name": "MODEL",
           "type": "MODEL",
           "links": [
-            117,
-            118
+            155,
+            156
           ]
         }
       ],
@@ -4170,7 +4766,7 @@
         80
       ],
       "flags": {},
-      "order": 72,
+      "order": 77,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4179,16 +4775,18 @@
           "name": "VAE",
           "type": "VAE",
           "links": [
-            121,
-            122,
-            133,
-            134
+            159,
+            160,
+            171,
+            172
           ]
         }
       ],
       "properties": {
         "cnr_id": "comfy-core",
-        "Node name for S&R": "VAELoader"
+        "Node name for S&R": "VAELoader",
+        "cc_dock_role": "vae_slot",
+        "cc_dock_key": "video"
       },
       "title": "Wan VAE",
       "widgets_values": [
@@ -4207,7 +4805,7 @@
         520
       ],
       "flags": {},
-      "order": 73,
+      "order": 78,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4216,7 +4814,7 @@
           "name": "IMAGE",
           "type": "IMAGE",
           "links": [
-            149
+            187
           ]
         },
         {
@@ -4252,7 +4850,7 @@
         520
       ],
       "flags": {},
-      "order": 74,
+      "order": 79,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4261,7 +4859,7 @@
           "name": "IMAGE",
           "type": "IMAGE",
           "links": [
-            150
+            188
           ]
         },
         {
@@ -4297,7 +4895,7 @@
         520
       ],
       "flags": {},
-      "order": 75,
+      "order": 80,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4306,7 +4904,7 @@
           "name": "IMAGE",
           "type": "IMAGE",
           "links": [
-            151
+            189
           ]
         },
         {
@@ -4342,7 +4940,7 @@
         60
       ],
       "flags": {},
-      "order": 76,
+      "order": 81,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4351,9 +4949,9 @@
           "name": "INT",
           "type": "INT",
           "links": [
-            123,
-            135,
-            145
+            161,
+            173,
+            183
           ]
         }
       ],
@@ -4381,7 +4979,7 @@
         60
       ],
       "flags": {},
-      "order": 77,
+      "order": 82,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4390,9 +4988,9 @@
           "name": "INT",
           "type": "INT",
           "links": [
-            124,
-            136,
-            146
+            162,
+            174,
+            184
           ]
         }
       ],
@@ -4420,7 +5018,7 @@
         60
       ],
       "flags": {},
-      "order": 78,
+      "order": 83,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4429,9 +5027,9 @@
           "name": "INT",
           "type": "INT",
           "links": [
-            125,
-            137,
-            147
+            163,
+            175,
+            185
           ]
         }
       ],
@@ -4459,7 +5057,7 @@
         60
       ],
       "flags": {},
-      "order": 79,
+      "order": 84,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4468,9 +5066,9 @@
           "name": "FLOAT",
           "type": "FLOAT",
           "links": [
-            154,
-            165,
-            176
+            192,
+            203,
+            214
           ]
         }
       ],
@@ -4497,7 +5095,7 @@
         60
       ],
       "flags": {},
-      "order": 80,
+      "order": 85,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4506,10 +5104,10 @@
           "name": "INT",
           "type": "INT",
           "links": [
-            126,
-            127,
-            138,
-            139
+            164,
+            165,
+            176,
+            177
           ]
         }
       ],
@@ -4537,7 +5135,7 @@
         60
       ],
       "flags": {},
-      "order": 81,
+      "order": 86,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4546,10 +5144,10 @@
           "name": "FLOAT",
           "type": "FLOAT",
           "links": [
-            128,
-            129,
-            140,
-            141
+            166,
+            167,
+            178,
+            179
           ]
         }
       ],
@@ -4576,7 +5174,7 @@
         60
       ],
       "flags": {},
-      "order": 82,
+      "order": 87,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4585,9 +5183,9 @@
           "name": "INT",
           "type": "INT",
           "links": [
-            130,
-            142,
-            148
+            168,
+            180,
+            186
           ]
         }
       ],
@@ -4615,7 +5213,7 @@
         60
       ],
       "flags": {},
-      "order": 83,
+      "order": 88,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4624,9 +5222,9 @@
           "name": "FLOAT",
           "type": "FLOAT",
           "links": [
-            155,
-            166,
-            177
+            193,
+            204,
+            215
           ]
         }
       ],
@@ -4653,7 +5251,7 @@
         60
       ],
       "flags": {},
-      "order": 84,
+      "order": 89,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4662,9 +5260,9 @@
           "name": "FLOAT",
           "type": "FLOAT",
           "links": [
-            159,
-            170,
-            181
+            197,
+            208,
+            219
           ]
         }
       ],
@@ -4691,7 +5289,7 @@
         60
       ],
       "flags": {},
-      "order": 85,
+      "order": 90,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4700,9 +5298,9 @@
           "name": "FLOAT",
           "type": "FLOAT",
           "links": [
-            160,
-            171,
-            182
+            198,
+            209,
+            220
           ]
         }
       ],
@@ -4729,7 +5327,7 @@
         60
       ],
       "flags": {},
-      "order": 86,
+      "order": 91,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4738,9 +5336,9 @@
           "name": "INT",
           "type": "INT",
           "links": [
-            161,
-            172,
-            183
+            199,
+            210,
+            221
           ]
         }
       ],
@@ -4768,7 +5366,7 @@
         60
       ],
       "flags": {},
-      "order": 87,
+      "order": 92,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4777,9 +5375,9 @@
           "name": "INT",
           "type": "INT",
           "links": [
-            162,
-            173,
-            184
+            200,
+            211,
+            222
           ]
         }
       ],
@@ -4807,56 +5405,56 @@
         470
       ],
       "flags": {},
-      "order": 88,
+      "order": 93,
       "mode": 0,
       "inputs": [
         {
           "localized_name": "vae_image",
           "name": "vae_image",
           "type": "VAE",
-          "link": 121
+          "link": 159
         },
         {
           "localized_name": "源图",
           "name": "start_image",
           "type": "IMAGE",
-          "link": 149
+          "link": 187
         },
         {
           "localized_name": "vae_decode",
           "name": "vae_decode",
           "type": "VAE",
-          "link": 122
+          "link": 160
         },
         {
           "localized_name": "model_high",
           "name": "model_high",
           "type": "MODEL",
-          "link": 115
+          "link": 153
         },
         {
           "localized_name": "model_low",
           "name": "model_low",
           "type": "MODEL",
-          "link": 117
+          "link": 155
         },
         {
           "localized_name": "positive",
           "name": "positive",
           "type": "CONDITIONING",
-          "link": 119
+          "link": 157
         },
         {
           "localized_name": "negative",
           "name": "negative",
           "type": "CONDITIONING",
-          "link": 120
+          "link": 158
         },
         {
           "localized_name": "宽",
           "name": "width",
           "type": "INT",
-          "link": 123,
+          "link": 161,
           "widget": {
             "name": "width"
           }
@@ -4865,7 +5463,7 @@
           "localized_name": "高",
           "name": "height",
           "type": "INT",
-          "link": 124,
+          "link": 162,
           "widget": {
             "name": "height"
           }
@@ -4874,7 +5472,7 @@
           "localized_name": "帧数",
           "name": "length",
           "type": "INT",
-          "link": 125,
+          "link": 163,
           "widget": {
             "name": "length"
           }
@@ -4883,7 +5481,7 @@
           "localized_name": "步数",
           "name": "steps_high",
           "type": "INT",
-          "link": 126,
+          "link": 164,
           "widget": {
             "name": "steps_high"
           }
@@ -4892,7 +5490,7 @@
           "localized_name": "步数",
           "name": "steps_low",
           "type": "INT",
-          "link": 127,
+          "link": 165,
           "widget": {
             "name": "steps_low"
           }
@@ -4901,7 +5499,7 @@
           "localized_name": "CFG",
           "name": "cfg_high",
           "type": "FLOAT",
-          "link": 128,
+          "link": 166,
           "widget": {
             "name": "cfg_high"
           }
@@ -4910,7 +5508,7 @@
           "localized_name": "CFG",
           "name": "cfg_low",
           "type": "FLOAT",
-          "link": 129,
+          "link": 167,
           "widget": {
             "name": "cfg_low"
           }
@@ -4919,7 +5517,7 @@
           "localized_name": "种子",
           "name": "seed",
           "type": "INT",
-          "link": 130,
+          "link": 168,
           "widget": {
             "name": "seed"
           }
@@ -4931,7 +5529,7 @@
           "name": "frames",
           "type": "IMAGE",
           "links": [
-            152
+            190
           ]
         }
       ],
@@ -4990,20 +5588,20 @@
         260
       ],
       "flags": {},
-      "order": 89,
+      "order": 94,
       "mode": 4,
       "inputs": [
         {
           "localized_name": "帧",
           "name": "frames",
           "type": "IMAGE",
-          "link": 152
+          "link": 190
         },
         {
           "localized_name": "目标倍数",
           "name": "factor",
           "type": "FLOAT",
-          "link": 159,
+          "link": 197,
           "widget": {
             "name": "factor"
           }
@@ -5012,7 +5610,7 @@
           "localized_name": "放大模型倍率",
           "name": "base",
           "type": "FLOAT",
-          "link": 160,
+          "link": 198,
           "widget": {
             "name": "base"
           }
@@ -5021,7 +5619,7 @@
           "localized_name": "每批帧数",
           "name": "batch",
           "type": "INT",
-          "link": 161,
+          "link": 199,
           "widget": {
             "name": "batch"
           }
@@ -5030,7 +5628,7 @@
           "localized_name": "分块大小（0=自动）",
           "name": "tile",
           "type": "INT",
-          "link": 162,
+          "link": 200,
           "widget": {
             "name": "tile"
           }
@@ -5042,7 +5640,7 @@
           "name": "frames",
           "type": "IMAGE",
           "links": [
-            153
+            191
           ]
         }
       ],
@@ -5085,20 +5683,20 @@
         240
       ],
       "flags": {},
-      "order": 90,
+      "order": 95,
       "mode": 4,
       "inputs": [
         {
           "localized_name": "帧",
           "name": "frames",
           "type": "IMAGE",
-          "link": 153
+          "link": 191
         },
         {
           "localized_name": "帧率",
           "name": "fps",
           "type": "FLOAT",
-          "link": 154,
+          "link": 192,
           "widget": {
             "name": "fps"
           }
@@ -5107,7 +5705,7 @@
           "localized_name": "补帧倍数",
           "name": "multiplier",
           "type": "FLOAT",
-          "link": 155,
+          "link": 193,
           "widget": {
             "name": "multiplier"
           }
@@ -5119,7 +5717,7 @@
           "name": "frames",
           "type": "IMAGE",
           "links": [
-            156
+            194
           ]
         },
         {
@@ -5127,7 +5725,7 @@
           "name": "fps",
           "type": "FLOAT",
           "links": [
-            157
+            195
           ]
         }
       ],
@@ -5162,14 +5760,14 @@
         110
       ],
       "flags": {},
-      "order": 91,
+      "order": 96,
       "mode": 0,
       "inputs": [
         {
           "localized_name": "images",
           "name": "images",
           "type": "IMAGE",
-          "link": 156
+          "link": 194
         },
         {
           "localized_name": "帧率",
@@ -5178,7 +5776,7 @@
           "widget": {
             "name": "fps"
           },
-          "link": 157
+          "link": 195
         }
       ],
       "outputs": [
@@ -5187,7 +5785,7 @@
           "name": "VIDEO",
           "type": "VIDEO",
           "links": [
-            158
+            196
           ]
         }
       ],
@@ -5214,14 +5812,14 @@
         160
       ],
       "flags": {},
-      "order": 92,
+      "order": 97,
       "mode": 2,
       "inputs": [
         {
           "localized_name": "video",
           "name": "video",
           "type": "VIDEO",
-          "link": 158
+          "link": 196
         }
       ],
       "outputs": [
@@ -5258,62 +5856,62 @@
         470
       ],
       "flags": {},
-      "order": 93,
+      "order": 98,
       "mode": 0,
       "inputs": [
         {
           "localized_name": "vae_image",
           "name": "vae_image",
           "type": "VAE",
-          "link": 133
+          "link": 171
         },
         {
           "localized_name": "首帧",
           "name": "start_image",
           "type": "IMAGE",
-          "link": 150
+          "link": 188
         },
         {
           "localized_name": "尾帧",
           "name": "end_image",
           "type": "IMAGE",
-          "link": 151
+          "link": 189
         },
         {
           "localized_name": "vae_decode",
           "name": "vae_decode",
           "type": "VAE",
-          "link": 134
+          "link": 172
         },
         {
           "localized_name": "model_high",
           "name": "model_high",
           "type": "MODEL",
-          "link": 116
+          "link": 154
         },
         {
           "localized_name": "model_low",
           "name": "model_low",
           "type": "MODEL",
-          "link": 118
+          "link": 156
         },
         {
           "localized_name": "positive",
           "name": "positive",
           "type": "CONDITIONING",
-          "link": 131
+          "link": 169
         },
         {
           "localized_name": "negative",
           "name": "negative",
           "type": "CONDITIONING",
-          "link": 132
+          "link": 170
         },
         {
           "localized_name": "宽",
           "name": "width",
           "type": "INT",
-          "link": 135,
+          "link": 173,
           "widget": {
             "name": "width"
           }
@@ -5322,7 +5920,7 @@
           "localized_name": "高",
           "name": "height",
           "type": "INT",
-          "link": 136,
+          "link": 174,
           "widget": {
             "name": "height"
           }
@@ -5331,7 +5929,7 @@
           "localized_name": "帧数",
           "name": "length",
           "type": "INT",
-          "link": 137,
+          "link": 175,
           "widget": {
             "name": "length"
           }
@@ -5340,7 +5938,7 @@
           "localized_name": "步数",
           "name": "steps_high",
           "type": "INT",
-          "link": 138,
+          "link": 176,
           "widget": {
             "name": "steps_high"
           }
@@ -5349,7 +5947,7 @@
           "localized_name": "步数",
           "name": "steps_low",
           "type": "INT",
-          "link": 139,
+          "link": 177,
           "widget": {
             "name": "steps_low"
           }
@@ -5358,7 +5956,7 @@
           "localized_name": "CFG",
           "name": "cfg_high",
           "type": "FLOAT",
-          "link": 140,
+          "link": 178,
           "widget": {
             "name": "cfg_high"
           }
@@ -5367,7 +5965,7 @@
           "localized_name": "CFG",
           "name": "cfg_low",
           "type": "FLOAT",
-          "link": 141,
+          "link": 179,
           "widget": {
             "name": "cfg_low"
           }
@@ -5376,7 +5974,7 @@
           "localized_name": "种子",
           "name": "seed",
           "type": "INT",
-          "link": 142,
+          "link": 180,
           "widget": {
             "name": "seed"
           }
@@ -5388,7 +5986,7 @@
           "name": "frames",
           "type": "IMAGE",
           "links": [
-            163
+            201
           ]
         }
       ],
@@ -5447,20 +6045,20 @@
         260
       ],
       "flags": {},
-      "order": 94,
+      "order": 99,
       "mode": 4,
       "inputs": [
         {
           "localized_name": "帧",
           "name": "frames",
           "type": "IMAGE",
-          "link": 163
+          "link": 201
         },
         {
           "localized_name": "目标倍数",
           "name": "factor",
           "type": "FLOAT",
-          "link": 170,
+          "link": 208,
           "widget": {
             "name": "factor"
           }
@@ -5469,7 +6067,7 @@
           "localized_name": "放大模型倍率",
           "name": "base",
           "type": "FLOAT",
-          "link": 171,
+          "link": 209,
           "widget": {
             "name": "base"
           }
@@ -5478,7 +6076,7 @@
           "localized_name": "每批帧数",
           "name": "batch",
           "type": "INT",
-          "link": 172,
+          "link": 210,
           "widget": {
             "name": "batch"
           }
@@ -5487,7 +6085,7 @@
           "localized_name": "分块大小（0=自动）",
           "name": "tile",
           "type": "INT",
-          "link": 173,
+          "link": 211,
           "widget": {
             "name": "tile"
           }
@@ -5499,7 +6097,7 @@
           "name": "frames",
           "type": "IMAGE",
           "links": [
-            164
+            202
           ]
         }
       ],
@@ -5542,20 +6140,20 @@
         240
       ],
       "flags": {},
-      "order": 95,
+      "order": 100,
       "mode": 4,
       "inputs": [
         {
           "localized_name": "帧",
           "name": "frames",
           "type": "IMAGE",
-          "link": 164
+          "link": 202
         },
         {
           "localized_name": "帧率",
           "name": "fps",
           "type": "FLOAT",
-          "link": 165,
+          "link": 203,
           "widget": {
             "name": "fps"
           }
@@ -5564,7 +6162,7 @@
           "localized_name": "补帧倍数",
           "name": "multiplier",
           "type": "FLOAT",
-          "link": 166,
+          "link": 204,
           "widget": {
             "name": "multiplier"
           }
@@ -5576,7 +6174,7 @@
           "name": "frames",
           "type": "IMAGE",
           "links": [
-            167
+            205
           ]
         },
         {
@@ -5584,7 +6182,7 @@
           "name": "fps",
           "type": "FLOAT",
           "links": [
-            168
+            206
           ]
         }
       ],
@@ -5619,14 +6217,14 @@
         110
       ],
       "flags": {},
-      "order": 96,
+      "order": 101,
       "mode": 0,
       "inputs": [
         {
           "localized_name": "images",
           "name": "images",
           "type": "IMAGE",
-          "link": 167
+          "link": 205
         },
         {
           "localized_name": "帧率",
@@ -5635,7 +6233,7 @@
           "widget": {
             "name": "fps"
           },
-          "link": 168
+          "link": 206
         }
       ],
       "outputs": [
@@ -5644,7 +6242,7 @@
           "name": "VIDEO",
           "type": "VIDEO",
           "links": [
-            169
+            207
           ]
         }
       ],
@@ -5671,14 +6269,14 @@
         160
       ],
       "flags": {},
-      "order": 97,
+      "order": 102,
       "mode": 2,
       "inputs": [
         {
           "localized_name": "video",
           "name": "video",
           "type": "VIDEO",
-          "link": 169
+          "link": 207
         }
       ],
       "outputs": [
@@ -5715,26 +6313,26 @@
         470
       ],
       "flags": {},
-      "order": 98,
+      "order": 103,
       "mode": 0,
       "inputs": [
         {
           "localized_name": "positive",
           "name": "positive",
           "type": "CONDITIONING",
-          "link": 143
+          "link": 181
         },
         {
           "localized_name": "negative",
           "name": "negative",
           "type": "CONDITIONING",
-          "link": 144
+          "link": 182
         },
         {
           "localized_name": "宽",
           "name": "width",
           "type": "INT",
-          "link": 145,
+          "link": 183,
           "widget": {
             "name": "width"
           }
@@ -5743,7 +6341,7 @@
           "localized_name": "高",
           "name": "height",
           "type": "INT",
-          "link": 146,
+          "link": 184,
           "widget": {
             "name": "height"
           }
@@ -5752,7 +6350,7 @@
           "localized_name": "帧数",
           "name": "length",
           "type": "INT",
-          "link": 147,
+          "link": 185,
           "widget": {
             "name": "length"
           }
@@ -5761,7 +6359,7 @@
           "localized_name": "种子",
           "name": "seed",
           "type": "INT",
-          "link": 148,
+          "link": 186,
           "widget": {
             "name": "seed"
           }
@@ -5773,7 +6371,7 @@
           "name": "frames",
           "type": "IMAGE",
           "links": [
-            174
+            212
           ]
         }
       ],
@@ -5816,20 +6414,20 @@
         260
       ],
       "flags": {},
-      "order": 99,
+      "order": 104,
       "mode": 4,
       "inputs": [
         {
           "localized_name": "帧",
           "name": "frames",
           "type": "IMAGE",
-          "link": 174
+          "link": 212
         },
         {
           "localized_name": "目标倍数",
           "name": "factor",
           "type": "FLOAT",
-          "link": 181,
+          "link": 219,
           "widget": {
             "name": "factor"
           }
@@ -5838,7 +6436,7 @@
           "localized_name": "放大模型倍率",
           "name": "base",
           "type": "FLOAT",
-          "link": 182,
+          "link": 220,
           "widget": {
             "name": "base"
           }
@@ -5847,7 +6445,7 @@
           "localized_name": "每批帧数",
           "name": "batch",
           "type": "INT",
-          "link": 183,
+          "link": 221,
           "widget": {
             "name": "batch"
           }
@@ -5856,7 +6454,7 @@
           "localized_name": "分块大小（0=自动）",
           "name": "tile",
           "type": "INT",
-          "link": 184,
+          "link": 222,
           "widget": {
             "name": "tile"
           }
@@ -5868,7 +6466,7 @@
           "name": "frames",
           "type": "IMAGE",
           "links": [
-            175
+            213
           ]
         }
       ],
@@ -5911,20 +6509,20 @@
         240
       ],
       "flags": {},
-      "order": 100,
+      "order": 105,
       "mode": 4,
       "inputs": [
         {
           "localized_name": "帧",
           "name": "frames",
           "type": "IMAGE",
-          "link": 175
+          "link": 213
         },
         {
           "localized_name": "帧率",
           "name": "fps",
           "type": "FLOAT",
-          "link": 176,
+          "link": 214,
           "widget": {
             "name": "fps"
           }
@@ -5933,7 +6531,7 @@
           "localized_name": "补帧倍数",
           "name": "multiplier",
           "type": "FLOAT",
-          "link": 177,
+          "link": 215,
           "widget": {
             "name": "multiplier"
           }
@@ -5945,7 +6543,7 @@
           "name": "frames",
           "type": "IMAGE",
           "links": [
-            178
+            216
           ]
         },
         {
@@ -5953,7 +6551,7 @@
           "name": "fps",
           "type": "FLOAT",
           "links": [
-            179
+            217
           ]
         }
       ],
@@ -5988,14 +6586,14 @@
         110
       ],
       "flags": {},
-      "order": 101,
+      "order": 106,
       "mode": 0,
       "inputs": [
         {
           "localized_name": "images",
           "name": "images",
           "type": "IMAGE",
-          "link": 178
+          "link": 216
         },
         {
           "localized_name": "帧率",
@@ -6004,7 +6602,7 @@
           "widget": {
             "name": "fps"
           },
-          "link": 179
+          "link": 217
         }
       ],
       "outputs": [
@@ -6013,7 +6611,7 @@
           "name": "VIDEO",
           "type": "VIDEO",
           "links": [
-            180
+            218
           ]
         }
       ],
@@ -6040,14 +6638,14 @@
         160
       ],
       "flags": {},
-      "order": 102,
+      "order": 107,
       "mode": 2,
       "inputs": [
         {
           "localized_name": "video",
           "name": "video",
           "type": "VIDEO",
-          "link": 180
+          "link": 218
         }
       ],
       "outputs": [
@@ -6084,13 +6682,13 @@
         1000
       ],
       "flags": {},
-      "order": 103,
+      "order": 108,
       "mode": 0,
       "inputs": [],
       "outputs": [],
       "properties": {},
       "widgets_values": [
-        "## ComfyUI 总控台 v6\n\n### 怎么用\n\n**面板是悬浮窗**，不随画布平移缩放：拖标题栏移动、拖边/角改大小，位置尺寸自动记住，\n挡住东西就往旁边一拖；顶栏右侧三个按钮管窗口本身：\n\n- **⧉**：变成独立小窗口（Chrome / Edge 支持），可以拖到另一个屏幕上，关掉自动收回页面\n- **📌**：钉回窗口顶部通栏（旧版的样子），再点一下恢复浮动\n- **◎**：跟随执行，**默认开**——跑图时自动切进正在执行的子图并聚焦那个节点；自己拖画布时会先让一让\n\n- **管线**：文生图 / 图生图精修 / 图生视频 / 首尾帧 / 文生视频，点一个切一个\n  切完之后，面板下面只显示这条管线用得上的东西：图像管线给图像提示词 + 图像参数 + 图像 LoRA，\n  视频管线的三兄弟给视频提示词 + 视频参数 + 视频 high/low LoRA，模块按钮也跟着换；不用自己找\n- **模型**：下拉即换 checkpoint，Illustrious / ANIMA 都在这里切；\n  选到 ANIMA 会自动变成 30 步 / CFG 4.5 / 不走 CLIP 取层 / 姿势换成 LLLite，\n  并把 CLIP、VAE 切到 ANIMA 专用那两路（Qwen3-0.6B 文本编码器 + Wan 2.1 VAE）\n- **模块**：图像那边是 姿势 / 脸手眼矫正 / 高清化；视频那边是 视频高清化 / 视频补帧，\n  切到哪条管线就显示哪几个，随时开关。姿势开关按当前模型族自动选 SDXL 或 ANIMA 那套\n\n面板右上角有四个页签，点开才展开，不占地方：\n\n- **提示词**：按管线只显示当前那两组（图像正 / 图像负，或视频正 / 视频负）\n  - **正向 = 8 段拼接**：每段一行 `#N` + 文本框 + `插件输入` + `启用` + `⌖ 跳转`，\n    右边是这段现在吃的是手填还是插件\n  - **负向 = 一个整体文本框**：不分段、不合并、没有插件开关，写完直接进编码\n  - **拼接**（只对正向）：8 段按顺序用分隔符（默认 `, `）拼成一条，空段自动跳过，所以没写满也不会有多余逗号；\n    分隔符在最上面那格，可以改\n  - **自动扩展**：一开始只露 3 行，你在哪一段写了字或者挂了插件，下面就自动多冒一行；最多 8 段。\n    想一次看全就点这组右上角的 `全部 8 段`；顶到头了会提示——真要更多，就在画布上再加一个拼接节点串上去\n  - **插件输入（手填 / 插件 二选一）**：勾上就是「这段听插件的」，点名框变灰、忽略手填；不勾就是「这段听我手写的」\n    （真的二选一：每段在画布上是一个 `CR Text Input Switch JK` 开关节点，插件的 STRING 输出接它的\n    「插件文本」口，开关的布尔值由面板控制；勾着插件但还没接线时会回落到手填文字，不会把这段变空）\n  - **⌖ 跳转**：点一下直接切到那一段的开关节点并放大居中——你在那儿把插件输出连上（比如 scene-composer 的\n    `environment` / `character` / `action` / `positive` / `negative` 的 `prompt` 口），回来勾上「插件输入」就能用。\n    没连线的会显示 `插件：未连线`，照着提示去连一下\n  - 每段的文字保存在「第 N 段（手填 / 插件）」节点上；拼接器节点里那 8 格是**只读镜像**，只为在画布上瞄一眼\n- **LoRA**：图像组给文生图 + 图生图共用；视频组给 I2V / FLF2V 的 high、low 两条链共用。\n  每行一个开关 + 一个下拉 + 强度，下面还有一行状态：\n  - `触发词: …` — 从 LoRA 元数据里读出来的训练触发词，**要锁角色/画风就把这词写进提示词**，不写的话很多时候看着像没生效\n  - `⚠ 已选但未启用` — 选了 LoRA 但左边开关没勾，后端会直接跳过这个 LoRA，勾上再出图\n  - `⚠ 与当前模型族可能不匹配` — 比如当前是 ANIMA 模型却挂了 Illustrious 的 LoRA（或反过来），换了多半不出效果\n  - 行数跟画布节点一致，在画布节点上点 “➕ Add Lora” 加行，面板自动跟上。\n    视频组第一行默认挂着 `lightx2v_4steps` 加速 LoRA（4 步 / CFG 1 的配方要它），不用就在面板上关掉\n- **参数**：按模块分区，**模块开着才显示那一块**（关掉模块那块自动收起来）\n  - **生成参数**：宽 / 高 / 步数 / CFG / 种子 + 🎲 随机；`重绘强度` 只在图生图精修时出现。\n    「高」右边那个 **⇄** 是长宽一键互换（1216×832 ↔ 832×1216）：想要竖图点一下就行，\n    视频那条也有自己的一个，两边互不影响\n  - **姿势参数**：姿势强度（姿势模块开着才有）\n  - **脸手眼矫正参数**：检测阈值（脸 / 手）/ 眼检测阈值 / 羽化 / 脸·手·眼三级重绘强度\n    （脸手眼矫正模块开着才有）。检测阈值调低 = 更容易认出脸和手；\n    眼那级单独一个阈值，是因为眼睛最容易在头发和花纹上误检；\n    羽化是遮罩边缘的柔化像素；三级重绘是各自的修复力度。\n    三级后面还挂着一道**色彩回正**，专门治「修完偏红 / 饱和度变高」\n  - **高清参数**：高清倍数 / 分块大小（带「自动」开关）/ 整体细化强度 / 分块精修强度 / 接缝修复强度\n    （高清化模块开着才有），底下两个只读行写着 **输出尺寸** / **实际分块**，不用自己算。\n    「高清倍数」是**最终尺寸 ÷ 原图尺寸**，填 2 就是 2 倍（以前填 2 出来是 4 倍，v6.3 起修好了）。\n    分块大小是这块里**唯一自动**的参数，其余几个强度你自己调，面板不会覆盖，\n    而且改了会记在浏览器里，刷新页面 / 重开工作流都还在\n    出图「像很多张拼起来」时先降分块精修强度、再降整体细化强度；接缝修复强度管块与块之间的糊合。\n    分块默认**自动跟着分辨率走**（精修尺寸的长边切 2 块，对齐 64、限 1024~1536），\n    取消「自动」就能自己钉一个固定值\n  - **视频参数**：宽 / 高 / 帧数 / 帧率 / 步数 / CFG / 种子 + 🎲 随机\n  - **视频补帧参数**（补帧模块开着才有）：`补帧倍数`——2 = 相邻两帧之间插 1 帧\n    （帧数 ×2、帧率也 ×2，**播放速度不变**）；4 = 插 3 帧。16fps 的 81 帧 →×2 变 161 帧 / 32fps。\n    底下那行只读提示会算出补完的帧数 / 帧率。源素材本身糊的地方补完还是糊，常规 2 倍就够\n  - **视频高清参数**（视频高清化模块开着才有）：`目标倍数`是**相对原始尺寸**说的，\n    填 2 就是 640×640 → 1280×1280；`放大模型倍率`跟磁盘上那个放大模型对齐（4xUltrasharp 就是 4），\n    换 2x 模型时改成 2，缩放系数会自动按「目标 ÷ 模型倍率」重算；`每批帧数`是显存保险丝\n    （一次放大太多帧会炸，默认 4）；`分块大小`填 0 = 自动，显存不够就填 256 / 384 往下压。\n    整条链是「先整帧放大、再缩到目标尺寸」，中间那层大图很吃内存，嫌慢就把目标倍数降到 1.5\n  - **🎲 随机（默认开）**：开着每张图 / 每段视频都是新种子；关掉就按下面那个数字出，方便微调。\n    这个开关是「这次打开页面」的事，刷新后回到默认开，不记进浏览器里\n  - 旁边那个 **🎲 按钮**是「只随机这一次」，点一下换个种子，不动上面的开关\n- **说明**：就是本页要点\n\n顶栏还有两个按钮：`⟳ 取图`（刷新 `output/` 图片下拉）、`↻ 同步`（从画布重新读一遍状态）。\n\n> 面板没出现？确认 `custom_nodes/cc_dashboard/web/dock.js` 在（插件装好）+ 刷新浏览器页面。\n> 想重新生成这份蓝图：面板「说明」页点「生成 / 更新蓝图」，或跑 `python tools/gen_dashboard.py`。\n> 面板跑到屏幕外了？`📌` 钉回顶部即可拉回来。\n> 实在不想用面板，也可以直接框选节点按 `Ctrl+B` 旁路 / `Ctrl+M` 静音，效果一样。\n\n### 画布结构（双击子图进去看内部连线）\n\n```\n[图像共用前端] 模型槽 → 图像 LoRA 组 → CLIP 取层 → 文本编码\n        ↓\n[文生图]  文生图 → 姿势 → 脸手眼矫正 → 高清化 → output/refined_*\n[图生图]  取图 → 图生图精修 → 脸手眼矫正 → 高清化 → output/refine_*\n[视频]    视频提示词 → 视频地基（UNET high/low + LoRA 组）→ I2V / FLF2V / T2V\n              → 视频高清化 → 视频补帧 → 封装 → output/video/total_*\n```\n\n- 文生图和图生图**共用**模型槽、提示词、LoRA 组\n- 提示词是「一处来源」：面板上的正向 8 段拼完再分发给文生图 / 图生图（负向就是一个单框，视频那套同理），\n  不是每个模型各写一份\n- 取图节点在画布上是可见的：图生图用 `output/` 里的图，I2V 也用 `output/`，刷新列表即可选到上一轮出的图\n- 管线切换是「静音其它 Save 节点」，不会白跑别的管线\n- 模块关掉靠旁路透传，不会断线也不会报错\n- 视频后处理（高清化 / 补帧）在三条视频管线上各挂了一份，默认关着；\n  链子顺序是 **视频高清化 → 视频补帧**（先放大再补帧：同样一遍 4x 放大，\n  81 帧比补完的 161 帧省一半时间和显存），两个都关掉就直接输出原始帧\n\n### 其它\n\n- 采样步数 / CFG / 尺寸 / 种子 / 重绘强度 / 高清倍数都在面板参数区，也可以直接改画布上的参数节点；\n  种子节点上的控制项（`randomize` / `fixed`）就是面板那个 🎲 随机开关写的，两边是同一个东西\n- 视频的 4 步是加速 LoRA 绑定的，想改步数就双击进 I2V / FLF2V 子图改\n- ANIMA 的裸 DiT（只含 `model.diffusion_model.*`，没有文本编码器 / VAE）已经接好了：\n  A2 区 `110 CLIPLoader` + `111 VAELoader` 补料，`112 / 113` 两个开关跟模型族自动切；\n  面板没加载时，手动把这两个开关设成 `2` 即可\n- 想接 Krea2 这类分离式权重：同样按 A2 区的接法，换成它自己的 `UNETLoader` + `CLIPLoader` + `VAELoader`\n- IPAdapter 参考图需求已删除（无节点、无权重）\n"
+        "## ComfyUI 总控台 v6\n\n### 怎么用\n\n**面板是悬浮窗**，不随画布平移缩放：拖标题栏移动、拖边/角改大小，位置尺寸自动记住，\n挡住东西就往旁边一拖；顶栏右侧三个按钮管窗口本身：\n\n- **⧉**：变成独立小窗口（Chrome / Edge 支持），可以拖到另一个屏幕上，关掉自动收回页面\n- **📌**：钉回窗口顶部通栏（旧版的样子），再点一下恢复浮动\n- **◎**：跟随执行，**默认开**——跑图时自动切进正在执行的子图并聚焦那个节点；自己拖画布时会先让一让\n\n- **管线**：文生图 / 图生图精修 / 图生图 / 图生视频 / 首尾帧 / 文生视频，点一个切一个\n  - **图生图精修**：在源图的原始分辨率上继续重绘，不改变尺寸，用来微调已经满意的图\n  - **图生图**：先把源图缩到面板分辨率（等比缩放 + 中心裁剪，不变形）再重绘，\n    输出尺寸永远等于面板上选的宽 × 高，适合 P 图 / 统一出图尺寸；\n    两条图生图共用同一套模型、提示词、LoRA 和重绘强度，区别只在「改不改尺寸」\n  切完之后，面板下面只显示这条管线用得上的东西：图像管线给图像提示词 + 图像参数 + 图像 LoRA，\n  视频管线的三兄弟给视频提示词 + 视频参数 + 视频 high/low LoRA，模块按钮也跟着换；不用自己找\n- **模型**：下拉即换 checkpoint，Illustrious / ANIMA 都在这里切；\n  选到 ANIMA 会自动变成 30 步 / CFG 4.5 / 不走 CLIP 取层 / 姿势换成 LLLite，\n  并把 CLIP、VAE 切到外挂那两路（Qwen3-0.6B 文本编码器 + Qwen-Image VAE）\n- **外挂资源**（模型下面那一行）：**面板自己读模型头部**判断这个 ckpt 自带不带文本编码器 / VAE ——\n  - 自带 → 这一行收起来，不用管；想强行换成外挂（比如给 SDXL 换 `sdxlVAE`）点右边的 `🛠 外挂` 展开\n  - 不带（ANIMA 那类只有 `model.diffusion_model.*` 的裸 DiT）→ 自动出现，缺哪项显示哪项，\n    并先填好 `qwen_3_06b_base.safetensors` + `qwen_image_vae.safetensors`，不满意直接在下拉里换；\n    选谁就写进画布 110 / 111，同时把 112 / 113 两个来源开关切到外挂\n  - 每个模型名记住你选过的那份，切回来自动还原；下拉里是 `models/text_encoders`、\n    `models/vae` 的全部文件，新丢进去的文件点 `⟳` 就能看到（不用重启）\n  - 读不到头部（`.gguf` / `.ckpt` / 接口还没重启）→ 退回按名字判断：名字含 anima 就当外挂，\n    其它当自带；出图不受影响\n- **模块**：图像那边是 姿势 / 脸手眼矫正 / 高清化；视频那边是 视频高清化 / 视频补帧，\n  切到哪条管线就显示哪几个，随时开关。姿势开关按当前模型族自动选 SDXL 或 ANIMA 那套\n\n面板右上角有四个页签，点开才展开，不占地方：\n\n- **提示词**：按管线只显示当前那两组（图像正 / 图像负，或视频正 / 视频负）\n  - **正向 = 8 段拼接**：每段一行 `#N` + 文本框 + `插件输入` + `启用` + `⌖ 跳转`，\n    右边是这段现在吃的是手填还是插件\n  - **负向 = 一个整体文本框**：不分段、不合并、没有插件开关，写完直接进编码\n  - **拼接**（只对正向）：8 段按顺序用分隔符（默认 `, `）拼成一条，空段自动跳过，所以没写满也不会有多余逗号；\n    分隔符在最上面那格，可以改\n  - **自动扩展**：一开始只露 3 行，你在哪一段写了字或者挂了插件，下面就自动多冒一行；最多 8 段。\n    想一次看全就点这组右上角的 `全部 8 段`；顶到头了会提示——真要更多，就在画布上再加一个拼接节点串上去\n  - **插件输入（手填 / 插件 二选一）**：勾上就是「这段听插件的」，点名框变灰、忽略手填；不勾就是「这段听我手写的」\n    （真的二选一：每段在画布上是一个 `CR Text Input Switch JK` 开关节点，插件的 STRING 输出接它的\n    「插件文本」口，开关的布尔值由面板控制；勾着插件但还没接线时会回落到手填文字，不会把这段变空）\n  - **⌖ 跳转**：点一下直接切到那一段的开关节点并放大居中——你在那儿把插件输出连上（比如 scene-composer 的\n    `environment` / `character` / `action` / `positive` / `negative` 的 `prompt` 口），回来勾上「插件输入」就能用。\n    没连线的会显示 `插件：未连线`，照着提示去连一下\n  - 每段的文字保存在「第 N 段（手填 / 插件）」节点上；拼接器节点里那 8 格是**只读镜像**，只为在画布上瞄一眼\n- **LoRA**：图像组给文生图 / 图生图精修 / 图生图共用；视频组给 I2V / FLF2V 的 high、low 两条链共用。\n  每行一个开关 + 一个下拉 + 强度，下面还有一行状态：\n  - `触发词: …` — 从 LoRA 元数据里读出来的训练触发词，**要锁角色/画风就把这词写进提示词**，不写的话很多时候看着像没生效\n  - `⚠ 已选但未启用` — 选了 LoRA 但左边开关没勾，后端会直接跳过这个 LoRA，勾上再出图\n  - `⚠ 与当前模型族可能不匹配` — 比如当前是 ANIMA 模型却挂了 Illustrious 的 LoRA（或反过来），换了多半不出效果\n  - 行数跟画布节点一致，在画布节点上点 “➕ Add Lora” 加行，面板自动跟上。\n    视频组第一行默认挂着 `lightx2v_4steps` 加速 LoRA（4 步 / CFG 1 的配方要它），不用就在面板上关掉\n- **参数**：按模块分区，**模块开着才显示那一块**（关掉模块那块自动收起来）\n  - **生成参数**：宽 / 高 / 步数 / CFG / 种子 + 🎲 随机；`重绘强度` 只在两条图生图管线里出现\n    （图生图精修 = 原分辨率重绘；图生图 = 缩到固定分辨率后重绘）。\n    「高」右边那个 **⇄** 是长宽一键互换（1216×832 ↔ 832×1216）：想要竖图点一下就行，\n    视频那条也有自己的一个，两边互不影响\n  - **姿势参数**：姿势强度（姿势模块开着才有）\n  - **脸手眼矫正参数**：检测阈值（脸 / 手）/ 眼检测阈值 / 羽化 / 脸·手·眼三级重绘强度\n    （脸手眼矫正模块开着才有）。检测阈值调低 = 更容易认出脸和手；\n    眼那级单独一个阈值，是因为眼睛最容易在头发和花纹上误检；\n    羽化是遮罩边缘的柔化像素；三级重绘是各自的修复力度。\n    三级后面还挂着一道**色彩回正**，专门治「修完偏红 / 饱和度变高」\n  - **高清参数**：高清倍数 / 分块大小（带「自动」开关）/ 整体细化强度 / 分块精修强度 / 接缝修复强度\n    （高清化模块开着才有），底下两个只读行写着 **输出尺寸** / **实际分块**，不用自己算。\n    「高清倍数」是**最终尺寸 ÷ 原图尺寸**，填 2 就是 2 倍（以前填 2 出来是 4 倍，v6.3 起修好了）。\n    分块大小是这块里**唯一自动**的参数，其余几个强度你自己调，面板不会覆盖，\n    而且改了会记在浏览器里，刷新页面 / 重开工作流都还在\n    出图「像很多张拼起来」时先降分块精修强度、再降整体细化强度；接缝修复强度管块与块之间的糊合。\n    分块默认**自动跟着分辨率走**（精修尺寸的长边切 2 块，对齐 64、限 1024~1536），\n    取消「自动」就能自己钉一个固定值\n  - **视频参数**：宽 / 高 / 帧数 / 帧率 / 步数 / CFG / 种子 + 🎲 随机\n  - **视频补帧参数**（补帧模块开着才有）：`补帧倍数`——2 = 相邻两帧之间插 1 帧\n    （帧数 ×2、帧率也 ×2，**播放速度不变**）；4 = 插 3 帧。16fps 的 81 帧 →×2 变 161 帧 / 32fps。\n    底下那行只读提示会算出补完的帧数 / 帧率。源素材本身糊的地方补完还是糊，常规 2 倍就够\n  - **视频高清参数**（视频高清化模块开着才有）：`目标倍数`是**相对原始尺寸**说的，\n    填 2 就是 640×640 → 1280×1280；`放大模型倍率`跟磁盘上那个放大模型对齐（4xUltrasharp 就是 4），\n    换 2x 模型时改成 2，缩放系数会自动按「目标 ÷ 模型倍率」重算；`每批帧数`是显存保险丝\n    （一次放大太多帧会炸，默认 4）；`分块大小`填 0 = 自动，显存不够就填 256 / 384 往下压。\n    整条链是「先整帧放大、再缩到目标尺寸」，中间那层大图很吃内存，嫌慢就把目标倍数降到 1.5\n  - **🎲 随机（默认开）**：开着每张图 / 每段视频都是新种子；关掉就按下面那个数字出，方便微调。\n    这个开关是「这次打开页面」的事，刷新后回到默认开，不记进浏览器里\n  - 旁边那个 **🎲 按钮**是「只随机这一次」，点一下换个种子，不动上面的开关\n- **说明**：就是本页要点\n\n顶栏还有两个按钮：`⟳ 取图`（刷新 `output/` 图片下拉）、`↻ 同步`（从画布重新读一遍状态）。\n\n> 面板没出现？确认 `custom_nodes/cc_dashboard/web/dock.js` 在（插件装好）+ 刷新浏览器页面。\n> 想重新生成这份蓝图：面板「说明」页点「生成 / 更新蓝图」，或跑 `python tools/gen_dashboard.py`。\n> 面板跑到屏幕外了？`📌` 钉回顶部即可拉回来。\n> 实在不想用面板，也可以直接框选节点按 `Ctrl+B` 旁路 / `Ctrl+M` 静音，效果一样。\n\n### 画布结构（双击子图进去看内部连线）\n\n```\n[图像共用前端] 模型槽 → 图像 LoRA 组 → CLIP 取层 → 文本编码\n        ↓\n[文生图]  文生图 → 姿势 → 脸手眼矫正 → 高清化 → output/refined_*\n[图生图精修]  取图 → 原分辨率重绘 → 脸手眼矫正 → 高清化 → output/refine_*\n[图生图]      取图 → 缩到固定分辨率（等比 + 中心裁剪）→ 采样 → 脸手眼矫正 → 高清化\n                  → output/i2ifixed_*\n[视频]    视频提示词 → 视频地基（UNET high/low + LoRA 组）→ I2V / FLF2V / T2V\n              → 视频高清化 → 视频补帧 → 封装 → output/video/total_*\n```\n\n- 文生图和两条图生图**共用**模型槽、提示词、LoRA 组\n- **模型分两套**：面板顶栏的「图像模型」就是 101 模型槽（Illustrious / ANIMA / 任意 ckpt，管文生图 + 两条图生图）；\n  「视频模型」是 406 / 407 那一对加载器（high noise / low noise，管 I2V / FLF2V / T2V）：\n  safetensors 走 `UNETLoader`、GGUF 走 `UnetLoaderGGUF`，面板按文件后缀自己换，下游连线不动。\n  Wan 2.2 这类模型是「两个专家」拼出来的，high 管前几步、low 管后几步，两个都要对；\n  面板里勾着「⇄ 成对」时改一个会自动把另一个换成配对的（`high_noise` ↔ `low_noise`、\n  `highQ80` ↔ `lowQ80`、`Q8H` ↔ `Q8L` 这些写法都认；另一半不在清单里就不动），\n  两边的族名对不上会在面板上直接提示。切到视频管线就只看得到视频模型，图像管线只看得到图像模型。\n  视频模型那一行下面还有一条「外挂资源」：视频模型是**分离式**的，UNETLoader 只给模型本体，\n  文本编码器（403，默认 `umt5_xxl_fp8_e4m3fn_scaled.safetensors`）和 VAE（412，默认 `wan_2.1_vae.safetensors`）\n  必须外挂，同样在下拉里换文件\n- 提示词是「一处来源」：面板上的正向 8 段拼完再分发给文生图 / 图生图精修 / 图生图（负向就是一个单框，视频那套同理），\n  不是每个模型各写一份\n- 取图节点在画布上是可见的：图生图精修 / 图生图 / I2V / 首尾帧都用 `output/` 里的图，刷新列表即可选到上一轮出的图\n- 管线切换是「静音其它 Save 节点」，不会白跑别的管线\n- 模块关掉靠旁路透传，不会断线也不会报错\n- 视频后处理（高清化 / 补帧）在三条视频管线上各挂了一份，默认关着；\n  链子顺序是 **视频高清化 → 视频补帧**（先放大再补帧：同样一遍 4x 放大，\n  81 帧比补完的 161 帧省一半时间和显存），两个都关掉就直接输出原始帧\n\n### 其它\n\n- 采样步数 / CFG / 尺寸 / 种子 / 重绘强度 / 高清倍数都在面板参数区，也可以直接改画布上的参数节点；\n  种子节点上的控制项（`randomize` / `fixed`）就是面板那个 🎲 随机开关写的，两边是同一个东西\n- 视频的 4 步是加速 LoRA 绑定的，想改步数就双击进 I2V / FLF2V 子图改\n- ANIMA 的裸 DiT（只含 `model.diffusion_model.*`，没有文本编码器 / VAE）已经接好了：\n  A2 区 `110 CLIPLoader` + `111 VAELoader` 补料，`112 / 113` 两个开关切「ckpt 自带 / 外挂」；\n  面板顶栏的「外挂资源」行就是改这两个 loader 的文件，面板没加载时手动把这两个开关设成 `2` 即可。\n  两份官方文件：`models/text_encoders/qwen_3_06b_base.safetensors`（1137 MB，Qwen3-0.6B）\n  与 `models/vae/qwen_image_vae.safetensors`（242 MB）；官方仓库 `circlestone-labs/Anima`\n  的 `split_files/` 里就是这两份，国内可以用 `hf-mirror.com` 或 ModelScope 下\n- 想接 Krea2 这类分离式权重：同样按 A2 区的接法，换成它自己的 `UNETLoader` + `CLIPLoader` + `VAELoader`\n- IPAdapter 参考图需求已删除（无节点、无权重）\n"
       ]
     },
     {
@@ -6105,7 +6703,7 @@
         300
       ],
       "flags": {},
-      "order": 104,
+      "order": 109,
       "mode": 0,
       "inputs": [],
       "outputs": [],
@@ -6126,7 +6724,7 @@
         620
       ],
       "flags": {},
-      "order": 105,
+      "order": 110,
       "mode": 0,
       "inputs": [],
       "outputs": [],
@@ -6723,30 +7321,46 @@
     ],
     [
       74,
-      129,
+      128,
       0,
-      205,
-      8,
+      314,
+      5,
       "FLOAT"
     ],
     [
       75,
       129,
       0,
-      304,
+      205,
       8,
       "FLOAT"
     ],
     [
       76,
-      1291,
+      129,
       0,
-      205,
-      9,
+      304,
+      8,
       "FLOAT"
     ],
     [
       77,
+      129,
+      0,
+      314,
+      8,
+      "FLOAT"
+    ],
+    [
+      78,
+      1291,
+      0,
+      205,
+      9,
+      "FLOAT"
+    ],
+    [
+      79,
       1291,
       0,
       304,
@@ -6754,47 +7368,71 @@
       "FLOAT"
     ],
     [
-      78,
-      1292,
-      0,
-      205,
-      7,
-      "FLOAT"
-    ],
-    [
-      79,
-      1292,
-      0,
-      304,
-      7,
-      "FLOAT"
-    ],
-    [
       80,
-      1293,
+      1291,
       0,
-      205,
-      6,
-      "INT"
+      314,
+      9,
+      "FLOAT"
     ],
     [
       81,
-      1293,
+      1292,
       0,
-      304,
-      6,
-      "INT"
+      205,
+      7,
+      "FLOAT"
     ],
     [
       82,
-      130,
+      1292,
       0,
-      204,
-      9,
+      304,
+      7,
       "FLOAT"
     ],
     [
       83,
+      1292,
+      0,
+      314,
+      7,
+      "FLOAT"
+    ],
+    [
+      84,
+      1293,
+      0,
+      205,
+      6,
+      "INT"
+    ],
+    [
+      85,
+      1293,
+      0,
+      304,
+      6,
+      "INT"
+    ],
+    [
+      86,
+      1293,
+      0,
+      314,
+      6,
+      "INT"
+    ],
+    [
+      87,
+      130,
+      0,
+      204,
+      9,
+      "FLOAT"
+    ],
+    [
+      88,
       1295,
       0,
       204,
@@ -6802,7 +7440,7 @@
       "FLOAT"
     ],
     [
-      84,
+      89,
       131,
       0,
       204,
@@ -6810,7 +7448,7 @@
       "INT"
     ],
     [
-      85,
+      90,
       132,
       0,
       204,
@@ -6818,7 +7456,7 @@
       "FLOAT"
     ],
     [
-      86,
+      91,
       133,
       0,
       204,
@@ -6826,7 +7464,7 @@
       "FLOAT"
     ],
     [
-      87,
+      92,
       134,
       0,
       204,
@@ -6834,7 +7472,7 @@
       "FLOAT"
     ],
     [
-      88,
+      93,
       137,
       0,
       204,
@@ -6842,7 +7480,7 @@
       "FLOAT"
     ],
     [
-      89,
+      94,
       138,
       0,
       204,
@@ -6850,7 +7488,7 @@
       "FLOAT"
     ],
     [
-      90,
+      95,
       139,
       0,
       204,
@@ -6858,7 +7496,7 @@
       "FLOAT"
     ],
     [
-      91,
+      96,
       130,
       0,
       303,
@@ -6866,7 +7504,7 @@
       "FLOAT"
     ],
     [
-      92,
+      97,
       1295,
       0,
       303,
@@ -6874,7 +7512,7 @@
       "FLOAT"
     ],
     [
-      93,
+      98,
       131,
       0,
       303,
@@ -6882,7 +7520,7 @@
       "INT"
     ],
     [
-      94,
+      99,
       132,
       0,
       303,
@@ -6890,7 +7528,7 @@
       "FLOAT"
     ],
     [
-      95,
+      100,
       133,
       0,
       303,
@@ -6898,7 +7536,7 @@
       "FLOAT"
     ],
     [
-      96,
+      101,
       134,
       0,
       303,
@@ -6906,7 +7544,7 @@
       "FLOAT"
     ],
     [
-      97,
+      102,
       137,
       0,
       303,
@@ -6914,7 +7552,7 @@
       "FLOAT"
     ],
     [
-      98,
+      103,
       138,
       0,
       303,
@@ -6922,7 +7560,7 @@
       "FLOAT"
     ],
     [
-      99,
+      104,
       139,
       0,
       303,
@@ -6930,7 +7568,79 @@
       "FLOAT"
     ],
     [
-      100,
+      105,
+      130,
+      0,
+      313,
+      9,
+      "FLOAT"
+    ],
+    [
+      106,
+      1295,
+      0,
+      313,
+      10,
+      "FLOAT"
+    ],
+    [
+      107,
+      131,
+      0,
+      313,
+      11,
+      "INT"
+    ],
+    [
+      108,
+      132,
+      0,
+      313,
+      6,
+      "FLOAT"
+    ],
+    [
+      109,
+      133,
+      0,
+      313,
+      7,
+      "FLOAT"
+    ],
+    [
+      110,
+      134,
+      0,
+      313,
+      8,
+      "FLOAT"
+    ],
+    [
+      111,
+      137,
+      0,
+      313,
+      12,
+      "FLOAT"
+    ],
+    [
+      112,
+      138,
+      0,
+      313,
+      13,
+      "FLOAT"
+    ],
+    [
+      113,
+      139,
+      0,
+      313,
+      14,
+      "FLOAT"
+    ],
+    [
+      114,
       201,
       0,
       204,
@@ -6938,7 +7648,7 @@
       "IMAGE"
     ],
     [
-      101,
+      115,
       204,
       0,
       205,
@@ -6946,7 +7656,7 @@
       "IMAGE"
     ],
     [
-      102,
+      116,
       205,
       0,
       206,
@@ -6954,7 +7664,7 @@
       "IMAGE"
     ],
     [
-      103,
+      117,
       301,
       0,
       302,
@@ -6962,7 +7672,7 @@
       "IMAGE"
     ],
     [
-      104,
+      118,
       302,
       0,
       303,
@@ -6970,7 +7680,7 @@
       "IMAGE"
     ],
     [
-      105,
+      119,
       303,
       0,
       304,
@@ -6978,7 +7688,7 @@
       "IMAGE"
     ],
     [
-      106,
+      120,
       304,
       0,
       305,
@@ -6986,7 +7696,199 @@
       "IMAGE"
     ],
     [
+      121,
+      311,
+      0,
+      312,
+      0,
+      "IMAGE"
+    ],
+    [
+      122,
+      312,
+      0,
+      313,
+      0,
+      "IMAGE"
+    ],
+    [
+      123,
+      313,
+      0,
+      314,
+      0,
+      "IMAGE"
+    ],
+    [
+      124,
+      314,
+      0,
+      315,
+      0,
+      "IMAGE"
+    ],
+    [
+      125,
+      121,
+      0,
+      312,
+      1,
+      "INT"
+    ],
+    [
+      126,
+      122,
+      0,
+      312,
+      2,
+      "INT"
+    ],
+    [
+      127,
+      123,
+      0,
+      312,
+      9,
+      "INT"
+    ],
+    [
+      128,
+      124,
+      0,
+      312,
+      10,
+      "FLOAT"
+    ],
+    [
+      129,
+      125,
+      0,
+      312,
+      8,
+      "INT"
+    ],
+    [
+      130,
+      126,
+      0,
+      312,
+      11,
+      "FLOAT"
+    ],
+    [
+      131,
+      106,
+      0,
+      312,
+      6,
+      "CONDITIONING"
+    ],
+    [
+      132,
       107,
+      0,
+      312,
+      7,
+      "CONDITIONING"
+    ],
+    [
+      133,
+      102,
+      0,
+      312,
+      5,
+      "MODEL"
+    ],
+    [
+      134,
+      106,
+      0,
+      313,
+      4,
+      "CONDITIONING"
+    ],
+    [
+      135,
+      107,
+      0,
+      313,
+      5,
+      "CONDITIONING"
+    ],
+    [
+      136,
+      102,
+      0,
+      313,
+      1,
+      "MODEL"
+    ],
+    [
+      137,
+      106,
+      0,
+      314,
+      2,
+      "CONDITIONING"
+    ],
+    [
+      138,
+      107,
+      0,
+      314,
+      3,
+      "CONDITIONING"
+    ],
+    [
+      139,
+      102,
+      0,
+      314,
+      1,
+      "MODEL"
+    ],
+    [
+      140,
+      113,
+      0,
+      312,
+      3,
+      "VAE"
+    ],
+    [
+      141,
+      113,
+      0,
+      312,
+      4,
+      "VAE"
+    ],
+    [
+      142,
+      113,
+      0,
+      313,
+      3,
+      "VAE"
+    ],
+    [
+      143,
+      113,
+      0,
+      314,
+      4,
+      "VAE"
+    ],
+    [
+      144,
+      103,
+      0,
+      313,
+      2,
+      "CLIP"
+    ],
+    [
+      145,
       401,
       0,
       404,
@@ -6994,7 +7896,7 @@
       "STRING"
     ],
     [
-      108,
+      146,
       402,
       0,
       405,
@@ -7002,7 +7904,7 @@
       "STRING"
     ],
     [
-      109,
+      147,
       403,
       0,
       404,
@@ -7010,7 +7912,7 @@
       "CLIP"
     ],
     [
-      110,
+      148,
       403,
       0,
       405,
@@ -7018,7 +7920,7 @@
       "CLIP"
     ],
     [
-      111,
+      149,
       406,
       0,
       408,
@@ -7026,7 +7928,7 @@
       "MODEL"
     ],
     [
-      112,
+      150,
       407,
       0,
       409,
@@ -7034,7 +7936,7 @@
       "MODEL"
     ],
     [
-      113,
+      151,
       408,
       0,
       410,
@@ -7042,7 +7944,7 @@
       "MODEL"
     ],
     [
-      114,
+      152,
       409,
       0,
       411,
@@ -7050,7 +7952,7 @@
       "MODEL"
     ],
     [
-      115,
+      153,
       410,
       0,
       431,
@@ -7058,7 +7960,7 @@
       "MODEL"
     ],
     [
-      116,
+      154,
       410,
       0,
       441,
@@ -7066,7 +7968,7 @@
       "MODEL"
     ],
     [
-      117,
+      155,
       411,
       0,
       431,
@@ -7074,7 +7976,7 @@
       "MODEL"
     ],
     [
-      118,
+      156,
       411,
       0,
       441,
@@ -7082,7 +7984,7 @@
       "MODEL"
     ],
     [
-      119,
+      157,
       404,
       0,
       431,
@@ -7090,7 +7992,7 @@
       "CONDITIONING"
     ],
     [
-      120,
+      158,
       405,
       0,
       431,
@@ -7098,7 +8000,7 @@
       "CONDITIONING"
     ],
     [
-      121,
+      159,
       412,
       0,
       431,
@@ -7106,7 +8008,7 @@
       "VAE"
     ],
     [
-      122,
+      160,
       412,
       0,
       431,
@@ -7114,7 +8016,7 @@
       "VAE"
     ],
     [
-      123,
+      161,
       421,
       0,
       431,
@@ -7122,7 +8024,7 @@
       "INT"
     ],
     [
-      124,
+      162,
       422,
       0,
       431,
@@ -7130,7 +8032,7 @@
       "INT"
     ],
     [
-      125,
+      163,
       423,
       0,
       431,
@@ -7138,7 +8040,7 @@
       "INT"
     ],
     [
-      126,
+      164,
       425,
       0,
       431,
@@ -7146,7 +8048,7 @@
       "INT"
     ],
     [
-      127,
+      165,
       425,
       0,
       431,
@@ -7154,7 +8056,7 @@
       "INT"
     ],
     [
-      128,
+      166,
       426,
       0,
       431,
@@ -7162,7 +8064,7 @@
       "FLOAT"
     ],
     [
-      129,
+      167,
       426,
       0,
       431,
@@ -7170,7 +8072,7 @@
       "FLOAT"
     ],
     [
-      130,
+      168,
       427,
       0,
       431,
@@ -7178,7 +8080,7 @@
       "INT"
     ],
     [
-      131,
+      169,
       404,
       0,
       441,
@@ -7186,7 +8088,7 @@
       "CONDITIONING"
     ],
     [
-      132,
+      170,
       405,
       0,
       441,
@@ -7194,7 +8096,7 @@
       "CONDITIONING"
     ],
     [
-      133,
+      171,
       412,
       0,
       441,
@@ -7202,7 +8104,7 @@
       "VAE"
     ],
     [
-      134,
+      172,
       412,
       0,
       441,
@@ -7210,7 +8112,7 @@
       "VAE"
     ],
     [
-      135,
+      173,
       421,
       0,
       441,
@@ -7218,7 +8120,7 @@
       "INT"
     ],
     [
-      136,
+      174,
       422,
       0,
       441,
@@ -7226,7 +8128,7 @@
       "INT"
     ],
     [
-      137,
+      175,
       423,
       0,
       441,
@@ -7234,7 +8136,7 @@
       "INT"
     ],
     [
-      138,
+      176,
       425,
       0,
       441,
@@ -7242,7 +8144,7 @@
       "INT"
     ],
     [
-      139,
+      177,
       425,
       0,
       441,
@@ -7250,7 +8152,7 @@
       "INT"
     ],
     [
-      140,
+      178,
       426,
       0,
       441,
@@ -7258,7 +8160,7 @@
       "FLOAT"
     ],
     [
-      141,
+      179,
       426,
       0,
       441,
@@ -7266,7 +8168,7 @@
       "FLOAT"
     ],
     [
-      142,
+      180,
       427,
       0,
       441,
@@ -7274,7 +8176,7 @@
       "INT"
     ],
     [
-      143,
+      181,
       404,
       0,
       451,
@@ -7282,7 +8184,7 @@
       "CONDITIONING"
     ],
     [
-      144,
+      182,
       405,
       0,
       451,
@@ -7290,7 +8192,7 @@
       "CONDITIONING"
     ],
     [
-      145,
+      183,
       421,
       0,
       451,
@@ -7298,7 +8200,7 @@
       "INT"
     ],
     [
-      146,
+      184,
       422,
       0,
       451,
@@ -7306,7 +8208,7 @@
       "INT"
     ],
     [
-      147,
+      185,
       423,
       0,
       451,
@@ -7314,7 +8216,7 @@
       "INT"
     ],
     [
-      148,
+      186,
       427,
       0,
       451,
@@ -7322,7 +8224,7 @@
       "INT"
     ],
     [
-      149,
+      187,
       413,
       0,
       431,
@@ -7330,7 +8232,7 @@
       "IMAGE"
     ],
     [
-      150,
+      188,
       414,
       0,
       441,
@@ -7338,7 +8240,7 @@
       "IMAGE"
     ],
     [
-      151,
+      189,
       415,
       0,
       441,
@@ -7346,7 +8248,7 @@
       "IMAGE"
     ],
     [
-      152,
+      190,
       431,
       0,
       492,
@@ -7354,7 +8256,7 @@
       "IMAGE"
     ],
     [
-      153,
+      191,
       492,
       0,
       491,
@@ -7362,7 +8264,7 @@
       "IMAGE"
     ],
     [
-      154,
+      192,
       424,
       0,
       491,
@@ -7370,7 +8272,7 @@
       "FLOAT"
     ],
     [
-      155,
+      193,
       481,
       0,
       491,
@@ -7378,7 +8280,7 @@
       "FLOAT"
     ],
     [
-      156,
+      194,
       491,
       0,
       497,
@@ -7386,7 +8288,7 @@
       "IMAGE"
     ],
     [
-      157,
+      195,
       491,
       1,
       497,
@@ -7394,7 +8296,7 @@
       "FLOAT"
     ],
     [
-      158,
+      196,
       497,
       0,
       432,
@@ -7402,7 +8304,7 @@
       "VIDEO"
     ],
     [
-      159,
+      197,
       482,
       0,
       492,
@@ -7410,7 +8312,7 @@
       "FLOAT"
     ],
     [
-      160,
+      198,
       483,
       0,
       492,
@@ -7418,7 +8320,7 @@
       "FLOAT"
     ],
     [
-      161,
+      199,
       484,
       0,
       492,
@@ -7426,7 +8328,7 @@
       "INT"
     ],
     [
-      162,
+      200,
       485,
       0,
       492,
@@ -7434,7 +8336,7 @@
       "INT"
     ],
     [
-      163,
+      201,
       441,
       0,
       494,
@@ -7442,7 +8344,7 @@
       "IMAGE"
     ],
     [
-      164,
+      202,
       494,
       0,
       493,
@@ -7450,7 +8352,7 @@
       "IMAGE"
     ],
     [
-      165,
+      203,
       424,
       0,
       493,
@@ -7458,7 +8360,7 @@
       "FLOAT"
     ],
     [
-      166,
+      204,
       481,
       0,
       493,
@@ -7466,7 +8368,7 @@
       "FLOAT"
     ],
     [
-      167,
+      205,
       493,
       0,
       498,
@@ -7474,7 +8376,7 @@
       "IMAGE"
     ],
     [
-      168,
+      206,
       493,
       1,
       498,
@@ -7482,7 +8384,7 @@
       "FLOAT"
     ],
     [
-      169,
+      207,
       498,
       0,
       442,
@@ -7490,7 +8392,7 @@
       "VIDEO"
     ],
     [
-      170,
+      208,
       482,
       0,
       494,
@@ -7498,7 +8400,7 @@
       "FLOAT"
     ],
     [
-      171,
+      209,
       483,
       0,
       494,
@@ -7506,7 +8408,7 @@
       "FLOAT"
     ],
     [
-      172,
+      210,
       484,
       0,
       494,
@@ -7514,7 +8416,7 @@
       "INT"
     ],
     [
-      173,
+      211,
       485,
       0,
       494,
@@ -7522,7 +8424,7 @@
       "INT"
     ],
     [
-      174,
+      212,
       451,
       0,
       496,
@@ -7530,7 +8432,7 @@
       "IMAGE"
     ],
     [
-      175,
+      213,
       496,
       0,
       495,
@@ -7538,7 +8440,7 @@
       "IMAGE"
     ],
     [
-      176,
+      214,
       424,
       0,
       495,
@@ -7546,7 +8448,7 @@
       "FLOAT"
     ],
     [
-      177,
+      215,
       481,
       0,
       495,
@@ -7554,7 +8456,7 @@
       "FLOAT"
     ],
     [
-      178,
+      216,
       495,
       0,
       499,
@@ -7562,7 +8464,7 @@
       "IMAGE"
     ],
     [
-      179,
+      217,
       495,
       1,
       499,
@@ -7570,7 +8472,7 @@
       "FLOAT"
     ],
     [
-      180,
+      218,
       499,
       0,
       452,
@@ -7578,7 +8480,7 @@
       "VIDEO"
     ],
     [
-      181,
+      219,
       482,
       0,
       496,
@@ -7586,7 +8488,7 @@
       "FLOAT"
     ],
     [
-      182,
+      220,
       483,
       0,
       496,
@@ -7594,7 +8496,7 @@
       "FLOAT"
     ],
     [
-      183,
+      221,
       484,
       0,
       496,
@@ -7602,7 +8504,7 @@
       "INT"
     ],
     [
-      184,
+      222,
       485,
       0,
       496,
@@ -7648,6 +8550,18 @@
       "flags": {}
     },
     {
+      "id": 6,
+      "title": "C2 图生图（固定分辨率 · P 图）",
+      "bounding": [
+        30,
+        4300,
+        2810,
+        840
+      ],
+      "color": "#a06a3c",
+      "flags": {}
+    },
+    {
       "id": 4,
       "title": "D 视频（I2V / 首尾帧 / 文生视频）",
       "bounding": [
@@ -7683,8 +8597,8 @@
     },
     "workflowRendererVersion": "LG",
     "cc_dashboard_blueprint": {
-      "rev": 4,
-      "tag": "video-post-vfi-upscale"
+      "rev": 7,
+      "tag": "external-te-vae-slots"
     }
   },
   "version": 0.4,
@@ -7722,7 +8636,7 @@
         },
         "inputs": [
           {
-            "id": "0040e93c-c326-4e29-98d9-472fee96ddef",
+            "id": "102fa2db-a337-4aa4-8cf8-85899effdf3d",
             "name": "model",
             "type": "MODEL",
             "linkIds": [
@@ -7735,7 +8649,7 @@
             ]
           },
           {
-            "id": "f79f6d4f-ed9c-451c-a7f6-5496d0f9d72f",
+            "id": "15941d44-e1a3-4023-b712-04f4b5eff55f",
             "name": "positive",
             "type": "CONDITIONING",
             "linkIds": [
@@ -7748,7 +8662,7 @@
             ]
           },
           {
-            "id": "53113b8a-fa97-4a55-8ff7-8e717ed4362a",
+            "id": "03dbffdb-2fa1-4f94-b4d8-36b589b95d6c",
             "name": "negative",
             "type": "CONDITIONING",
             "linkIds": [
@@ -7761,7 +8675,7 @@
             ]
           },
           {
-            "id": "6427ed37-c4be-4946-b12c-d042a2453baa",
+            "id": "d3ca5d52-0eff-46ac-bd7d-d7ff0d500d9e",
             "name": "vae",
             "type": "VAE",
             "linkIds": [
@@ -7774,7 +8688,7 @@
             ]
           },
           {
-            "id": "91921920-5123-4b16-86d4-d62eda8ba0b0",
+            "id": "e3744416-f0fd-4303-9b1f-92f940306663",
             "name": "width",
             "type": "INT",
             "linkIds": [
@@ -7787,7 +8701,7 @@
             ]
           },
           {
-            "id": "59de55a2-e6f0-4e2e-864c-0efa1d360b9c",
+            "id": "dad1622b-51b7-49b4-b985-be56d22c70df",
             "name": "height",
             "type": "INT",
             "linkIds": [
@@ -7800,7 +8714,7 @@
             ]
           },
           {
-            "id": "4ae2afaf-1692-46d2-8561-5fa25e924c99",
+            "id": "4ad6aff2-62be-4f01-9c35-3efe143434fd",
             "name": "seed",
             "type": "INT",
             "linkIds": [
@@ -7813,7 +8727,7 @@
             ]
           },
           {
-            "id": "d447c526-5d6f-4d3a-9d03-30bf62fa2e1b",
+            "id": "5d5ae4a0-7eff-4ac5-87c6-731e5a67dea2",
             "name": "steps",
             "type": "INT",
             "linkIds": [
@@ -7826,7 +8740,7 @@
             ]
           },
           {
-            "id": "8e817965-e109-4760-90d6-ef62aa2339ba",
+            "id": "d1bef013-1c8f-4505-bb4e-31e975d3643f",
             "name": "cfg",
             "type": "FLOAT",
             "linkIds": [
@@ -7841,7 +8755,7 @@
         ],
         "outputs": [
           {
-            "id": "d6a06aa0-6ef2-4b1f-baa3-c39e291018a6",
+            "id": "660ac575-7c28-44f3-987c-14d23ffc15e9",
             "name": "image",
             "type": "IMAGE",
             "linkIds": [
@@ -8182,7 +9096,7 @@
         },
         "inputs": [
           {
-            "id": "35e7253e-0981-4f41-8a9e-eb24cb17a054",
+            "id": "06876f19-a60b-4df8-906a-b0962e22f013",
             "name": "source_image",
             "type": "IMAGE",
             "linkIds": [
@@ -8195,7 +9109,7 @@
             ]
           },
           {
-            "id": "6f11fac3-8e4c-47af-953d-bbfec1a7995c",
+            "id": "17f3b8d2-6ae3-48e6-9166-8ea34267a602",
             "name": "vae_encode",
             "type": "VAE",
             "linkIds": [
@@ -8208,7 +9122,7 @@
             ]
           },
           {
-            "id": "25c4b8c0-a655-44af-8ee4-c8d2218ce9ac",
+            "id": "1753fc2c-c524-40f7-9e61-1262c3880731",
             "name": "vae_decode",
             "type": "VAE",
             "linkIds": [
@@ -8221,7 +9135,7 @@
             ]
           },
           {
-            "id": "6bb50ccd-2ad0-4cc4-a50c-e6a6aef309b5",
+            "id": "3731355e-1415-4310-940b-750536ee4be1",
             "name": "model",
             "type": "MODEL",
             "linkIds": [
@@ -8234,7 +9148,7 @@
             ]
           },
           {
-            "id": "a32c9858-c940-4d1b-aac5-200efd56f4fc",
+            "id": "e3d50d6f-63d3-4c2c-98e7-1c1617dbbc8e",
             "name": "positive",
             "type": "CONDITIONING",
             "linkIds": [
@@ -8247,7 +9161,7 @@
             ]
           },
           {
-            "id": "f93f1af8-6744-4576-9fe6-4598544a19aa",
+            "id": "e983e56f-d50d-40ce-9205-16b32b600582",
             "name": "negative",
             "type": "CONDITIONING",
             "linkIds": [
@@ -8260,7 +9174,7 @@
             ]
           },
           {
-            "id": "2a75fbc5-e43f-4757-b242-f5a3ed0c2ef3",
+            "id": "d08cc1fc-5ec9-41e3-989a-dd59302a6f62",
             "name": "seed",
             "type": "INT",
             "linkIds": [
@@ -8273,7 +9187,7 @@
             ]
           },
           {
-            "id": "0a917b11-5a8e-47fc-8ec1-3519891561ac",
+            "id": "85dd031e-8b5c-4fa7-bf46-b2abfdaf7be4",
             "name": "steps",
             "type": "INT",
             "linkIds": [
@@ -8286,7 +9200,7 @@
             ]
           },
           {
-            "id": "c395b514-4290-45a0-a516-f8658c2f94d6",
+            "id": "e7f683c8-d70d-49fa-b4a7-bcd50e5a6dea",
             "name": "cfg",
             "type": "FLOAT",
             "linkIds": [
@@ -8299,7 +9213,7 @@
             ]
           },
           {
-            "id": "a6e13194-2305-4ddf-8578-fd33422ce91d",
+            "id": "729b9db8-fc91-4ede-8627-9f96eed50b11",
             "name": "denoise",
             "type": "FLOAT",
             "linkIds": [
@@ -8314,7 +9228,7 @@
         ],
         "outputs": [
           {
-            "id": "3c8fcd4e-5baa-4e02-869e-79cdccad303c",
+            "id": "d11f8c2f-e8e4-4ce2-89e9-f9a0b5d42dcc",
             "name": "image",
             "type": "IMAGE",
             "linkIds": [
@@ -8629,6 +9543,596 @@
         "description": "图生图精修（VAE 编码 + 重绘）"
       },
       {
+        "id": "0b7a1c10-0001-4a01-9c01-00000000000c",
+        "version": 1,
+        "state": {
+          "lastGroupId": 0,
+          "lastNodeId": 4,
+          "lastLinkId": 16,
+          "lastRerouteId": 0
+        },
+        "revision": 0,
+        "config": {},
+        "name": "图生图（固定分辨率）",
+        "inputNode": {
+          "id": -10,
+          "bounding": [
+            -320,
+            60,
+            120,
+            60
+          ]
+        },
+        "outputNode": {
+          "id": -20,
+          "bounding": [
+            1500,
+            60,
+            120,
+            60
+          ]
+        },
+        "inputs": [
+          {
+            "id": "764998d4-bf7c-463f-8a71-2082f27dffd8",
+            "name": "source_image",
+            "type": "IMAGE",
+            "linkIds": [
+              4
+            ],
+            "localized_name": "源图",
+            "pos": [
+              -200,
+              100
+            ]
+          },
+          {
+            "id": "289d9082-002e-4377-806a-df68db0263ef",
+            "name": "width",
+            "type": "INT",
+            "linkIds": [
+              5
+            ],
+            "localized_name": "宽",
+            "pos": [
+              -200,
+              140
+            ]
+          },
+          {
+            "id": "9dce3e88-7962-4b96-b953-5f5e714b731f",
+            "name": "height",
+            "type": "INT",
+            "linkIds": [
+              6
+            ],
+            "localized_name": "高",
+            "pos": [
+              -200,
+              180
+            ]
+          },
+          {
+            "id": "afd05063-7fa5-45f6-ba10-2a218f68795a",
+            "name": "vae_encode",
+            "type": "VAE",
+            "linkIds": [
+              7
+            ],
+            "localized_name": "vae_encode",
+            "pos": [
+              -200,
+              220
+            ]
+          },
+          {
+            "id": "85b9ec13-cfd5-48a4-8901-556e70ae255b",
+            "name": "vae_decode",
+            "type": "VAE",
+            "linkIds": [
+              8
+            ],
+            "localized_name": "vae_decode",
+            "pos": [
+              -200,
+              260
+            ]
+          },
+          {
+            "id": "e0b83a34-7eec-4c93-80df-961b3132a6c2",
+            "name": "model",
+            "type": "MODEL",
+            "linkIds": [
+              9
+            ],
+            "localized_name": "model",
+            "pos": [
+              -200,
+              300
+            ]
+          },
+          {
+            "id": "fcce8e5d-0fbf-4abd-b320-26ce2eb97788",
+            "name": "positive",
+            "type": "CONDITIONING",
+            "linkIds": [
+              10
+            ],
+            "localized_name": "positive",
+            "pos": [
+              -200,
+              340
+            ]
+          },
+          {
+            "id": "fe4b18ab-b45d-4376-9925-fb716c786115",
+            "name": "negative",
+            "type": "CONDITIONING",
+            "linkIds": [
+              11
+            ],
+            "localized_name": "negative",
+            "pos": [
+              -200,
+              380
+            ]
+          },
+          {
+            "id": "b2fee1e6-3f8b-44a0-ae39-6669fde137b3",
+            "name": "seed",
+            "type": "INT",
+            "linkIds": [
+              12
+            ],
+            "localized_name": "种子",
+            "pos": [
+              -200,
+              420
+            ]
+          },
+          {
+            "id": "2a77adcd-0376-4e4f-a0e9-79abee48d73c",
+            "name": "steps",
+            "type": "INT",
+            "linkIds": [
+              13
+            ],
+            "localized_name": "步数",
+            "pos": [
+              -200,
+              460
+            ]
+          },
+          {
+            "id": "5f4d9135-8139-4787-955c-f4690067ba44",
+            "name": "cfg",
+            "type": "FLOAT",
+            "linkIds": [
+              14
+            ],
+            "localized_name": "CFG",
+            "pos": [
+              -200,
+              500
+            ]
+          },
+          {
+            "id": "479532a8-e3ff-4b25-8415-833f57f61278",
+            "name": "denoise",
+            "type": "FLOAT",
+            "linkIds": [
+              15
+            ],
+            "localized_name": "重绘强度",
+            "pos": [
+              -200,
+              540
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "id": "7545f767-f5e5-40cb-877a-b6ec78a0a780",
+            "name": "image",
+            "type": "IMAGE",
+            "linkIds": [
+              16
+            ],
+            "localized_name": "image",
+            "pos": [
+              1400,
+              100
+            ]
+          }
+        ],
+        "widgets": [],
+        "nodes": [
+          {
+            "id": 1,
+            "type": "ImageScale",
+            "pos": [
+              80,
+              80
+            ],
+            "size": [
+              330,
+              150
+            ],
+            "flags": {},
+            "order": 0,
+            "mode": 0,
+            "inputs": [
+              {
+                "localized_name": "image",
+                "name": "image",
+                "type": "IMAGE",
+                "link": 4
+              },
+              {
+                "localized_name": "宽",
+                "name": "width",
+                "type": "INT",
+                "widget": {
+                  "name": "width"
+                },
+                "link": 5
+              },
+              {
+                "localized_name": "高",
+                "name": "height",
+                "type": "INT",
+                "widget": {
+                  "name": "height"
+                },
+                "link": 6
+              }
+            ],
+            "outputs": [
+              {
+                "localized_name": "IMAGE",
+                "name": "IMAGE",
+                "type": "IMAGE",
+                "links": [
+                  1
+                ]
+              }
+            ],
+            "properties": {
+              "cnr_id": "comfy-core",
+              "Node name for S&R": "ImageScale"
+            },
+            "title": "缩放到固定分辨率（中心裁剪）",
+            "widgets_values": [
+              "lanczos",
+              1216,
+              832,
+              "center"
+            ]
+          },
+          {
+            "id": 2,
+            "type": "VAEEncode",
+            "pos": [
+              500,
+              80
+            ],
+            "size": [
+              240,
+              80
+            ],
+            "flags": {},
+            "order": 1,
+            "mode": 0,
+            "inputs": [
+              {
+                "localized_name": "pixels",
+                "name": "pixels",
+                "type": "IMAGE",
+                "link": 1
+              },
+              {
+                "localized_name": "vae",
+                "name": "vae",
+                "type": "VAE",
+                "link": 7
+              }
+            ],
+            "outputs": [
+              {
+                "localized_name": "LATENT",
+                "name": "LATENT",
+                "type": "LATENT",
+                "links": [
+                  2
+                ]
+              }
+            ],
+            "properties": {
+              "cnr_id": "comfy-core",
+              "Node name for S&R": "VAEEncode"
+            }
+          },
+          {
+            "id": 3,
+            "type": "KSampler",
+            "pos": [
+              820,
+              80
+            ],
+            "size": [
+              310,
+              300
+            ],
+            "flags": {},
+            "order": 2,
+            "mode": 0,
+            "inputs": [
+              {
+                "localized_name": "model",
+                "name": "model",
+                "type": "MODEL",
+                "link": 9
+              },
+              {
+                "localized_name": "positive",
+                "name": "positive",
+                "type": "CONDITIONING",
+                "link": 10
+              },
+              {
+                "localized_name": "negative",
+                "name": "negative",
+                "type": "CONDITIONING",
+                "link": 11
+              },
+              {
+                "localized_name": "latent_image",
+                "name": "latent_image",
+                "type": "LATENT",
+                "link": 2
+              },
+              {
+                "localized_name": "种子",
+                "name": "seed",
+                "type": "INT",
+                "widget": {
+                  "name": "seed"
+                },
+                "link": 12
+              },
+              {
+                "localized_name": "步数",
+                "name": "steps",
+                "type": "INT",
+                "widget": {
+                  "name": "steps"
+                },
+                "link": 13
+              },
+              {
+                "localized_name": "CFG",
+                "name": "cfg",
+                "type": "FLOAT",
+                "widget": {
+                  "name": "cfg"
+                },
+                "link": 14
+              },
+              {
+                "localized_name": "重绘强度",
+                "name": "denoise",
+                "type": "FLOAT",
+                "widget": {
+                  "name": "denoise"
+                },
+                "link": 15
+              }
+            ],
+            "outputs": [
+              {
+                "localized_name": "LATENT",
+                "name": "LATENT",
+                "type": "LATENT",
+                "links": [
+                  3
+                ]
+              }
+            ],
+            "properties": {
+              "cnr_id": "comfy-core",
+              "Node name for S&R": "KSampler"
+            },
+            "title": "图生图采样",
+            "widgets_values": [
+              123456789,
+              "randomize",
+              28,
+              5.5,
+              "dpmpp_2m",
+              "karras",
+              0.5
+            ]
+          },
+          {
+            "id": 4,
+            "type": "VAEDecode",
+            "pos": [
+              1220,
+              80
+            ],
+            "size": [
+              240,
+              80
+            ],
+            "flags": {},
+            "order": 3,
+            "mode": 0,
+            "inputs": [
+              {
+                "localized_name": "samples",
+                "name": "samples",
+                "type": "LATENT",
+                "link": 3
+              },
+              {
+                "localized_name": "vae",
+                "name": "vae",
+                "type": "VAE",
+                "link": 8
+              }
+            ],
+            "outputs": [
+              {
+                "localized_name": "IMAGE",
+                "name": "IMAGE",
+                "type": "IMAGE",
+                "links": null
+              }
+            ],
+            "properties": {
+              "cnr_id": "comfy-core",
+              "Node name for S&R": "VAEDecode"
+            }
+          }
+        ],
+        "groups": [],
+        "links": [
+          {
+            "id": 1,
+            "origin_id": 1,
+            "origin_slot": 0,
+            "target_id": 2,
+            "target_slot": 0,
+            "type": "IMAGE"
+          },
+          {
+            "id": 2,
+            "origin_id": 2,
+            "origin_slot": 0,
+            "target_id": 3,
+            "target_slot": 3,
+            "type": "LATENT"
+          },
+          {
+            "id": 3,
+            "origin_id": 3,
+            "origin_slot": 0,
+            "target_id": 4,
+            "target_slot": 0,
+            "type": "LATENT"
+          },
+          {
+            "id": 4,
+            "origin_id": -10,
+            "origin_slot": 0,
+            "target_id": 1,
+            "target_slot": 0,
+            "type": "IMAGE"
+          },
+          {
+            "id": 5,
+            "origin_id": -10,
+            "origin_slot": 1,
+            "target_id": 1,
+            "target_slot": 1,
+            "type": "INT"
+          },
+          {
+            "id": 6,
+            "origin_id": -10,
+            "origin_slot": 2,
+            "target_id": 1,
+            "target_slot": 2,
+            "type": "INT"
+          },
+          {
+            "id": 7,
+            "origin_id": -10,
+            "origin_slot": 3,
+            "target_id": 2,
+            "target_slot": 1,
+            "type": "VAE"
+          },
+          {
+            "id": 8,
+            "origin_id": -10,
+            "origin_slot": 4,
+            "target_id": 4,
+            "target_slot": 1,
+            "type": "VAE"
+          },
+          {
+            "id": 9,
+            "origin_id": -10,
+            "origin_slot": 5,
+            "target_id": 3,
+            "target_slot": 0,
+            "type": "MODEL"
+          },
+          {
+            "id": 10,
+            "origin_id": -10,
+            "origin_slot": 6,
+            "target_id": 3,
+            "target_slot": 1,
+            "type": "CONDITIONING"
+          },
+          {
+            "id": 11,
+            "origin_id": -10,
+            "origin_slot": 7,
+            "target_id": 3,
+            "target_slot": 2,
+            "type": "CONDITIONING"
+          },
+          {
+            "id": 12,
+            "origin_id": -10,
+            "origin_slot": 8,
+            "target_id": 3,
+            "target_slot": 4,
+            "type": "INT"
+          },
+          {
+            "id": 13,
+            "origin_id": -10,
+            "origin_slot": 9,
+            "target_id": 3,
+            "target_slot": 5,
+            "type": "INT"
+          },
+          {
+            "id": 14,
+            "origin_id": -10,
+            "origin_slot": 10,
+            "target_id": 3,
+            "target_slot": 6,
+            "type": "FLOAT"
+          },
+          {
+            "id": 15,
+            "origin_id": -10,
+            "origin_slot": 11,
+            "target_id": 3,
+            "target_slot": 7,
+            "type": "FLOAT"
+          },
+          {
+            "id": 16,
+            "origin_id": 4,
+            "origin_slot": 0,
+            "target_id": -20,
+            "target_slot": 0,
+            "type": "IMAGE"
+          }
+        ],
+        "extra": {
+          "workflowRendererVersion": "LG"
+        },
+        "category": "总控台",
+        "description": "图生图：缩放到固定分辨率 → 中心裁剪 → 重绘（P 图向）"
+      },
+      {
         "id": "0b7a1c10-0001-4a01-9c01-000000000003",
         "version": 1,
         "state": {
@@ -8660,7 +10164,7 @@
         },
         "inputs": [
           {
-            "id": "185ccc09-055d-4f5e-b621-bd706e5d9945",
+            "id": "12064a81-ff97-4dd6-b186-564a52026e69",
             "name": "positive",
             "type": "CONDITIONING",
             "linkIds": [
@@ -8673,7 +10177,7 @@
             ]
           },
           {
-            "id": "6864d30b-1634-4ab4-87d6-03aea0d56fc8",
+            "id": "f90d1128-f22e-42ee-a741-f505f07321a9",
             "name": "negative",
             "type": "CONDITIONING",
             "linkIds": [
@@ -8686,7 +10190,7 @@
             ]
           },
           {
-            "id": "e8f35172-284a-443b-81d7-f5b6ac817096",
+            "id": "e79c11d7-8435-4398-b827-ea49a247bd94",
             "name": "pose_image",
             "type": "IMAGE",
             "linkIds": [
@@ -8699,7 +10203,7 @@
             ]
           },
           {
-            "id": "600cf23e-9582-456e-b4ed-43a35693ca08",
+            "id": "283a2386-800e-4c0b-b90e-062af9101fa3",
             "name": "strength",
             "type": "FLOAT",
             "linkIds": [
@@ -8714,7 +10218,7 @@
         ],
         "outputs": [
           {
-            "id": "dbd216d7-99f2-4e33-acd2-0e606b214599",
+            "id": "e60e947f-8d33-4d2f-8e05-e2812b70ad30",
             "name": "positive",
             "type": "CONDITIONING",
             "linkIds": [
@@ -8727,7 +10231,7 @@
             ]
           },
           {
-            "id": "b8d6b05d-7d67-4a9b-82a1-fbb7e34ce618",
+            "id": "96343d6b-c4d1-4226-abc7-cc352e975fa2",
             "name": "negative",
             "type": "CONDITIONING",
             "linkIds": [
@@ -8997,7 +10501,7 @@
         },
         "inputs": [
           {
-            "id": "7ea7837a-7c03-491e-a13d-0cf568d731db",
+            "id": "b7e214f0-7c9f-49ef-8b66-776d9e2bfa28",
             "name": "model",
             "type": "MODEL",
             "linkIds": [
@@ -9010,7 +10514,7 @@
             ]
           },
           {
-            "id": "6d2e5f6d-1061-41b7-8e26-b7e9543cbf68",
+            "id": "8b260145-ca1d-4ad6-bec3-e47b477c7fd5",
             "name": "pose_image",
             "type": "IMAGE",
             "linkIds": [
@@ -9023,7 +10527,7 @@
             ]
           },
           {
-            "id": "2c143096-77c7-44a5-93f7-5e43404ef843",
+            "id": "73c58e8c-131d-4487-8b5f-a1e8b56bfcca",
             "name": "strength",
             "type": "FLOAT",
             "linkIds": [
@@ -9038,7 +10542,7 @@
         ],
         "outputs": [
           {
-            "id": "4cddab48-29a1-4eb1-9dbf-9ca77f7c47a2",
+            "id": "02432961-d460-4e98-be07-dda6a8d0c995",
             "name": "model",
             "type": "MODEL",
             "linkIds": [
@@ -9231,7 +10735,7 @@
         },
         "inputs": [
           {
-            "id": "b3ad278c-0a22-495c-b75a-755244d04102",
+            "id": "5cc5c10f-1aab-4c63-a397-7bd5619f059f",
             "name": "image",
             "type": "IMAGE",
             "linkIds": [
@@ -9245,7 +10749,7 @@
             ]
           },
           {
-            "id": "af232676-58bd-4f3b-a6bd-8c80915c5c59",
+            "id": "f63e73ad-d1c9-475a-b0d2-09992e407205",
             "name": "model",
             "type": "MODEL",
             "linkIds": [
@@ -9260,7 +10764,7 @@
             ]
           },
           {
-            "id": "fc560272-471d-45db-83d4-ada9694b411c",
+            "id": "b060996b-466f-46fd-a0a0-07cc94a4af87",
             "name": "clip",
             "type": "CLIP",
             "linkIds": [
@@ -9275,7 +10779,7 @@
             ]
           },
           {
-            "id": "f7445ef4-c0be-4bd8-b796-3dc209f60ccd",
+            "id": "ea47c0a9-a16d-4918-9673-05abd173f3ff",
             "name": "vae",
             "type": "VAE",
             "linkIds": [
@@ -9290,7 +10794,7 @@
             ]
           },
           {
-            "id": "b21aae5f-0d65-4b33-9f99-906d9728479b",
+            "id": "3dd9e4ff-d67b-4d00-8025-80c79d98b06f",
             "name": "positive",
             "type": "CONDITIONING",
             "linkIds": [
@@ -9305,7 +10809,7 @@
             ]
           },
           {
-            "id": "8e7593bf-f226-4513-92f6-90e94417adb5",
+            "id": "c601155d-42ea-4285-8cb5-b668578664d1",
             "name": "negative",
             "type": "CONDITIONING",
             "linkIds": [
@@ -9320,7 +10824,7 @@
             ]
           },
           {
-            "id": "055c857b-c097-4304-91b1-59747e90e302",
+            "id": "0b2695d8-863d-4c4c-817a-4f52934e4b7e",
             "name": "denoise_face",
             "type": "FLOAT",
             "linkIds": [
@@ -9333,7 +10837,7 @@
             ]
           },
           {
-            "id": "534cd77e-3238-4eb7-9f88-03a7d0d019b3",
+            "id": "97b185b0-f4b4-42ef-bb1f-f83276526f8f",
             "name": "denoise_hand",
             "type": "FLOAT",
             "linkIds": [
@@ -9346,7 +10850,7 @@
             ]
           },
           {
-            "id": "f083748d-fa87-4292-9082-5434773c43f3",
+            "id": "52c7b521-2a9c-45d2-8168-65f2fbfd1171",
             "name": "denoise_eye",
             "type": "FLOAT",
             "linkIds": [
@@ -9359,7 +10863,7 @@
             ]
           },
           {
-            "id": "594b3798-0604-4b69-978b-335cb5f74442",
+            "id": "27f2ae90-1432-490e-ade9-68fd6e610026",
             "name": "bbox_threshold",
             "type": "FLOAT",
             "linkIds": [
@@ -9373,7 +10877,7 @@
             ]
           },
           {
-            "id": "dd650ef7-7b0b-4bdb-923d-8ee078f143ae",
+            "id": "d74a191a-7e5d-4ad0-a47f-fb27d5fc3928",
             "name": "bbox_threshold_eye",
             "type": "FLOAT",
             "linkIds": [
@@ -9386,7 +10890,7 @@
             ]
           },
           {
-            "id": "75890e03-e9f8-4162-a4e9-304a472f1448",
+            "id": "3d5fa6bb-b863-4876-846e-593dbc868de5",
             "name": "feather",
             "type": "INT",
             "linkIds": [
@@ -9401,7 +10905,7 @@
             ]
           },
           {
-            "id": "c814b6da-809c-4bcd-abb5-8d610cee9b7a",
+            "id": "71b0b03e-f026-49b3-bf52-9490dda36cf1",
             "name": "guide",
             "type": "FLOAT",
             "linkIds": [
@@ -9416,7 +10920,7 @@
             ]
           },
           {
-            "id": "738f75fe-076c-4cf9-bcb2-05866c29b6fe",
+            "id": "bb34f518-bde9-4ed7-aa58-9122cc676ceb",
             "name": "max_size",
             "type": "FLOAT",
             "linkIds": [
@@ -9431,7 +10935,7 @@
             ]
           },
           {
-            "id": "2c213bbe-d306-46bd-9035-810eab1f4125",
+            "id": "77e8218d-35ba-4bb4-92b5-df36898b6c01",
             "name": "crop",
             "type": "FLOAT",
             "linkIds": [
@@ -9448,7 +10952,7 @@
         ],
         "outputs": [
           {
-            "id": "f2f473c7-7c6d-49fa-9645-9d6374a9997c",
+            "id": "233c443b-4213-4021-8729-3c79b2e2b475",
             "name": "image",
             "type": "IMAGE",
             "linkIds": [
@@ -10658,7 +12162,7 @@
         },
         "inputs": [
           {
-            "id": "96be8356-26f5-49ae-826d-69a9c681eccf",
+            "id": "e28457ca-602b-4b8d-9414-55a6a8e8020a",
             "name": "image",
             "type": "IMAGE",
             "linkIds": [
@@ -10671,7 +12175,7 @@
             ]
           },
           {
-            "id": "a5584553-f17d-42ce-80d9-d706283328a8",
+            "id": "59295e0b-93c1-422b-861a-d47de4c046c9",
             "name": "model",
             "type": "MODEL",
             "linkIds": [
@@ -10685,7 +12189,7 @@
             ]
           },
           {
-            "id": "84f4df68-97ab-40b3-937d-2d57d1f4942f",
+            "id": "6f243c1a-456a-46b4-a459-63ba412b3d3c",
             "name": "positive",
             "type": "CONDITIONING",
             "linkIds": [
@@ -10699,7 +12203,7 @@
             ]
           },
           {
-            "id": "47a07d52-3ea4-4aef-b124-f430ddcda8fd",
+            "id": "3b906fab-db10-429c-9af0-49182590c764",
             "name": "negative",
             "type": "CONDITIONING",
             "linkIds": [
@@ -10713,7 +12217,7 @@
             ]
           },
           {
-            "id": "99ac70f9-0c5b-4888-a091-cfb9379c2bf4",
+            "id": "7f0f34e6-6fe4-44b9-a899-37fbaf414585",
             "name": "vae",
             "type": "VAE",
             "linkIds": [
@@ -10728,7 +12232,7 @@
             ]
           },
           {
-            "id": "f05eb471-746b-4510-8a0e-a68c82f7b2aa",
+            "id": "fc4f92a7-e33e-44aa-9de2-3b1e57c8204e",
             "name": "factor",
             "type": "FLOAT",
             "linkIds": [
@@ -10741,7 +12245,7 @@
             ]
           },
           {
-            "id": "6a617e9c-0b49-4f6e-bee5-a9bf141d85f3",
+            "id": "9de30801-28fc-4216-80f7-a0cc5e2e0d80",
             "name": "tile",
             "type": "INT",
             "linkIds": [
@@ -10755,7 +12259,7 @@
             ]
           },
           {
-            "id": "028172d6-2e77-4db5-aa02-9b17a15067e1",
+            "id": "fb7d0565-aa1d-4308-9208-6f31ca5a382e",
             "name": "whole_denoise",
             "type": "FLOAT",
             "linkIds": [
@@ -10768,7 +12272,7 @@
             ]
           },
           {
-            "id": "151f5693-38fe-4051-9834-9ba609aca2a8",
+            "id": "27446d50-fb53-476e-b3db-8fd6c2b73a2c",
             "name": "denoise",
             "type": "FLOAT",
             "linkIds": [
@@ -10781,7 +12285,7 @@
             ]
           },
           {
-            "id": "e39ebbda-90f6-4265-a42b-58a9262839a0",
+            "id": "e465472b-6e41-47f5-80c9-45aec7c6324b",
             "name": "seam_fix_denoise",
             "type": "FLOAT",
             "linkIds": [
@@ -10796,7 +12300,7 @@
         ],
         "outputs": [
           {
-            "id": "e9a9f2b8-da4f-4009-be36-ecb2ce292745",
+            "id": "27700d8d-332a-4456-b5c3-b4c1702c22e7",
             "name": "image",
             "type": "IMAGE",
             "linkIds": [
@@ -11429,7 +12933,7 @@
         },
         "inputs": [
           {
-            "id": "80681c24-3243-4eb7-99c9-473d273d8635",
+            "id": "9a3df498-47c4-4754-b9ed-5453c6e27282",
             "name": "vae_image",
             "type": "VAE",
             "linkIds": [
@@ -11442,7 +12946,7 @@
             ]
           },
           {
-            "id": "15f085e8-324b-4f1e-9250-af5442c97db3",
+            "id": "2db7eff1-dd8b-4b6e-acd0-f2b742b74e34",
             "name": "start_image",
             "type": "IMAGE",
             "linkIds": [
@@ -11455,7 +12959,7 @@
             ]
           },
           {
-            "id": "b1e2b1be-8fa2-4f72-aa78-358e71073d34",
+            "id": "7e9014e8-c4c5-4159-9970-4f4bc3217dbb",
             "name": "vae_decode",
             "type": "VAE",
             "linkIds": [
@@ -11468,7 +12972,7 @@
             ]
           },
           {
-            "id": "0edb6182-4396-49d0-9103-a914f27381e7",
+            "id": "0cf38d46-c235-49e9-9666-38d857da6d41",
             "name": "model_high",
             "type": "MODEL",
             "linkIds": [
@@ -11481,7 +12985,7 @@
             ]
           },
           {
-            "id": "66420313-7585-49bb-a4a7-86ea6e3ddb9a",
+            "id": "5588d43b-0f9c-4e94-81cf-a881cda164b1",
             "name": "model_low",
             "type": "MODEL",
             "linkIds": [
@@ -11494,7 +12998,7 @@
             ]
           },
           {
-            "id": "b7c6a7d5-1990-4fc5-bf44-f7ff46b8280b",
+            "id": "ef4c974b-a1ba-466a-8516-c81c234428fd",
             "name": "positive",
             "type": "CONDITIONING",
             "linkIds": [
@@ -11507,7 +13011,7 @@
             ]
           },
           {
-            "id": "42fe3d47-59e0-44c3-a68e-cbac9b16d89d",
+            "id": "9f76c5c0-c719-4c84-9d39-bd3bcda8dcbc",
             "name": "negative",
             "type": "CONDITIONING",
             "linkIds": [
@@ -11520,7 +13024,7 @@
             ]
           },
           {
-            "id": "ab93a004-9e03-4b99-bda2-daf64e74bb6b",
+            "id": "d6c37f41-7506-410b-99e1-92ab75ae1e61",
             "name": "width",
             "type": "INT",
             "linkIds": [
@@ -11533,7 +13037,7 @@
             ]
           },
           {
-            "id": "3f0d6b81-16a7-4801-83ec-e253b4ed9980",
+            "id": "5e2f5101-6ad6-48c4-8473-90145399520e",
             "name": "height",
             "type": "INT",
             "linkIds": [
@@ -11546,7 +13050,7 @@
             ]
           },
           {
-            "id": "0e8b5cf3-aa14-44b9-9a79-fa5ae0a8b65b",
+            "id": "486d5541-29a2-4553-9af9-9de71b9878af",
             "name": "length",
             "type": "INT",
             "linkIds": [
@@ -11559,7 +13063,7 @@
             ]
           },
           {
-            "id": "d8b3dbc3-0f52-45d6-bdf7-78360794ef34",
+            "id": "8d1f4ec2-4d76-4053-9d55-6eee3fb3b0a0",
             "name": "steps_high",
             "type": "INT",
             "linkIds": [
@@ -11572,7 +13076,7 @@
             ]
           },
           {
-            "id": "295948de-58db-424d-bad0-1f81e7d24796",
+            "id": "6929e9d3-8866-4258-b4be-bc3097f76c0f",
             "name": "steps_low",
             "type": "INT",
             "linkIds": [
@@ -11585,7 +13089,7 @@
             ]
           },
           {
-            "id": "b0add6ab-dab2-41bc-9b46-91b0fb50c8b7",
+            "id": "7fb8f0ea-95ee-44b3-866d-057e62115580",
             "name": "cfg_high",
             "type": "FLOAT",
             "linkIds": [
@@ -11598,7 +13102,7 @@
             ]
           },
           {
-            "id": "5fe9580a-27a2-4703-a5f5-dd2ca85ef62d",
+            "id": "e2b559f3-25f9-4d69-808d-0642a5a2d1b8",
             "name": "cfg_low",
             "type": "FLOAT",
             "linkIds": [
@@ -11611,7 +13115,7 @@
             ]
           },
           {
-            "id": "951c0fa9-9ace-4a19-b980-3aa87e18d993",
+            "id": "555afc04-c70f-4ee6-a887-def8a1d0adc0",
             "name": "seed",
             "type": "INT",
             "linkIds": [
@@ -11626,7 +13130,7 @@
         ],
         "outputs": [
           {
-            "id": "2175fcb6-85b3-4dce-b06c-eb0637ce8610",
+            "id": "8715952b-9bf9-4ff0-8fc5-dce22785d59e",
             "name": "frames",
             "type": "IMAGE",
             "linkIds": [
@@ -12202,7 +13706,7 @@
         },
         "inputs": [
           {
-            "id": "c85e62d5-911c-4ac7-a8f8-aa16d6ad826f",
+            "id": "9168865e-19ce-4dc8-9a33-15ee60ba7fd4",
             "name": "vae_image",
             "type": "VAE",
             "linkIds": [
@@ -12215,7 +13719,7 @@
             ]
           },
           {
-            "id": "13ba2566-991e-4e07-bec1-22e171a0a423",
+            "id": "49b9671b-a8e9-4b2c-8fef-984948fdfb7c",
             "name": "start_image",
             "type": "IMAGE",
             "linkIds": [
@@ -12228,7 +13732,7 @@
             ]
           },
           {
-            "id": "4cf0b5bc-ee98-4e33-bf78-96c14fcda556",
+            "id": "ffc4854b-56bb-4499-a006-3a3c26366da3",
             "name": "end_image",
             "type": "IMAGE",
             "linkIds": [
@@ -12241,7 +13745,7 @@
             ]
           },
           {
-            "id": "28862844-9a4f-4ed9-a4ed-89c724252273",
+            "id": "5cf1f14c-77b9-4e2e-b91d-9d71b4eace5f",
             "name": "vae_decode",
             "type": "VAE",
             "linkIds": [
@@ -12254,7 +13758,7 @@
             ]
           },
           {
-            "id": "bdacb978-5756-46c8-8d8f-9761a2827865",
+            "id": "dceb300d-1761-4ee0-8a02-fb566f88fb2d",
             "name": "model_high",
             "type": "MODEL",
             "linkIds": [
@@ -12267,7 +13771,7 @@
             ]
           },
           {
-            "id": "e279c41a-798e-4444-af42-3a1708e002ae",
+            "id": "2d87d26e-3738-4a26-8d62-f642e2b0b93c",
             "name": "model_low",
             "type": "MODEL",
             "linkIds": [
@@ -12280,7 +13784,7 @@
             ]
           },
           {
-            "id": "5fb40408-a292-48a0-9695-2a0412567327",
+            "id": "d2ee912f-9703-48b7-9a4d-c8740361d9fa",
             "name": "positive",
             "type": "CONDITIONING",
             "linkIds": [
@@ -12293,7 +13797,7 @@
             ]
           },
           {
-            "id": "cebff5bc-542c-410d-961e-ea65b0890c97",
+            "id": "f4eee14a-08b1-4e72-9fe4-26f0c9ce96ee",
             "name": "negative",
             "type": "CONDITIONING",
             "linkIds": [
@@ -12306,7 +13810,7 @@
             ]
           },
           {
-            "id": "f64e4e27-9f0f-43c9-9a3a-cd8548a95b5a",
+            "id": "e1b31fa3-f1d7-403b-8c4c-80aa72d6b7e8",
             "name": "width",
             "type": "INT",
             "linkIds": [
@@ -12319,7 +13823,7 @@
             ]
           },
           {
-            "id": "e0321334-8703-4054-9682-e58d2b51aa09",
+            "id": "a766f2f3-4326-44ed-94af-1c1cbc83720c",
             "name": "height",
             "type": "INT",
             "linkIds": [
@@ -12332,7 +13836,7 @@
             ]
           },
           {
-            "id": "e073e960-a8b2-4fee-bdba-be52e2e7c9e2",
+            "id": "9f8d7c2b-32a0-431e-a604-cfcccc8973d0",
             "name": "length",
             "type": "INT",
             "linkIds": [
@@ -12345,7 +13849,7 @@
             ]
           },
           {
-            "id": "218fdaff-8941-451d-916b-b82690636312",
+            "id": "92b73d66-fe21-4ded-865a-a1ef79c58651",
             "name": "steps_high",
             "type": "INT",
             "linkIds": [
@@ -12358,7 +13862,7 @@
             ]
           },
           {
-            "id": "3ba8c757-e7fa-49fd-b8af-1879a6802652",
+            "id": "3437f002-b1ed-4c2e-a80f-3b98c76df528",
             "name": "steps_low",
             "type": "INT",
             "linkIds": [
@@ -12371,7 +13875,7 @@
             ]
           },
           {
-            "id": "afdb5d9f-ad23-4cd5-8dcb-f31bc298bc4c",
+            "id": "54beb4c5-5f3c-4563-9773-0599662a4f4a",
             "name": "cfg_high",
             "type": "FLOAT",
             "linkIds": [
@@ -12384,7 +13888,7 @@
             ]
           },
           {
-            "id": "66992db4-8037-4673-8c42-e134000e7302",
+            "id": "d21b7301-1922-4808-b694-939f80d43801",
             "name": "cfg_low",
             "type": "FLOAT",
             "linkIds": [
@@ -12397,7 +13901,7 @@
             ]
           },
           {
-            "id": "1d36186c-1a28-42a7-a81d-2bed622e1c3b",
+            "id": "87c19544-d3ab-4d8d-9a7f-4564b5fde541",
             "name": "seed",
             "type": "INT",
             "linkIds": [
@@ -12412,7 +13916,7 @@
         ],
         "outputs": [
           {
-            "id": "45611af8-6813-4943-9cec-c608252312e3",
+            "id": "08879f0b-010f-47cc-95ed-8abef557d702",
             "name": "frames",
             "type": "IMAGE",
             "linkIds": [
@@ -13008,7 +14512,7 @@
         },
         "inputs": [
           {
-            "id": "dbdc14cd-3c51-4f1a-9b22-a8e384150076",
+            "id": "8123d05f-102a-4302-8d21-ed4b1b435a89",
             "name": "positive",
             "type": "CONDITIONING",
             "linkIds": [
@@ -13021,7 +14525,7 @@
             ]
           },
           {
-            "id": "716b2f48-da36-43a9-8696-7cb4bc081b45",
+            "id": "ef0c34ec-ac8d-419c-b474-6d3534823feb",
             "name": "negative",
             "type": "CONDITIONING",
             "linkIds": [
@@ -13034,7 +14538,7 @@
             ]
           },
           {
-            "id": "08ca849d-ee74-43a1-ae3f-0bd6093e87d0",
+            "id": "057a4dfd-8ac5-4970-b06c-a388aebdccac",
             "name": "width",
             "type": "INT",
             "linkIds": [
@@ -13047,7 +14551,7 @@
             ]
           },
           {
-            "id": "317e0eb8-1f62-4420-8629-5d50eb3d7189",
+            "id": "b2197826-96b6-4bb2-be1b-fd2b7fcd45bf",
             "name": "height",
             "type": "INT",
             "linkIds": [
@@ -13060,7 +14564,7 @@
             ]
           },
           {
-            "id": "7a603b4b-3c68-4049-b21f-79a1c3f86e80",
+            "id": "b4c25384-7f0c-45cc-9df8-548d8dbd9d5d",
             "name": "length",
             "type": "INT",
             "linkIds": [
@@ -13073,7 +14577,7 @@
             ]
           },
           {
-            "id": "8dae4931-be4a-4e20-8ac9-3449194a5bf8",
+            "id": "5f2e0964-35b2-4c4f-b3bd-79fef03123b7",
             "name": "seed",
             "type": "INT",
             "linkIds": [
@@ -13088,7 +14592,7 @@
         ],
         "outputs": [
           {
-            "id": "46cf5da1-5772-4b77-b57a-aaeeb29bff83",
+            "id": "f4175e0a-69a1-4bb6-9da4-ef10bd0adddc",
             "name": "frames",
             "type": "IMAGE",
             "linkIds": [
@@ -13508,7 +15012,7 @@
         },
         "inputs": [
           {
-            "id": "c482dc23-18e2-42b3-ace9-4f4595b16160",
+            "id": "a68fef5b-ea56-46eb-8527-17a56be4b0f6",
             "name": "frames",
             "type": "IMAGE",
             "linkIds": [
@@ -13521,7 +15025,7 @@
             ]
           },
           {
-            "id": "2e5ecb5e-4273-48c5-9548-50530719a505",
+            "id": "fb16fd41-5925-4f78-9904-2174b1129596",
             "name": "factor",
             "type": "FLOAT",
             "linkIds": [
@@ -13534,7 +15038,7 @@
             ]
           },
           {
-            "id": "68d94600-19a8-482a-a22f-2886c4cdcd77",
+            "id": "97a1729b-fc8f-4c22-9ed7-27ee352466a4",
             "name": "base",
             "type": "FLOAT",
             "linkIds": [
@@ -13547,7 +15051,7 @@
             ]
           },
           {
-            "id": "b0add05b-354f-4291-ac91-b41c2ddaf3f8",
+            "id": "9f595c4c-9ecc-433e-955f-e757e2c3030c",
             "name": "batch",
             "type": "INT",
             "linkIds": [
@@ -13560,7 +15064,7 @@
             ]
           },
           {
-            "id": "d3cb7568-97da-42d5-9de8-ba75f04326bb",
+            "id": "c7434826-da15-4415-b880-ceea245b88ec",
             "name": "tile",
             "type": "INT",
             "linkIds": [
@@ -13575,7 +15079,7 @@
         ],
         "outputs": [
           {
-            "id": "c541ea63-be5c-42ef-b20e-c1af40022e7b",
+            "id": "7330db59-72fe-432b-8d49-e824f8d9d06b",
             "name": "frames",
             "type": "IMAGE",
             "linkIds": [
@@ -13910,7 +15414,7 @@
         },
         "inputs": [
           {
-            "id": "7276fabf-8561-488a-a07d-6a60090e67ca",
+            "id": "a4e51dda-83f9-4683-9f66-c0806d5bf68d",
             "name": "frames",
             "type": "IMAGE",
             "linkIds": [
@@ -13923,7 +15427,7 @@
             ]
           },
           {
-            "id": "16bf6678-8bc4-4712-a65a-d2be4c65194e",
+            "id": "28e6e7e9-b1a0-425b-aa71-9427cba20d8a",
             "name": "fps",
             "type": "FLOAT",
             "linkIds": [
@@ -13936,7 +15440,7 @@
             ]
           },
           {
-            "id": "2f1912a0-5936-412a-8c4f-adc6f8efa786",
+            "id": "dfc2dfab-91fa-48ee-a725-83d5b8c59666",
             "name": "multiplier",
             "type": "FLOAT",
             "linkIds": [
@@ -13952,7 +15456,7 @@
         ],
         "outputs": [
           {
-            "id": "c61c5d49-36b0-44ea-9d2c-12badb0e6ec1",
+            "id": "9a2d6e42-9ef0-4777-9b07-f243b17a3d2e",
             "name": "frames",
             "type": "IMAGE",
             "linkIds": [
@@ -13965,7 +15469,7 @@
             ]
           },
           {
-            "id": "77154aa8-ca15-469c-9e22-1eb4e6326565",
+            "id": "4c6dcb68-2d76-4f1c-873b-c64760059321",
             "name": "fps",
             "type": "FLOAT",
             "linkIds": [

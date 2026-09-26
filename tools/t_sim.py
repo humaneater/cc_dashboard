@@ -378,6 +378,31 @@ def count(prompt, ctype):
     return sum(1 for e in prompt.values() if e["class_type"] == ctype)
 
 
+# 脸手眼矫正子图里那三个 FaceDetailer（含被你自己关掉 / 旁路的，按定义算）。
+# 「跑几级」不该写死 3：面板上关掉的那一级是有意的选择，测试只该核对「定义还在、
+# 没被旁路的那些级确实进了 prompt」。
+def detailer_stage_nodes(wf):
+    out = []
+    for sg in (wf.get("definitions") or {}).get("subgraphs") or []:
+        if sg.get("name") != "脸手眼矫正":
+            continue
+        for node in sg.get("nodes") or []:
+            if node.get("type") == "FaceDetailer":
+                out.append(node)
+    return out
+
+
+def live_detailer_stages(wf):
+    """没被静音 / 旁路的级（face / hand / eye），按子图定义里的 mode 算"""
+    out = []
+    for n in detailer_stage_nodes(wf):
+        if n.get("mode", 0) in (2, 4):
+            continue
+        key = ((n.get("properties") or {}).get("cc_dock_key")) or "?"
+        out.append(key)
+    return out
+
+
 def entry_of(prompt, ctype):
     for k, e in prompt.items():
         if e["class_type"] == ctype:
@@ -502,8 +527,17 @@ def main():
         print("      ! 不该再有收尾的第二次 4x 放大，实际 %d 处"
               % count(p, "ImageUpscaleWithModel"))
         bad += 1
-    if count(p, "FaceDetailer") != 3:
-        print("      ! FaceDetailer 应为 3 级，实际 %d" % count(p, "FaceDetailer"))
+    stages = detailer_stage_nodes(wf)
+    if len(stages) != 3:
+        print("      ! 脸手眼矫正子图里应有 3 级 FaceDetailer，实际 %d" % len(stages))
+        bad += 1
+    live = live_detailer_stages(wf)
+    if not live:
+        print("      ! 脸手眼三级全被旁路了（面板上至少留一级）")
+        bad += 1
+    elif count(p, "FaceDetailer") != len(live):
+        print("      ! 定义里没旁路的是 %s（%d 级），prompt 里却跑了 %d 级"
+              % ("/".join(live), len(live), count(p, "FaceDetailer")))
         bad += 1
 
     # 3 切 ANIMA
@@ -543,12 +577,45 @@ def main():
     for cls, fld, want in (("CLIPLoader", "clip_name",
                             "qwen_3_06b_base.safetensors"),
                            ("VAELoader", "vae_name",
-                            "wan_2.1_vae.safetensors")):
+                            "qwen_image_vae.safetensors")):
         _k, ent = entry_of(p, cls)
         got = (ent or {}).get("inputs", {}).get(fld)
         if got != want:
             print("      ! ANIMA 应由 %s 供 %s=%s，实际 %s"
                   % (cls, fld, want, got))
+            bad += 1
+    # 外挂资源槽在画布上要能被面板认出来（v1.9.0：role=te_slot / vae_slot）
+    for nid, role_, key_, want in (
+            ("110", "te_slot", "image", "qwen_3_06b_base.safetensors"),
+            ("111", "vae_slot", "image", "qwen_image_vae.safetensors"),
+            ("403", "te_slot", "video", "umt5_xxl_fp8_e4m3fn_scaled.safetensors"),
+            ("412", "vae_slot", "video", "wan_2.1_vae.safetensors")):
+        node = next((n for n in wf["nodes"] if str(n.get("id")) == nid), None)
+        props = (node or {}).get("properties") or {}
+        got = ((node or {}).get("widgets_values") or [""])[0]
+        if props.get("cc_dock_role") != role_ or props.get("cc_dock_key") != key_:
+            print("      ! %s 应是外挂资源槽 %s:%s，实际 %s:%s"
+                  % (nid, role_, key_, props.get("cc_dock_role"),
+                     props.get("cc_dock_key")))
+            bad += 1
+        if got != want:
+            print("      ! %s 默认文件应为 %s，实际 %s" % (nid, want, got))
+            bad += 1
+    # 视频侧恒外挂：403 / 412 只换文件，不参与来源开关
+    for nid, cls, fld, want in (
+            ("403", "CLIPLoader", "clip_name",
+             "umt5_xxl_fp8_e4m3fn_scaled.safetensors"),
+            ("412", "VAELoader", "vae_name", "wan_2.1_vae.safetensors")):
+        node = next((n for n in wf["nodes"] if str(n.get("id")) == nid), None)
+        if node is None:
+            continue                      # 老蓝图里没有就算了
+        if node.get("type") != cls:
+            print("      ! %s 应是 %s，实际 %s" % (nid, cls, node.get("type")))
+            bad += 1
+            continue
+        got = (node.get("widgets_values") or [""])[0]
+        if got != want:
+            print("      ! 视频资源 %s 默认应为 %s，实际 %s" % (nid, want, got))
             bad += 1
     for k, nid in (("clip", "112"), ("vae", "113")):
         ent = p.get(nid)
@@ -573,6 +640,77 @@ def main():
               % e["inputs"].get("filename_prefix"))
         bad += 1
 
+    # 4b 图生图（固定分辨率）：P 图向 —— 先缩到面板分辨率再重绘，出图尺寸不跟原图
+    w4b = copy.deepcopy(wf)
+    pick_pipeline(w4b, "i2i_fixed")
+    p, ok = sim(w4b, oi, "图生图（固定分辨率）")
+    bad += not ok
+    for c in ["LoadImageOutput", "ImageScale", "VAEEncode", "KSampler",
+              "VAEDecode", "SaveImage"]:
+        if count(p, c) == 0:
+            print("      ! 缺 %s" % c)
+            bad += 1
+    k, e = entry_of(p, "SaveImage")
+    if e and e["inputs"].get("filename_prefix") != "i2ifixed":
+        print("      ! 图生图（固定分辨率）应存 i2ifixed_*，实际 %s"
+              % e["inputs"].get("filename_prefix"))
+        bad += 1
+    # 缩放节点的宽 / 高必须来自「分辨率」参数节点（121 / 122），不是写死的数字
+    k, sc = entry_of(p, "ImageScale")
+    if k is None:
+        print("      ! 没找到 ImageScale（缩放那步）")
+        bad += 1
+    else:
+        for fld in ("width", "height"):
+            up = deref(p, k, fld)
+            ct = up.get("class_type") if isinstance(up, dict) else up
+            if ct != "PrimitiveInt":
+                print("      ! 缩放节点的 %s 该来自分辨率参数节点，实际 %s" % (fld, ct))
+                bad += 1
+        if sc["inputs"].get("crop") != "center":
+            print("      ! 缩放该用中心裁剪（crop=center），实际 %s"
+                  % sc["inputs"].get("crop"))
+            bad += 1
+    # 采样继续走图像那套：模型 / LoRA / 提示词 / 重绘强度都跟文生图共用
+    if count(p, "Power Lora Loader (rgthree)") == 0:
+        print("      ! 图生图没挂图像 LoRA 组（应该和文生图共用一套）")
+        bad += 1
+    for kk, ent in p.items():
+        if ent["class_type"] != "KSampler":
+            continue
+        up = deref(p, kk, "model")
+        ct = up.get("class_type") if isinstance(up, dict) else up
+        if ct != "Power Lora Loader (rgthree)":
+            print("      ! 图生图的 model 该来自 LoRA 组，实际 %s" % ct)
+            bad += 1
+        up = deref(p, kk, "denoise")
+        ct = up.get("class_type") if isinstance(up, dict) else up
+        if ct != "PrimitiveFloat":
+            print("      ! 图生图的重绘强度该来自参数节点，实际 %s" % ct)
+            bad += 1
+
+    # 4c 图生图（固定分辨率）+ 脸手眼 + 高清化：两个模块接在它下游
+    w4c = copy.deepcopy(wf)
+    pick_pipeline(w4c, "i2i_fixed")
+    set_module(w4c, "detailer", True)
+    set_module(w4c, "upscale", True)
+    p, ok = sim(w4c, oi, "图生图（固定分辨率）+ 脸手眼 + 高清化")
+    bad += not ok
+    for c in ["ImageScale", "FaceDetailer", "UltimateSDUpscaleNoUpscale",
+              "SaveImage"]:
+        if count(p, c) == 0:
+            print("      ! 缺 %s" % c)
+            bad += 1
+    if count(p, "SaveImage") != 1:
+        print("      ! 同时只该跑一条出图管线，实际 SaveImage=%d"
+              % count(p, "SaveImage"))
+        bad += 1
+    k, e = entry_of(p, "SaveImage")
+    if e and e["inputs"].get("filename_prefix") != "i2ifixed":
+        print("      ! 存的还是 i2ifixed_*，实际 %s"
+              % e["inputs"].get("filename_prefix"))
+        bad += 1
+
     # 5 I2V
     w5 = copy.deepcopy(wf)
     pick_pipeline(w5, "i2v")
@@ -591,9 +729,11 @@ def main():
              if e["class_type"] == "Power Lora Loader (rgthree)"]
     pre = [v for e in loras for k, v in e["inputs"].items()
            if k.startswith("lora_") and v.get("on")]
-    if len(pre) != 2 or not all("lightx2v" in str(x.get("lora"))
-                                for x in pre):
-        print("      ! 视频 4 步加速 LoRA 没预挂：%s" % pre)
+    # 默认该挂上 high / low 两个 lightx2v；你自己往上加的行（其它 LoRA）不算错
+    light = [x for x in pre if "lightx2v" in str(x.get("lora"))]
+    if len(light) != 2:
+        print("      ! 视频 4 步加速 LoRA 没预挂（该有 high / low 两个 lightx2v）：%s"
+              % pre)
         bad += 1
 
     # 6 FLF2V
@@ -856,8 +996,10 @@ def main():
     p10b, ok = sim(w10b, oi, "脸手眼矫正参数（阈值 / 羽化 / 三级重绘）")
     bad += not ok
     fds = [e for e in p10b.values() if e.get("class_type") == "FaceDetailer"]
-    if len(fds) != 3:
-        print("      ! 该跑三级 FaceDetailer，实际 %d" % len(fds))
+    live = live_detailer_stages(wf)
+    if len(fds) != len(live) or not live:
+        print("      ! 定义里没旁路的是 %s（%d 级），prompt 里却跑了 %d 级"
+              % ("/".join(live) or "无", len(live), len(fds)))
         bad += 1
     else:
         refs = {}
@@ -871,13 +1013,17 @@ def main():
 
         # 脸 / 手 共用一个阈值参数，眼单独一个（1295）；羽化三级共用；重绘三级各一个；
         # v6.5 起「检测框放大尺寸 / 放大上限 / 裁剪倍率」（137/138/139）也三级共用
-        want = {"bbox_threshold": ["1295", "130"], "feather": ["131"],
-                "denoise": ["132", "133", "134"],
+        # 你自己关掉的那一级不在 prompt 里，所以期望值是按「没旁路的级」算出来的
+        thr_of = {"face": "130", "hand": "130", "eye": "1295"}
+        den_of = {"face": "132", "hand": "133", "eye": "134"}
+        want = {"bbox_threshold": [thr_of[k] for k in live],
+                "feather": ["131"],
+                "denoise": [den_of[k] for k in live],
                 "guide_size": ["137"], "max_size": ["138"],
                 "bbox_crop_factor": ["139"]}
         for name, ids in want.items():
             got = sorted({ref_of(v) for v in refs.get(name, [])})
-            if got != sorted(ids):
+            if got != sorted(set(ids)):
                 print("      ! %s 应接参数节点 %s，实际 %s"
                       % (name, ids, refs.get(name)))
                 bad += 1
@@ -968,6 +1114,9 @@ def main():
     # (a) 只留脸：手 / 眼旁路 → 只剩 1 个 FaceDetailer
     w10d = modules_all_off(copy.deepcopy(wf))
     set_module(w10d, "detailer", True)
+    # 三个 stage 的开关状态跟着画布走（用户可能自己关过脸那级），
+    # 所以这里显式摆成「只留脸」，不依赖磁盘上那份的当前状态
+    set_stage(w10d, "face", 0)
     set_stage(w10d, "hand", 4)
     set_stage(w10d, "eye", 4)
     p10d, ok = sim(w10d, oi, "只留脸（手 / 眼旁路）")

@@ -290,12 +290,61 @@ function loraNode(key, rows) {
 }
 
 const MODELS = ["waiIllustriousSDXL_v170.safetensors", "oneObsession_anima29BV1.safetensors"];
+const UNETS = [
+  "openkolorsUnet_v13.safetensors",
+  "wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors",
+  "wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors",
+  "wan2.2_t2v_high_noise_14B_fp8_scaled.safetensors",
+  "wan2.2_t2v_low_noise_14B_fp8_scaled.safetensors",
+];
+// 外挂资源槽的文件清单（v1.9.0）
+const TE_FILES = [
+  "qwen_3_06b_base.safetensors",
+  "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+];
+const VAE_FILES = [
+  "wan_2.1_vae.safetensors",
+  "qwen_image_vae.safetensors",
+  "sdxlVAE_sdxlVAE.safetensors",
+];
 
 function buildGraph() {
   const nodes = [];
   nodes.push(mark("model_slot", null, mkNode(101, "CheckpointLoaderSimple",
     { widgets: [widget("ckpt_name", MODELS[0], { options: { values: MODELS.slice() } })] })));
+  // 视频模型（v1.5.0）：high / low 两个 UNETLoader，各自带下拉清单
+  for (const [k, cur] of [["video_high", UNETS[1]], ["video_low", UNETS[2]]]) {
+    nodes.push(mark("unet_slot", k, mkNode("u_" + k, "UNETLoader", {
+      widgets: [
+        widget("unet_name", cur, { options: { values: UNETS.slice() } }),
+        widget("weight_dtype", "default"),
+      ],
+    })));
+  }
   nodes.push(mark("preset_sdxl", null, mkNode(102, "CLIPSetLastLayer", { mode: 0 })));
+  // 外挂资源槽（v1.9.0）：图像侧 110 / 111，视频侧 403 / 412
+  nodes.push(mark("te_slot", "image", mkNode("te_img", "CLIPLoader", {
+    widgets: [
+      widget("clip_name", TE_FILES[0], { options: { values: TE_FILES.slice() } }),
+      widget("type", "stable_diffusion"), widget("device", "default"),
+    ],
+  })));
+  nodes.push(mark("vae_slot", "image", mkNode("vae_img", "VAELoader", {
+    widgets: [
+      widget("vae_name", VAE_FILES[0], { options: { values: VAE_FILES.slice() } }),
+    ],
+  })));
+  nodes.push(mark("te_slot", "video", mkNode("te_vid", "CLIPLoader", {
+    widgets: [
+      widget("clip_name", TE_FILES[1], { options: { values: TE_FILES.slice() } }),
+      widget("type", "wan"), widget("device", "default"),
+    ],
+  })));
+  nodes.push(mark("vae_slot", "video", mkNode("vae_vid", "VAELoader", {
+    widgets: [
+      widget("vae_name", VAE_FILES[0], { options: { values: VAE_FILES.slice() } }),
+    ],
+  })));
   for (const [i, k] of ["image_pos", "image_neg", "video_pos", "video_neg"].entries()) {
     nodes.push(mark("clip_encode", k, mkNode(110 + i, "CLIPTextEncode")));
     nodes.push(promptNode(k, "hello " + k));
@@ -320,12 +369,13 @@ function buildGraph() {
   nodes.push(loraNode("image", [{ i: 0, lora: "" }, { i: 1, lora: "" }]));
   nodes.push(loraNode("video_high", [{ i: 0, lora: "lightx2v_4steps.safetensors", on: true }]));
   nodes.push(loraNode("video_low", [{ i: 0, lora: "", on: false }]));
-  for (const k of ["t2i", "i2i", "i2v", "flf2v", "t2v"]) {
+  for (const k of ["t2i", "i2i", "i2i_fixed", "i2v", "flf2v", "t2v"]) {
     nodes.push(mark("save", k, mkNode("s_" + k, "SaveImage", { mode: k === "t2i" ? 0 : 2 })));
   }
   // 取图节点：LoadImageOutput 的下拉（options.values 按最新在前）
   for (const [k, cur, list] of [
     ["i2i", "old_i2i.png", ["old_i2i.png", "older.png"]],
+    ["i2i_fixed", "old_i2if.png", ["old_i2if.png", "older.png"]],
     ["i2v", "old_i2v.png", ["old_i2v.png", "older.png"]],
     ["flf_start", "old_s.png", ["old_s.png", "older.png"]],
     ["flf_end", "old_e.png", ["old_e.png", "older.png"]],
@@ -412,6 +462,39 @@ function buildGraph() {
   subNode.isSubgraphNode = () => true;
   nodes.push(subNode);
 
+  // 图生图（固定分辨率）子图：内部 ImageScale → KSampler，
+  // 用来验证分辨率写进缩放节点、采样器也写进它自己那个采样节点
+  const fScale = mkNode(1, "ImageScale", {
+    pos: [80, 80], size: [330, 150],
+    widgets: [
+      widget("upscale_method", "lanczos",
+        { options: { values: ["nearest-exact", "bilinear", "area", "bicubic", "lanczos"] } }),
+      widget("width", 1216), widget("height", 832),
+      widget("crop", "center", { options: { values: ["disabled", "center"] } }),
+    ],
+  });
+  const fKs = mkNode(3, "KSampler", {
+    pos: [820, 80], size: [310, 300],
+    widgets: [
+      widget("seed", 1), widget("control_after_generate", "randomize"),
+      widget("steps", 28), widget("cfg", 5.5),
+      widget("sampler_name", "dpmpp_2m"), widget("scheduler", "karras"),
+      widget("denoise", 0.5),
+    ],
+  });
+  const fSub = {
+    id: "sgf", name: "图生图（固定分辨率）", isRootGraph: false,
+    nodes: [fScale, fKs],
+    getNodeById: (id) => (String(id) === "1" ? fScale : (String(id) === "3" ? fKs : null)),
+  };
+  fScale.graph = fSub;
+  fKs.graph = fSub;
+  const fNode = mark("pipeline", "i2i_fixed",
+    mkNode(312, "SubgraphNode", { pos: [0, 1400], size: [300, 140] }));
+  fNode.subgraph = fSub;
+  fNode.isSubgraphNode = () => true;
+  nodes.push(fNode);
+
   // 视频管线子图：采样器下拉要写 KSamplerAdvanced 的 sampler_name / scheduler
   const vInner = mkNode(2, "KSamplerAdvanced", {
     pos: [400, 260], size: [320, 240],
@@ -444,6 +527,18 @@ function buildGraph() {
     links.push([id, src, sslot, dstNode.id, slot, "STRING"]);
     return id;
   };
+  // 视频模型槽的下游（LoRA 那半边）：换加载器类型时要能把线接回去
+  for (const k of ["video_high", "video_low"]) {
+    const src = nodes.find((n) => n.properties.cc_dock_role === "unet_slot"
+      && n.properties.cc_dock_key === k);
+    const dst = mkNode("lora_" + k + "_in", "LoraLoader", {
+      widgets: [widget("lora_name", "")],
+    });
+    dst.inputs = [{ name: "model", link: null }];
+    nodes.push(dst);
+    const lid = wire(src.id, 0, dst, "model");
+    src.outputs = [{ name: "MODEL", links: [lid] }];
+  }
   // 只有正面两组有分段开关（负面是单框）
   for (const k of ["image_pos", "video_pos"]) {
     const host = nodes.find((n) => n.id === "t_" + k);
@@ -467,13 +562,31 @@ function buildGraph() {
   }
 
   const byId = new Map(nodes.map((n) => [n.id, n]));
-  return {
+  const g = {
     isRootGraph: true,
     nodes,
     links,
-    getNodeById: (id) => byId.get(String(id)) || null,
+    getNodeById(id) {
+      // 桩里图省事用了重号的 id（110+i 撞上 113）：照 LiteGraph 的习惯取最后那个
+      for (let i = g.nodes.length - 1; i >= 0; i--) {
+        if (String(g.nodes[i].id) === String(id)) return g.nodes[i];
+      }
+      return byId.get(String(id)) || null;
+    },
+    add(n) {
+      n.graph = g;
+      g.nodes.push(n);
+      byId.set(String(n.id), n);
+      return n;
+    },
+    remove(n) {
+      g.nodes = g.nodes.filter((x) => x !== n);
+      byId.delete(String(n.id));
+      return n;
+    },
     change() {},
   };
+  return g;
 }
 
 const rootGraph = buildGraph();
@@ -599,6 +712,14 @@ try {
   await tick(10);
   eq(app.graph.nodes.filter((n) => n.properties.cc_dock_role === "save" && n.mode === 0)
     .map((n) => n.properties.cc_dock_key).join(","), "i2i", "切管线只留图生图 Save");
+
+  eq([...root().querySelectorAll("BUTTON")].filter((b) => b.classList.contains("ccd-pipe")).length,
+    6, "顶栏 6 个管线按钮（多了一条「图生图」）");
+  pipeBtn("图生图").dispatch("click");
+  await tick(10);
+  eq(app.graph.nodes.filter((n) => n.properties.cc_dock_role === "save" && n.mode === 0)
+    .map((n) => n.properties.cc_dock_key).join(","), "i2i_fixed",
+  "「图生图」是独立管线（只留 i2ifixed_* 那个 Save）");
 
   pipeBtn("文生图").dispatch("click");
   await tick(10);
@@ -743,7 +864,10 @@ try {
   loraSel.value = "qingxiao_anima_v1.safetensors";
   loraSel.dispatch("change", {});
   await tick(10);
-  const imgLora = app.graph.nodes.find((n) => n.properties.cc_dock_key === "image");
+  // 注意：v1.9.0 起 role=te_slot/vae_slot 的节点也用 key="image"，必须连 role 一起判
+  const imgLora = app.graph.nodes.find((n) => n.properties
+    && n.properties.cc_dock_role === "lora_group"
+    && n.properties.cc_dock_key === "image");
   eq(imgLora.widgets[0].value.lora, "qingxiao_anima_v1.safetensors", "LoRA 行写入画布节点");
 
   console.log("\n[8] LoRA 勾选写入缺陷（选了却不生效）+ 状态行");
@@ -817,7 +941,7 @@ try {
   plugChk2.dispatch("change", {});
   await tick(10);
   eq(sw2.widgets[0].value, true, "勾「插件输入」写 boolean_value=true");
-  ok(segRows[1].children[5].textContent.indexOf("插件：未连线") === 0,
+  ok(segRows[1].children[6].textContent.indexOf("插件：未连线") === 0,
     "勾了插件但没连线时提示去连");
   const sw3 = app.graph.getNodeById("sw_image_pos_3");
   const plugChk3 = segRows[2].children[2].children[0];
@@ -825,7 +949,7 @@ try {
   plugChk3.dispatch("change", {});
   await tick(10);
   eq(sw3.widgets[0].value, true, "第 3 段插件输入打开");
-  eq(segRows[2].children[5].textContent, "插件 ← 环境描述", "状态显示插件来源节点名");
+  eq(segRows[2].children[6].textContent, "插件 ← 环境描述", "状态显示插件来源节点名");
   const en2 = segRows[1].children[3].children[0];
   en2.checked = false;
   en2.dispatch("change", {});
@@ -836,12 +960,58 @@ try {
   ta6.dispatch("change", {});
   await tick(10);
   eq(visible(segRows), 8, "写到第 6 段后下面自动补满 8 行");
-  ok(/8 段/.test(posGroup.children[0].children[3].textContent), "顶到 8 段上限时给提示");
+  ok(/8 段/.test(posGroup.children[0].children[4].textContent), "顶到 8 段上限时给提示");
   canvasCalls.animate.length = 0;
   segRows[2].children[4].dispatch("click");
   await sleep(80);
   eq(canvasCalls.animate.length, 1, "⌖ 跳转聚焦到那一段的开关节点");
   eq(canvasCalls.animate[0][0], sw3.boundingRect, "聚焦框就是那个开关节点");
+
+  console.log("\n[10c2] 装了本机 Opus-MT 时「译」= 真翻译（不再被词典截胡）");
+  const keepFetchNmt = globalThis.fetch;
+  globalThis.fetch = async (url, opt) => {
+    const u = String(url || "");
+    if (u.indexOf("/translate/status") >= 0) {
+      return { ok: true, status: 200,
+        json: async () => ({ ok: true, installed: true, loaded: true }) };
+    }
+    if (u.indexOf("/translate") >= 0) {
+      return { ok: true, status: 200,
+        json: async () => ({ ok: true, installed: true, loaded: true,
+          engine: "opus-mt", text: "The silver-haired girl smiles.", chunks: 2,
+          load_ms: 4200 }) };
+    }
+    return keepFetchNmt(url, opt);
+  };
+  const trBtn8 = segRows[7].children[5];
+  const ta8 = segRows[7].children[1];
+  ta8.value = "银发女孩微笑";              // 词典能全覆盖，但装了模型就该走 NMT
+  ta8.dispatch("change", {});
+  await tick(10);
+  trBtn8.dispatch("click");
+  await tick(60);
+  eq(ta8.value, "The silver-haired girl smiles.", "装了 Opus-MT 走 NMT（真翻译）");
+  eq(app.graph.getNodeById("sw_image_pos_8").widgets[1].value,
+    "The silver-haired girl smiles.", "NMT 结果写回画布节点");
+  eq(segRows[7].children[6].textContent, "NMT · 加载 4.2s", "状态栏标出走的是 NMT");
+  globalThis.fetch = keepFetchNmt;
+
+  console.log("\n[10c] 中→英翻译按钮（没装模型时：词典兜底、离线可用）");
+  const trBtn7 = segRows[6].children[5];
+  ok(!!trBtn7 && trBtn7.tagName === "BUTTON", "每段行尾有「译」按钮");
+  eq(posGroup.children[0].children[1].textContent, "中→英",
+    "组头有「中→英」译本组按钮");
+  const ta7 = segRows[6].children[1];
+  ta7.value = "银发女孩微笑";
+  ta7.dispatch("change", {});
+  await tick(10);
+  trBtn7.dispatch("click");
+  await tick(40);
+  eq(ta7.value, "1girl silver hair smile", "点译后文本框变英文标签");
+  eq(app.graph.getNodeById("sw_image_pos_7").widgets[1].value,
+    "1girl silver hair smile", "英文写回画布节点（手填 text_false）");
+  eq(segRows[6].children[6].textContent, "词典",
+    "词典兜底时状态栏标「词典」，不报未收录");
 
   console.log("\n[10b] 负面提示词 = 单框（不分段、无插件开关）");
   const negGroup = root().querySelectorAll(".ccd-pg")[1];
@@ -883,6 +1053,14 @@ try {
   pipeBtn("图生图精修").dispatch("click");
   await tick(20);
   eq(modBtn("姿势").classList.contains("ccd-hide"), true, "图生图不显示姿势（采样前改条件）");
+  eq(modBtn("高清化").classList.contains("ccd-hide"), false, "图生图显示高清化");
+  pipeBtn("图生图").dispatch("click");
+  await tick(20);
+  eq(posGroup.classList.contains("ccd-hide"), false, "图生图（固定分辨率）是图像管线：图像提示词显示");
+  eq(imgSet.classList.contains("ccd-hide"), false, "图生图显示图像参数");
+  eq(imgLoraCols[0].classList.contains("ccd-hide"), false, "图生图用图像 LoRA 组（共用同一个）");
+  eq(modBtn("姿势").classList.contains("ccd-hide"), true, "图生图不显示姿势（它也没接 ControlNet）");
+  eq(modBtn("脸手眼矫正").classList.contains("ccd-hide"), false, "图生图显示脸手眼矫正");
   eq(modBtn("高清化").classList.contains("ccd-hide"), false, "图生图显示高清化");
 
   console.log("\n[12] 参数按模块分区（模块开着才显示那一块）");
@@ -932,6 +1110,12 @@ try {
   eq(tube(detSec), true, "手眼模块关着 → 手眼参数收起");
   eq(tube(upSec), true, "高清模块关着 → 高清参数收起");
   eq(tube(fieldOf(genSec, "重绘强度")), true, "重绘强度在文生图不显示（只有图生图用）");
+  pipeBtn("图生图").dispatch("click");
+  await tick(20);
+  eq(tube(fieldOf(genSec, "重绘强度")), false, "图生图（固定分辨率）也显示重绘强度");
+  eq(tube(genSec), false, "图生图用的是同一份生成参数");
+  pipeBtn("文生图").dispatch("click");
+  await tick(20);
 
   await setMod("脸手眼矫正", true);
   eq(tube(detSec), false, "打开手眼矫正 → 手眼参数出现");
@@ -1217,6 +1401,10 @@ try {
   schSel.dispatch("change");
   await tick(20);
   eq(imgW("scheduler"), "sgm_uniform", "选调度器 → 写进同一个 KSampler");
+  const fitKs = () => app.graph.getNodeById("312").subgraph.getNodeById("3");
+  const fitW = (name) => (fitKs().widgets.find((w) => w.name === name) || {}).value;
+  eq(fitW("sampler_name"), "euler_ancestral", "采样器也写进图生图（固定分辨率）子图");
+  eq(fitW("scheduler"), "sgm_uniform", "  └ 调度器同样写进去");
   eq((JSON.parse(localStorage.getItem(pkey) || "{}")).__sampler_image, "euler_ancestral",
     "采样器选择记进本地记忆");
   // 视频那套是独立的：切到视频管线才显示，写的是 KSamplerAdvanced
@@ -1280,6 +1468,7 @@ try {
   syncBtn2.dispatch("click");
   await sleep(1300);
   eq(wImg("i2i").value, "new_t2i.png", "文生图的最新图留在图生图取图节点");
+  eq(wImg("i2i_fixed").value, "new_t2i.png", "文生图 → 图生图：也同步过去了");
   eq(wImg("i2v").value, "new_t2i.png", "文生图 → 图生视频：同步过去了");
   eq(wImg("flf_start").value, "new_t2i.png", "文生图 → 首尾帧（首帧）也同步了");
   eq(wImg("flf_end").value, "new_t2i.png", "文生图 → 首尾帧（尾帧）先接上同一张");
@@ -1296,6 +1485,7 @@ try {
   eq(wImg("i2v").value, "refine_x.png", "图生图 → 图生视频：用的是图生图的图");
   eq(wImg("flf_start").value, "refine_x.png", "图生图 → 首尾帧（首帧）同步了");
   eq(nodeSrc("i2i").properties.cc_dock_key, "i2i", "图生图取图节点没被自己改掉");
+  eq(wImg("i2i_fixed").value, "refine_x.png", "图生图精修 → 图生图：精修完的图能接着 P");
   // 视频管线没有下游：点同步不该动任何东西
   const beforeV = wImg("i2v").value;
   pipeBtn("图生视频").dispatch("click");
@@ -1315,6 +1505,22 @@ try {
   await sleep(1300);
   eq(wImg("i2v").value, "newer_t2i.png", "「⟳ 取图」也会把最新的图同步下去");
 
+  // 图生图（固定分辨率）：自己那格是它的取图节点（同步/取图都认它），同步只往下游传
+  pipeBtn("图生图").dispatch("click");
+  await tick();
+  setSrcList("i2i", ["newest_i2i.png", "fit_out.png"], "fit_out.png");
+  setSrcList("i2i_fixed", ["newest_i2i.png", "fit_old.png"], "fit_old.png");
+  setSrcList("i2v", ["keep_i2v.png"], "keep_i2v.png");
+  takeBtn.dispatch("click");
+  await sleep(1300);
+  eq(wImg("i2i_fixed").value, "newest_i2i.png", "「⟳ 取图」把最新那张填进图生图自己的取图节点");
+  eq(wImg("i2i").value, "fit_out.png", "  └ 上游那格保持你手动选的图");
+  eq(wImg("i2v").value, "newest_i2i.png", "图生图 → 图生视频：同步过去了");
+  eq(wImg("flf_start").value, "newest_i2i.png", "图生图 → 首尾帧（首帧）同步了");
+  eq(wImg("flf_end").value, "newest_i2i.png", "图生图 → 首尾帧（尾帧）同步了");
+  pipeBtn("文生图").dispatch("click");
+  await tick();
+
   // ---------------------------------------------- 刚跑完就同步（不用等下拉开刷新）
   const api = globalThis.__ccApi;
   ok(!!api && typeof api.emit === "function", "测试桩能派发 ComfyUI 事件");
@@ -1332,6 +1538,8 @@ try {
   await sleep(150);
   eq(wImg("i2i").value, "refined_00046_.png [output]",
     "  └ 图生图的取图也换成刚出的这张");
+  eq(wImg("i2i_fixed").value, "refined_00046_.png [output]",
+    "  └ 图生图（固定分辨率）那格也换了");
   eq(wImg("flf_end").value, "refined_00046_.png [output]", "  └ 首尾帧尾帧也换了");
 
   // 下拉刷新落地后：新图排在列表最前，结果保持一致（不回跳）
@@ -1371,6 +1579,8 @@ try {
   api.emit("graphConfigured", {});
   await tick();
   setSrcList("i2i", ["_output_images_will_be_put_here [output]"],
+    "_output_images_will_be_put_here [output]");
+  setSrcList("i2i_fixed", ["_output_images_will_be_put_here [output]"],
     "_output_images_will_be_put_here [output]");
   setSrcList("i2v", ["total_i2v_00001_.mp4 [output]", "real_pic.png [output]"],
     "total_i2v_00001_.mp4 [output]");
@@ -1653,6 +1863,26 @@ try {
   app.graph.extra = {};
   await sleep(1400);
   eq(driftEl.classList.contains("ccd-hide"), true, "没有高清子图信息时不当成旧蓝图");
+
+  // 视频那条链里本来就有 ImageScaleBy（放大模型放大之后再缩回目标倍数），
+  // 不能因为「高清化」三个字就把「视频高清化」也当成图像高清链 —— v1.5.0 修掉的误报
+  const vidUp = {
+    id: "sg_vid_up", name: "视频高清化", isRootGraph: false,
+    nodes: ["UpscaleModelLoader", "UpscaleWithModelAdvanced", "ImageScaleBy"]
+      .map((t, i) => ({ id: "vu_" + i, type: t, mode: 0, widgets: [] })),
+    getNodeById: () => null,
+  };
+  app.graph.nodes.push({
+    id: 997, type: "0b7a1c10-0001-4a01-9c01-00000000000b", title: "视频高清化",
+    mode: 0, subgraph: vidUp,
+  });
+  app.graph.extra = { cc_dashboard_blueprint: { rev: 999, tag: "current" } };
+  await sleep(1400);
+  eq(driftEl.classList.contains("ccd-hide"), true,
+    "只有视频高清化（里面也有 ImageScaleBy）时不报「图像高清链多绕一段」");
+  app.graph.nodes.pop();
+  app.graph.extra = {};
+  await sleep(1400);
 
   console.log("\n[18] 重开工作流后 LoRA 行重绑（v6.6：选了不丢 / 开开关不冲掉）");
   {
@@ -1939,6 +2169,707 @@ try {
     eq(tube(paramTab.children[1]), true, "切回文生图 → 整块视频参数收起");
     eq(modBtn("高清化").classList.contains("ccd-hide"), false,
       "图像那个「高清化」按钮回来");
+  }
+
+  console.log("\n[22] 图像模型 / 视频模型分开（视频 high + low 成对，v1.5.0）");
+  {
+    const groupOf = (labelText) => {
+      let hit = null;
+      walk(root(), (n) => {
+        if (hit || !n.classList.contains("ccd-group")) return;
+        // v1.9.0 起模型那一格是「模型行 + 外挂资源行」，label 在里面一层
+        walk(n, (c) => {
+          if (!hit && c.tagName === "LABEL" && c.textContent === labelText) hit = n;
+        });
+      });
+      return hit;
+    };
+    // 模型行（外挂资源行是同一个分组框里的第二条）
+    const modelRow = (g) => (g.children || []).find(
+      (c) => c.classList.contains("ccd-row")) || g;
+    const selectsIn = (box) => {
+      const out = [];
+      walk(box, (n) => { if (n.tagName === "SELECT") out.push(n); });
+      return out;
+    };
+    const dig = (box, pred) => {
+      let hit = null;
+      walk(box, (n) => { if (!hit && pred(n)) hit = n; });
+      return hit;
+    };
+    const unetOf = (k) => {
+      const n = app.graph.nodes.find((x) => x.properties
+        && x.properties.cc_dock_role === "unet_slot"
+        && x.properties.cc_dock_key === k);
+      return n ? n.widgets[0].value : null;
+    };
+    const imgG = groupOf("图像模型");
+    const vidG = groupOf("视频模型");
+    ok(!!imgG && !!vidG, "顶栏把模型拆成「图像模型」和「视频模型」两块");
+
+    pipeBtn("文生图").dispatch("click");
+    await tick(20);
+    eq(imgG.classList.contains("ccd-hide"), false, "图像管线：显示图像模型");
+    eq(vidG.classList.contains("ccd-hide"), true, "图像管线：收起视频模型");
+    eq(selectsIn(modelRow(imgG))[0].children.length, MODELS.length,
+      "图像模型下拉还是那套 ckpt");
+
+    pipeBtn("图生视频").dispatch("click");
+    await tick(20);
+    eq(imgG.classList.contains("ccd-hide"), true, "视频管线：收起图像模型");
+    eq(vidG.classList.contains("ccd-hide"), false, "视频管线：显示视频模型");
+    const vSels = selectsIn(modelRow(vidG));
+    eq(vSels.length, 2, "视频模型区是 high / low 两个下拉");
+    const hiSel = vSels[0], loSel = vSels[1];
+    eq(hiSel.children.length, UNETS.length, "high 下拉列出全部 UNET");
+    eq(hiSel.value, UNETS[1], "high 下拉选中画布上的值");
+    eq(loSel.value, UNETS[2], "low 下拉选中画布上的值");
+    eq(vidG.classList.contains("ccd-vmodel-bad"), false, "成套时不给警告底色");
+
+    // ⇄ 成对：默认开着，改 high 要把 low 一起换成配对的
+    hiSel.value = UNETS[3];
+    hiSel.dispatch("change", {});
+    await tick(20);
+    eq(unetOf("video_high"), UNETS[3], "high 写进画布 406");
+    eq(unetOf("video_low"), UNETS[4], "成对联动：low 自动换成配对的那个");
+    eq(loSel.value, UNETS[4], "low 下拉跟着显示");
+
+    // 拆开成对：只改一个，另一个不动
+    const pairChk = dig(vidG, (n) => n.tagName === "INPUT");
+    ok(!!pairChk, "视频模型区有「⇄ 成对」勾选框");
+    pairChk.checked = false;
+    pairChk.dispatch("change", {});
+    await tick(20);
+    loSel.value = UNETS[2];
+    loSel.dispatch("change", {});
+    await tick(20);
+    eq(unetOf("video_low"), UNETS[2], "取消成对后 low 独立写画布");
+    eq(unetOf("video_high"), UNETS[3], "取消成对后 high 不受影响");
+    ok(vidG.classList.contains("ccd-vmodel-bad"), "high / low 不是同一套 → 区块给警告底色");
+    const vWarn = dig(vidG, (n) => n.classList.contains("ccd-vmodel-warn"));
+    ok(!!vWarn && /不是同一套/.test(String(vWarn.textContent)),
+      "黄字说明两边的族名对不上：" + (vWarn ? vWarn.textContent : "没有提示元素"));
+
+    // 配回同一套 + 重新勾上成对 → 警告收起
+    pairChk.checked = true;
+    pairChk.dispatch("change", {});
+    hiSel.value = UNETS[1];
+    hiSel.dispatch("change", {});
+    await tick(20);
+    eq(unetOf("video_low"), UNETS[2], "重新成对：low 回到 i2v 那套");
+    eq(vWarn.classList.contains("ccd-hide"), true, "配回同一套后提示收起");
+    eq(vidG.classList.contains("ccd-vmodel-bad"), false, "警告底色也跟着撤掉");
+  }
+
+  console.log("\n[23] 视频模型：GGUF 加载器 / 更多配对写法 / 拖窗不还原（v1.5.0）");
+  {
+    const GGUF_UNETS = [
+      "wan22RemixI2VGGUFV20_highQ80.gguf",
+      "wan22RemixI2VGGUFV20_lowQ80.gguf",
+      "wan22EnhancedNSFWSVICamera_nolightningSVICfQ8H.gguf",
+      "wan22EnhancedNSFWSVICamera_nolightningSVICfQ8L.gguf",
+      "wan22I2VA14BGGUF_q8A14BHigh.gguf",
+    ];
+    let seq = 0, lid = 5000;
+    const reg = {
+      registered_node_types: {
+        UNETLoader: {
+          nodeData: {
+            input: {
+              required: {
+                unet_name: [UNETS.slice()],
+                weight_dtype: [["default", "fp8_e4m3fn"]],
+              },
+            },
+          },
+        },
+        UnetLoaderGGUF: {
+          nodeData: { input: { required: { unet_name: [GGUF_UNETS.slice()] } } },
+        },
+      },
+      createNode(type) {
+        const def = this.registered_node_types[type];
+        if (!def) return null;
+        const n = mkNode("sw" + (++seq), type, {
+          widgets: type === "UNETLoader"
+            ? [widget("unet_name", "", { options: { values: UNETS.slice() } }),
+              widget("weight_dtype", "default")]
+            : [widget("unet_name", "", { options: { values: GGUF_UNETS.slice() } })],
+        });
+        n.comfyClass = type;
+        n.outputs = [{ name: "MODEL", links: [] }];
+        n.connect = function (oslot, target, tslot) {
+          const id = ++lid;
+          target.inputs[tslot].link = id;
+          this.outputs[oslot].links = this.outputs[oslot].links || [];
+          this.outputs[oslot].links.push(id);
+          app.graph.links.push([id, this.id, oslot, target.id, tslot, "MODEL"]);
+          return id;
+        };
+        return n;
+      },
+    };
+    globalThis.LiteGraph = reg;
+    mainWin.LiteGraph = reg;
+
+    const unetNode = (k) => app.graph.nodes.find((x) => x.properties
+      && x.properties.cc_dock_role === "unet_slot"
+      && x.properties.cc_dock_key === k);
+    const unetType = (k) => { const n = unetNode(k); return n ? n.type : null; };
+    const unetVal = (k) => { const n = unetNode(k); return n ? n.widgets[0].value : null; };
+    const downLink = (k) => {
+      const n = unetNode(k);
+      const src = n && n.outputs && n.outputs[0];
+      const id = src && src.links && src.links[0];
+      return id ? app.graph.links.find((x) => x[0] === id) : null;
+    };
+    const groupOf = (labelText) => {
+      let hit = null;
+      walk(root(), (n) => {
+        if (hit || !n.classList.contains("ccd-group")) return;
+        // v1.9.0 起模型那一格是「模型行 + 外挂资源行」，label 在里面一层
+        walk(n, (c) => {
+          if (!hit && c.tagName === "LABEL" && c.textContent === labelText) hit = n;
+        });
+      });
+      return hit;
+    };
+    const vidG = groupOf("视频模型");
+    // 模型行（外挂资源行是同一个分组框里的第二条）
+    const vidRow = (vidG.children || []).find(
+      (c) => c.classList.contains("ccd-row")) || vidG;
+    const vSels = [];
+    walk(vidRow, (n) => { if (n.tagName === "SELECT") vSels.push(n); });
+    const hiSel = vSels[0], loSel = vSels[1];
+    const vWarn = (() => {
+      let hit = null;
+      walk(vidG, (n) => { if (!hit && n.classList.contains("ccd-vmodel-warn")) hit = n; });
+      return hit;
+    })();
+    const pairChk = (() => {
+      let hit = null;
+      walk(vidRow, (n) => { if (!hit && n.tagName === "INPUT") hit = n; });
+      return hit;
+    })();
+
+    pipeBtn("图生视频").dispatch("click");
+    await tick(20);
+    eq(hiSel.children.length, UNETS.length + GGUF_UNETS.length,
+      "下拉把 safetensors 和 GGUF 合在一张清单里");
+    const ggufOpt = hiSel.children.find((o) => o.attrs.value === GGUF_UNETS[0]);
+    ok(!!ggufOpt && /GGUF/.test(ggufOpt.textContent), "GGUF 那几行标了（GGUF）");
+    pairChk.checked = true;
+    pairChk.dispatch("change", {});
+
+    // 选 GGUF：406 换成 UnetLoaderGGUF，下游线还在，low 自动配成 lowQ80
+    hiSel.value = GGUF_UNETS[0];
+    hiSel.dispatch("change", {});
+    await tick(20);
+    eq(unetType("video_high"), "UnetLoaderGGUF", "选 .gguf 把 406 换成 GGUF 加载器");
+    eq(unetVal("video_high"), GGUF_UNETS[0], "GGUF 文件名写进画布");
+    eq(unetType("video_low"), "UnetLoaderGGUF", "成对联动：407 也跟着换成 GGUF 加载器");
+    eq(unetVal("video_low"), GGUF_UNETS[1], "成对联动认出 highQ80 ↔ lowQ80");
+    const dl = downLink("video_high");
+    ok(!!dl && dl[1] === unetNode("video_high").id,
+      "换加载器后 MODEL 那条线接回原来的下游：" + JSON.stringify(dl));
+
+    // 拖动面板（旧 bug：松手时 sync(true) 把下拉重置回第一项）
+    const bar = root().children[0];
+    bar.dispatch("pointerdown", { button: 0, clientX: 300, clientY: 30 });
+    mainWin.dispatch("pointermove", { clientX: 360, clientY: 90 });
+    await tick(20);
+    mainWin.dispatch("pointerup", {});
+    await tick(30);
+    eq(hiSel.value, GGUF_UNETS[0], "拖窗之后 high 下拉还是你选的那个（不再自己还原）");
+    eq(loSel.value, GGUF_UNETS[1], "拖窗之后 low 下拉也保持");
+    eq(unetVal("video_high"), GGUF_UNETS[0], "拖窗之后画布 406 没被改回去");
+
+    // 选回 safetensors：加载器换回 UNETLoader，weight_dtype 那格回来
+    hiSel.value = UNETS[3];
+    hiSel.dispatch("change", {});
+    await tick(20);
+    eq(unetType("video_high"), "UNETLoader", "选回 safetensors 换回核心 UNETLoader");
+    eq(unetNode("video_high").widgets.length, 2, "换回后 weight_dtype 那格还在");
+    eq(unetVal("video_low"), UNETS[4], "safetensors 那套也照旧成对（t2v high ↔ low）");
+
+    // Q8H / Q8L 也认
+    hiSel.value = GGUF_UNETS[2];
+    hiSel.dispatch("change", {});
+    await tick(20);
+    eq(unetVal("video_low"), GGUF_UNETS[3], "认得出 Q8H ↔ Q8L 这种写法");
+    eq(vWarn.classList.contains("ccd-hide"), true, "配成一套时不提示");
+
+    // 只有 High 的半套不硬凑
+    hiSel.value = GGUF_UNETS[4];
+    hiSel.dispatch("change", {});
+    await tick(20);
+    eq(unetVal("video_low"), GGUF_UNETS[3], "找不到另一半就不动 low（半套不硬凑）");
+    ok(/不是同一套/.test(String(vWarn.textContent)),
+      "半套 / 不配套时给黄字：" + vWarn.textContent);
+
+    // 旧蓝图（画布上没有视频模型槽）：下拉禁掉 + 提示，别假装改成功
+    app.graph.remove(unetNode("video_high"));
+    app.graph.remove(unetNode("video_low"));
+    await sleep(1400);                     // 等面板轮询里的一次 sync
+    eq(hiSel.disabled, true, "画布上没有视频模型槽 → high 下拉禁掉");
+    eq(loSel.disabled, true, "low 下拉也禁掉");
+    ok(/载入最新蓝图/.test(String(vWarn.textContent)),
+      "黄字告诉你去载入最新蓝图：" + vWarn.textContent);
+    delete globalThis.LiteGraph;
+    delete mainWin.LiteGraph;
+  }
+
+  console.log("\n[24] 外挂资源：文本编码器 / VAE（v1.9.0）");
+  {
+    const groupOf = (labelText) => {
+      let hit = null;
+      walk(root(), (n) => {
+        if (hit || !n.classList.contains("ccd-group")) return;
+        walk(n, (c) => {
+          if (!hit && c.tagName === "LABEL" && c.textContent === labelText) hit = n;
+        });
+      });
+      return hit;
+    };
+    const dig = (box, pred) => {
+      let hit = null;
+      walk(box, (n) => { if (!hit && pred(n)) hit = n; });
+      return hit;
+    };
+    const selectsIn = (box) => {
+      const out = [];
+      walk(box, (n) => { if (n.tagName === "SELECT") out.push(n); });
+      return out;
+    };
+    const imgG = groupOf("图像模型");
+    const vidG = groupOf("视频模型");
+    const imgRes = dig(imgG, (n) => n.classList.contains("ccd-res"));
+    const vidRes = dig(vidG, (n) => n.classList.contains("ccd-res"));
+    ok(!!imgRes && !!vidRes, "图像 / 视频模型下面各有一行「外挂资源」");
+
+    const imgResSels = selectsIn(imgRes);
+    const vidResSels = selectsIn(vidRes);
+    eq(imgResSels.length, 2, "图像侧两个下拉：文本编码器 + VAE");
+    eq(vidResSels.length, 2, "视频侧两个下拉：文本编码器 + VAE");
+    const [teSel, vaeSel] = imgResSels;
+    const optsOf = (sel) => sel.children.map((o) => o.attrs.value);
+    eq(optsOf(teSel).length, TE_FILES.length + 1, "图像文本编码器清单 = 画布节点的清单 + 「用模型自带」");
+    ok(TE_FILES.every((f) => optsOf(teSel).indexOf(f) >= 0), "清单里就是 models\\text_encoders 那些文件");
+    eq(optsOf(vaeSel).length, VAE_FILES.length + 1, "图像 VAE 清单 = 画布节点的清单 + 「用模型自带」");
+    eq(optsOf(vidResSels[0]).length, TE_FILES.length, "视频侧没有「用模型自带」（分离式模型必须外挂）");
+
+    // 选文件 → 写节点 + 把来源开关（112 / 113）切到外挂
+    teSel.value = TE_FILES[0];
+    teSel.dispatch("change", {});
+    await tick(20);
+    eq(app.graph.getNodeById("te_img").widgets[0].value, TE_FILES[0], "选文本编码器写进画布 110");
+    eq(app.graph.getNodeById("f_clip").widgets[0].value, 2, "来源开关 112 切到外挂");
+    vaeSel.value = VAE_FILES[1];
+    vaeSel.dispatch("change", {});
+    await tick(20);
+    eq(app.graph.getNodeById("vae_img").widgets[0].value, VAE_FILES[1], "选 VAE 写进画布 111");
+    eq(app.graph.getNodeById("f_vae").widgets[0].value, 2, "来源开关 113 切到外挂");
+
+    // 选回「用模型自带」→ 开关回 1
+    teSel.value = "__builtin";
+    teSel.dispatch("change", {});
+    await tick(20);
+    eq(app.graph.getNodeById("f_clip").widgets[0].value, 1, "选「用模型自带」把 112 切回 1");
+    vaeSel.value = "__builtin";
+    vaeSel.dispatch("change", {});
+    await tick(20);
+    eq(app.graph.getNodeById("f_vae").widgets[0].value, 1, "选「用模型自带」把 113 切回 1");
+
+    // 后端探测：ANIMA 那种裸 DiT（缺 TE + VAE）→ 这一行出现并自动预填
+    const keepFetchRes = globalThis.fetch;
+    const PROBE = {
+      [MODELS[0]]: { known: true, has_te: true, has_vae: true, is_anima: false },
+      [MODELS[1]]: { known: true, has_te: false, has_vae: false, is_anima: true },
+    };
+    globalThis.fetch = async (url) => {
+      const u = String(url || "");
+      const m = /\/cc_dashboard\/model_info\?name=([^&]+)/.exec(u);
+      if (m) {
+        const name = decodeURIComponent(m[1]);
+        return { ok: true, status: 200,
+          json: async () => (PROBE[name] || { known: false }) };
+      }
+      return { ok: true, status: 200,
+        json: async () => ({ queue_running: [], queue_pending: [] }) };
+    };
+    // 前面场景用默认桩探测过（返回 {} → 失败缓存 60s），清掉再测，免得桩不生效
+    globalThis.__ccDock.resetProbes();
+
+    modelSel.value = MODELS[1];
+    modelSel.dispatch("change", {});
+    await tick(30);
+    eq(imgRes.classList.contains("ccd-hide"), false, "裸模型（缺 TE / VAE）→ 图像侧资源行显示出来");
+    eq(teSel.value, "qwen_3_06b_base.safetensors", "自动预填 ANIMA 的文本编码器");
+    eq(vaeSel.value, "qwen_image_vae.safetensors", "自动预填 ANIMA 的 VAE");
+    eq(app.graph.getNodeById("f_clip").widgets[0].value, 2, "预填后 112 自动切到外挂");
+    eq(app.graph.getNodeById("f_vae").widgets[0].value, 2, "预填后 113 自动切到外挂");
+    ok(/不自带/.test(String(imgRes.children[imgRes.children.length - 1].textContent)),
+      "给一行提示说明模型不自带：" + imgRes.children[imgRes.children.length - 1].textContent);
+
+    // 自带 TE / VAE 的模型（Illustrious）→ 整行收起，只剩「🛠 外挂」按钮
+    modelSel.value = MODELS[0];
+    modelSel.dispatch("change", {});
+    await tick(30);
+    eq(imgRes.classList.contains("ccd-hide"), true, "自带 TE / VAE → 图像侧资源行收起");
+    eq(app.graph.getNodeById("f_clip").widgets[0].value, 1, "收起时 112 也用模型自带");
+    eq(vidRes.classList.contains("ccd-hide"), false, "视频侧那一行不受图像模型影响，恒显示");
+    eq(vidResSels[0].disabled, false, "视频侧文本编码器下拉可用");
+
+    // 🛠 强制展开 + 每模型记住选过的那份
+    const resOpen = dig(imgG, (n) => n.classList.contains("ccd-res-open"));
+    ok(!!resOpen, "「🛠 外挂」按钮在模型那一行");
+    resOpen.dispatch("click");
+    await tick(20);
+    eq(imgRes.classList.contains("ccd-hide"), false, "点 🛠 能把收起的资源行强制展开");
+    vaeSel.value = "sdxlVAE_sdxlVAE.safetensors";
+    vaeSel.dispatch("change", {});
+    await tick(20);
+    eq(app.graph.getNodeById("vae_img").widgets[0].value, "sdxlVAE_sdxlVAE.safetensors",
+      "给自带 VAE 的模型强换外挂也写得进画布");
+    modelSel.value = MODELS[1];
+    modelSel.dispatch("change", {});
+    await tick(30);
+    modelSel.value = MODELS[0];
+    modelSel.dispatch("change", {});
+    await tick(30);
+    eq(app.graph.getNodeById("vae_img").widgets[0].value, "sdxlVAE_sdxlVAE.safetensors",
+      "切回这个模型自动还原你给它选过的 VAE");
+    eq(app.graph.getNodeById("f_vae").widgets[0].value, 2, "还原的那份也照样切外挂");
+
+    // 管线过滤：视频只看视频资源行，图像只看图像资源行（整格隐藏）
+    pipeBtn("图生视频").dispatch("click");
+    await tick(20);
+    eq(imgG.classList.contains("ccd-hide"), true, "视频管线：图像模型那格（含资源行）收起");
+    eq(vidG.classList.contains("ccd-hide"), false, "视频管线：视频资源行显示");
+    pipeBtn("文生图").dispatch("click");
+    await tick(20);
+    eq(vidG.classList.contains("ccd-hide"), true, "图像管线：视频资源行收起");
+    eq(imgG.classList.contains("ccd-hide"), false, "图像管线：图像资源行显示");
+
+    // 回归：选完 VAE 之后清单刷新会把下拉视觉上冲回「用模型自带」（画布值其实没被改）——
+    // 用户看到的就是「我选 VAE，它自己又切回自带」。重建选项后必须保住选中项。
+    vaeSel.value = VAE_FILES[0];
+    vaeSel.dispatch("change", {});
+    await tick(20);
+    eq(app.graph.getNodeById("vae_img").widgets[0].value, VAE_FILES[0], "先选一份 VAE");
+    ok(/已写进画布 111/.test(String(imgRes.children[imgRes.children.length - 1].textContent)),
+      "选完给一句「写进画布 111」的反馈："
+      + imgRes.children[imgRes.children.length - 1].textContent);
+    // 模拟 models\vae 里新丢进一个文件 → 清单签名变了 → 下拉重建
+    app.graph.getNodeById("vae_img").widgets[0].options =
+      { values: VAE_FILES.concat(["brand_new_vae.safetensors"]).slice() };
+    const resReload = dig(imgRes, (n) => n.classList.contains("ccd-res-reload"));
+    resReload.dispatch("click");
+    await tick(30);
+    ok(optsOf(vaeSel).indexOf("brand_new_vae.safetensors") >= 0,
+      "⟳ 重拉清单：新文件出现在下拉里");
+    eq(vaeSel.value, VAE_FILES[0], "清单重建后选中项没被冲回「用模型自带」");
+    eq(app.graph.getNodeById("f_vae").widgets[0].value, 2, "来源开关还停在外挂");
+    globalThis.fetch = keepFetchRes;
+  }
+
+  console.log("\n[25] 流匹配模型（ANIMA）：karras 调度器会把图洗白（自动纠正 + 黄字）");
+  {
+    const schSel2 = selOf(genSec, "调度器");
+    const smpSel2 = selOf(genSec, "采样器");
+    const warnOf = (sel) => {
+      const w = sel.parentNode && sel.parentNode.querySelector(".ccd-warn-txt");
+      return String((w && w.textContent) || "");
+    };
+    // 先落在 SDXL 的正常默认上（karras 对扩散模型没问题）
+    schSel2.value = "karras";
+    schSel2.dispatch("change");
+    await tick(20);
+    eq(imgW("scheduler"), "karras", "前提：Illustrious + karras（扩散模型的正常配方）");
+    eq(warnOf(schSel2), "", "SDXL 上不提示（karras 是它的甜点）");
+
+    // 切到 ANIMA：karras 必须自动换掉
+    modelSel.value = MODELS[1];
+    modelSel.dispatch("change", {});
+    await tick(30);
+    eq(imgW("scheduler"), "simple", "切到 ANIMA → 调度器自动从 karras 换成 simple");
+    eq(imgW("sampler_name"), "dpmpp_2m", "采样器不动（当前值本身安全）");
+    const parStatus2 = root().querySelector(".ccd-par-status");
+    ok(/karras/.test(String(parStatus2.textContent)) && /simple/.test(String(parStatus2.textContent)),
+      "面板说清改了哪一项：" + parStatus2.textContent);
+    eq((JSON.parse(localStorage.getItem(pkey) || "{}")).__scheduler_image, "simple",
+      "纠正后的调度器也记进本地记忆");
+
+    // 手动选回 karras：你说了算，值照样写进去，但那一行下面出黄字
+    schSel2.value = "karras";
+    schSel2.dispatch("change");
+    await tick(20);
+    eq(imgW("scheduler"), "karras", "手动选 karras 照样写进画布（不偷偷改你的选择）");
+    ok(/流匹配/.test(warnOf(schSel2)) && /simple/.test(warnOf(schSel2)),
+      "调度器那一行下面出现黄字：" + warnOf(schSel2));
+    schSel2.value = "simple";
+    schSel2.dispatch("change");
+    await tick(20);
+    eq(warnOf(schSel2), "", "换回 simple → 黄字消失");
+
+    // 重置默认值：按当前模型族取，ANIMA 给 er_sde + simple（不会重置回 karras）
+    const resetBtn2 = [...root().querySelectorAll("BUTTON")].find(
+      (b) => b.textContent.indexOf("重置默认值") >= 0);
+    ok(!!resetBtn2, "参数页的重置按钮还在");
+    resetBtn2.dispatch("click");
+    await tick(30);
+    eq(imgW("sampler_name"), "er_sde", "重置 → ANIMA 的采样器回到 er_sde（官方推荐）");
+    eq(imgW("scheduler"), "simple", "重置 → 调度器回到 simple，不会又踩 karras");
+
+    // 老会话在 localStorage 里留着 karras：重开工作流写回记忆时也要纠掉
+    const st2 = JSON.parse(localStorage.getItem(pkey) || "{}");
+    st2.__scheduler_image = "karras";
+    st2.__sampler_image = "dpmpp_2m";
+    localStorage.setItem(pkey, JSON.stringify(st2));
+    imgKs().widgets.find((w) => w.name === "scheduler").value = "karras";
+    globalThis.__ccApi.emit("graphConfigured");
+    await tick(60);
+    eq(imgW("scheduler"), "simple", "重开工作流：记忆里的 karras 也被纠成 simple");
+    eq(imgW("sampler_name"), "dpmpp_2m", "采样器按记忆写回（这个值本身没问题）");
+
+    // 本地记忆里没有调度器那一项（老会话 / 换电脑）：画布上留着的 karras 也要在打开工作流时纠掉
+    const st3 = JSON.parse(localStorage.getItem(pkey) || "{}");
+    delete st3.__scheduler_image;
+    localStorage.setItem(pkey, JSON.stringify(st3));
+    imgKs().widgets.find((w) => w.name === "scheduler").value = "karras";
+    globalThis.__ccApi.emit("graphConfigured");
+    await tick(60);
+    eq(imgW("scheduler"), "simple", "打开工作流时也按族纠一遍（不靠本地记忆兜）");
+
+    // 切回 Illustrious：只纠正流匹配族，不会误伤（SDXL 上 karras 合法）
+    schSel2.value = "karras";
+    schSel2.dispatch("change");
+    await tick(20);
+    modelSel.value = MODELS[0];
+    modelSel.dispatch("change", {});
+    await tick(30);
+    eq(imgW("scheduler"), "karras", "切回 Illustrious 时不动调度器（仍是你要的 karras）");
+    eq(warnOf(schSel2), "", "切回 SDXL 后黄字也消失");
+    smpSel2.value = "dpmpp_2m";
+    smpSel2.dispatch("change");
+    await tick(20);
+    eq(imgW("sampler_name"), "dpmpp_2m", "收尾：采样器回到 dpmpp_2m");
+  }
+
+  console.log("\n[26] 推荐分辨率真的读模型头部（v1.9.2）");
+  {
+    const keepFetch3 = globalThis.fetch;
+    const EXTRA = "krea2Style_test.safetensors";        // 名字里什么族都认不出 → 只能靠头部
+    const EXTRA_UNET = "wan2.2_testX_high_noise.safetensors";
+    const PROBE3 = {
+      [EXTRA]: {
+        known: true, has_te: true, has_vae: true, is_anima: false, arch: "sdxl",
+        res: [1216, 832], res_src: "file",
+        res_why: "模型文件里写了训练分辨率（合成：ss_bucket_info）",
+        buckets: [[1024, 1536, 55]],
+      },
+      [EXTRA_UNET]: {
+        known: true, has_te: false, has_vae: false, is_anima: false, arch: "wan",
+        res: [832, 480], res_src: "family",
+        res_why: "Wan 2.2 官方 480P 档 832×480（合成）", buckets: [],
+      },
+    };
+    const asked = [];
+    globalThis.fetch = async (url) => {
+      const u = String(url || "");
+      const m = /\/cc_dashboard\/model_info\?name=([^&]+)/.exec(u);
+      if (m) {
+        const name = decodeURIComponent(m[1]);
+        asked.push(name);
+        return { ok: true, status: 200,
+          json: async () => (PROBE3[name] || { known: false }) };
+      }
+      return { ok: true, status: 200,
+        json: async () => ({ queue_running: [], queue_pending: [] }) };
+    };
+
+    // 新模型塞进画布清单：名字里没有 anima / illustrious 线索
+    const slot = app.graph.nodes.find((n) => n.properties
+      && n.properties.cc_dock_role === "model_slot");
+    slot.widgets[0].options.values.push(EXTRA);
+    // 先把宽高压成「按名字猜出来的推荐值」1024×1024（这时面板只会给 1024）
+    const wInp = fieldOf(genSec, "宽").querySelector("input");
+    const hInp = fieldOf(genSec, "高").querySelector("input");
+    wInp.value = "1024"; wInp.dispatch("change", {});
+    hInp.value = "1024"; hInp.dispatch("change", {});
+    globalThis.__ccApi.emit("graphConfigured");
+    await tick(60);
+    const slotSel = root().querySelector("select");
+    eq(slotSel, modelSel, "顶上第一个下拉就是图像模型下拉");
+    // 桩里 option 的 value 只在 el() 里设属性，这里按文本判断
+    ok(slotSel.children.map((o) => String(o.textContent)).indexOf(EXTRA) >= 0,
+      "新模型出现在下拉里：" + EXTRA);
+
+    slotSel.value = EXTRA;
+    slotSel.dispatch("change", {});
+    await tick(60);
+    ok(asked.indexOf(EXTRA) >= 0, "换模型时向后端问了头部（model_info）：" + EXTRA);
+    const resSel3 = selOf(genSec, "分辨率");
+    const recTxt3 = String(resSel3.children[0].textContent);
+    ok(/1216/.test(recTxt3) && /832/.test(recTxt3),
+      "推荐项按头部给的真值（1216×832），不再拿 1024×1024 糊弄：" + recTxt3);
+    ok(/文件里写了训练分辨率/.test(recTxt3),
+      "文件里写了训练分辨率 → 文案说清来源：" + recTxt3);
+    ok(/读自模型文件/.test(String(resSel3.title || "")),
+      "推荐项悬停说明写清来源：" + String(resSel3.title || "").slice(0, 24) + "…");
+    eq(pnum("p_width"), 1216, "宽高还停在猜测值时自动跟随头部：宽 = 1216");
+    eq(pnum("p_height"), 832, "宽高还停在猜测值时自动跟随头部：高 = 832");
+    const bucketOpt = (resSel3.children || []).find(
+      (o) => String(o.attrs.value) === "1024x1536");
+    ok(!!bucketOpt && /训练桶|55/.test(String(bucketOpt.textContent)),
+      "kohya 训练桶也列成选项：" + (bucketOpt ? bucketOpt.textContent : "没有这一项"));
+
+    // 视频侧：场景 [22] 把两个视频模型槽都删了（验证「没有槽就禁用下拉」），
+    // 这里重新挂一对回来，换一个没探过的 unet → 推荐跟着它自己的头部走
+    const mkUnet = (key, cur) => {
+      const n = mkNode("u_" + key + "_back", "UNETLoader", {
+        widgets: [
+          widget("unet_name", cur, { options: { values: UNETS.concat([EXTRA_UNET]) } }),
+          widget("weight_dtype", "default"),
+        ],
+      });
+      n.properties = { cc_dock_role: "unet_slot", cc_dock_key: key };
+      app.graph.add(n);
+      return n;
+    };
+    mkUnet("video_high", UNETS[1]);
+    mkUnet("video_low", UNETS[2]);
+    globalThis.__ccApi.emit("graphConfigured");
+    await tick(60);
+    pipeBtn("图生视频").dispatch("click");
+    await tick(30);
+    const vidModelGroup = (() => {
+      let hit = null;
+      walk(root(), (n) => {
+        if (hit || !n.classList.contains("ccd-group")) return;
+        walk(n, (c) => { if (!hit && c.tagName === "LABEL" && c.textContent === "视频模型") hit = n; });
+      });
+      return hit;
+    })();
+    const hiSel3 = (() => {
+      let hit = null;
+      walk(vidModelGroup, (n) => { if (!hit && n.tagName === "SELECT") hit = n; });
+      return hit;
+    })();
+    ok(!!hiSel3, "视频模型 high 下拉在");
+    hiSel3.value = EXTRA_UNET;
+    hiSel3.dispatch("change", {});
+    await tick(60);
+    ok(asked.indexOf(EXTRA_UNET) >= 0, "换视频模型也会问头部：" + EXTRA_UNET);
+    const vSec3 = secOf(paramTab.children[1], "视频生成参数");
+    const vResSel3 = selOf(vSec3, "分辨率");
+    ok(!!vResSel3, "视频参数里有分辨率下拉");
+    const vRecTxt = String(vResSel3.children[0].textContent);
+    ok(/832/.test(vRecTxt) && /480/.test(vRecTxt) && /合成/.test(vRecTxt),
+      "视频推荐项按 unet 头部给（832×480）：" + vRecTxt);
+
+    pipeBtn("文生图").dispatch("click");
+    await tick(20);
+    globalThis.fetch = keepFetch3;
+  }
+
+  console.log("\n[27] LoRA 下拉：排序 + ⟳ 刷新（v1.9.3）");
+  {
+    const keepFetch4 = globalThis.fetch;
+    const NOW = Date.now() / 1000;
+    // 名字顺序和时间顺序故意不一致，才能看出排的是哪个
+    const FILES = [
+      { name: "a_newest.safetensors", mtime: NOW - 60, size: 11 },
+      { name: "b_oldest.safetensors", mtime: NOW - 900000, size: 22 },
+      { name: "c_middle.safetensors", mtime: NOW - 90000, size: 33 },
+    ];
+    let asks = 0, extra = false;
+    globalThis.fetch = async (url) => {
+      const u = String(url || "");
+      if (u.indexOf("/cc_dashboard/loras") >= 0) {
+        asks++;
+        const items = FILES.concat(extra
+          ? [{ name: "z_fresh_download.safetensors", mtime: NOW + 5, size: 44 }] : []);
+        return { ok: true, status: 200,
+          json: async () => ({ ok: true, count: items.length, items: items.slice(),
+            dirs: ["D:/models/loras"] }) };
+      }
+      return { ok: true, status: 200, json: async () => ({}) };
+    };
+
+    const cols = root().querySelectorAll(".ccd-lora-col");
+    eq(cols.length, 3, "LoRA 页还是三个分组（图像 / high / low）");
+    const sorts = root().querySelectorAll(".ccd-lora-sort");
+    eq(sorts.length, 3, "三个分组各有一个排序下拉");
+    eq((sorts[0].children || []).length, 4, "排序下拉有四项（名称 ↑↓ / 时间 新→旧、旧→新）");
+    eq(sorts[0].value, "name", "默认按名称 A→Z");
+    const refBtn = root().querySelectorAll(".ccd-lora-refresh")[0];
+    ok(!!refBtn, "每个分组有一个 ⟳ 刷新按钮");
+
+    // ⟳：问后端要清单（新下的文件也在这份里）
+    refBtn.dispatch("click", {});
+    await tick(40);
+    ok(asks > 0, "⟳ 会去问 /cc_dashboard/loras（问了 " + asks + " 次）");
+    const pickOf = (colIdx, rowIdx) => cols[colIdx].children[1].children[rowIdx].children[1];
+    const optsOf = (s) => (s.children || []).map((o) => String(o.attrs.value));
+    eq(optsOf(pickOf(0, 0)).slice(1, 4).join("|"),
+      "a_newest.safetensors|b_oldest.safetensors|c_middle.safetensors",
+      "默认名称排序：a → b → c");
+    ok(optsOf(pickOf(0, 0)).indexOf("hiyuki02.safetensors") >= 0,
+      "面板里正在用的那个（清单里没有的）也留着，不会被刷新冲掉");
+    eq(String(pickOf(0, 0).children[0].textContent), "— 无 —", "第一个选项还是「— 无 —」");
+
+    // 选中一个，再换排序：选中项必须保住
+    pickOf(0, 0).value = "c_middle.safetensors";
+    pickOf(0, 0).dispatch("change", {});
+    await tick(20);
+    sorts[0].value = "time_desc";
+    sorts[0].dispatch("change", {});
+    await tick(40);
+    eq(optsOf(pickOf(0, 0)).slice(1).join("|"),
+      "a_newest.safetensors|c_middle.safetensors|b_oldest.safetensors",
+      "时间 新→旧：a（最新）→ c → b");
+    eq(pickOf(0, 0).value, "c_middle.safetensors", "换成时间排序后，选中的那个没被冲掉");
+    eq(sorts[1].value, "time_desc", "三个分组的排序是同一份设置（high 跟着变）");
+    eq(sorts[2].value, "time_desc", "low 也跟着变");
+    eq(JSON.parse(localStorage.getItem("cc_dock_ui_v1")).loraSort, "time_desc",
+      "排序方式记进本地记忆（换页面还在）");
+    const loraNode = app.graph.nodes.find((n) => n.properties
+      && n.properties.cc_dock_role === "lora_group" && n.properties.cc_dock_key === "image");
+    eq(loraNode.widgets[0].value.lora, "c_middle.safetensors", "排序只动面板下拉，画布那行没被改");
+
+    sorts[0].value = "time";
+    sorts[0].dispatch("change", {});
+    await tick(40);
+    eq(optsOf(pickOf(0, 0)).slice(1).join("|"),
+      "b_oldest.safetensors|c_middle.safetensors|a_newest.safetensors",
+      "时间 旧→新：b（最旧）→ c → a");
+
+    sorts[0].value = "name_desc";
+    sorts[0].dispatch("change", {});
+    await tick(40);
+    eq(optsOf(pickOf(0, 0)).slice(1).join("|"),
+      "c_middle.safetensors|b_oldest.safetensors|a_newest.safetensors",
+      "名称 Z→A：c → b → a");
+
+    // 刚下完一个新 LoRA：点 ⟳ 就能选到，还能看出「新增 1 个」
+    extra = true;
+    refBtn.dispatch("click", {});
+    await tick(60);
+    ok(optsOf(pickOf(0, 0)).indexOf("z_fresh_download.safetensors") >= 0,
+      "刷新后新下载的 LoRA 出现在下拉里（不用重启）");
+    const note = cols[0].children[2];
+    ok(/新增 1 个/.test(String(note.textContent)),
+      "刷新后给一句「新增了几个」：" + note.textContent);
+    ok(/新增 1 个/.test(String(cols[1].children[2].textContent)),
+      "提示三个分组一起显示（不用切过去看）");
+    eq(pickOf(0, 0).value, "c_middle.safetensors", "刷新也不会把你正选着的那个冲掉");
+
+    // 回到名称排序收尾，别把状态留给后面的预览
+    sorts[0].value = "name";
+    sorts[0].dispatch("change", {});
+    await tick(20);
+    globalThis.fetch = keepFetch4;
   }
 
 } catch (e) {

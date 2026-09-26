@@ -92,12 +92,16 @@ def main():
     for rel in ("__init__.py", "web/dock.js", "blueprint/00_总控台.json",
                 "blueprint/generator.py", "pyproject.toml", "README.md",
                 "SHARE.md", "tools/gen_dashboard.py", "tools/check_dashboard.py",
-                "tools/t_sim.py", "tools/t_dock.mjs", "tools/make_zip.py"):
+                "tools/t_sim.py", "tools/t_dock.mjs", "tools/make_zip.py",
+                "translate.py", "web/zh_en_dict.json",
+                "tools/install_translate.py"):
         ok(os.path.exists(os.path.join(PLUGIN, rel)), "有 %s" % rel)
     init_src = read(os.path.join(PLUGIN, "__init__.py"))
     ok('WEB_DIRECTORY = "web"' in init_src, "WEB_DIRECTORY 指向 web/")
-    ok("/cc_dashboard/status" in init_src and "/cc_dashboard/blueprint" in init_src,
-       "注册了 status / blueprint 两个接口")
+    ok("/cc_dashboard/status" in init_src and "/cc_dashboard/blueprint" in init_src
+       and "/cc_dashboard/translate" in init_src,
+       "注册了 status / blueprint / translate 三个接口")
+    ok("CCTranslateZhEn" in init_src, "注册了「中→英 翻译」画布节点")
     ok("ensure_blueprint_installed" in init_src, "首次安装会放置预置蓝图")
 
     print("\n[3] 预置蓝图与生成器同步")
@@ -118,6 +122,30 @@ def main():
     ok(role_keys(bundled) == role_keys(fresh),
        "面板认领的 role:key 共 %d 项，两边一致" % len(role_keys(fresh)))
     ok(len(role_keys(fresh)) > 0, "蓝图里带了面板标记（不是普通工作流）")
+
+    print("\n[3b] 中→英翻译（内置词典 + 可选 Opus-MT）")
+    import translate as trans                                   # noqa: E402
+    dict_doc = json.load(open(os.path.join(PLUGIN, "web", "zh_en_dict.json"),
+                              encoding="utf-8"))
+    nwords = len(dict_doc.get("dict") or {})
+    ok(nwords > 800, "词典词条 %d 条" % nwords)
+    ok("女孩" in (dict_doc.get("dict") or {}), "词典含常用词（女孩）")
+    r1 = trans.translate("银发女孩微笑", engine="dict")
+    ok("1girl" in r1["text"] and "smile" in r1["text"],
+       "词典翻译可用：银发女孩微笑 → %s" % r1["text"])
+    r2 = trans.translate("一只叫做咪咪的猫在弹钢琴", engine="dict")
+    ok("cat" in r2["text"] and bool(r2["miss"]),
+       "未收录词列出来不硬吞：%s" % r2["miss"])
+    st = trans.status()
+    ok(isinstance(st, dict) and "installed" in st and "dir" in st,
+       "翻译状态可用（Opus-MT %s）" % ("已装" if st.get("installed") else "未装"))
+    r3 = trans.translate("银发女孩微笑")          # 默认引擎：装了模型就是真翻译
+    if st.get("installed"):
+        ok(r3.get("engine") == "opus-mt",
+           "装了模型时默认走本机 Opus-MT（真翻译）→ %s" % r3["text"])
+        ok(not r3.get("miss"), "NMT 模式不报未收录")
+    else:
+        ok(r3.get("engine") == "dict", "没装模型时回落词典 → %s" % r3["text"])
 
     print("\n[4] 面板契约与面板脚本对得上")
     dock = read(os.path.join(PLUGIN, "web", "dock.js"))
@@ -175,6 +203,24 @@ def main():
                           wv[order.index("scheduler")]))
         ok(touched > 0 and seen == {("uni_pc", "sgm_uniform")},
            "重建时结转子图里的采样器 / 调度器（%d 处采样节点）" % touched)
+        # 视频模型槽要是 GGUF 加载器（面板上选 .gguf 会换过去），重建后得还是它，
+        # 否则那格会挂一个核心 UNETLoader 清单里根本没有的 .gguf 文件名
+        with open(out, encoding="utf-8") as fh:
+            doc = json.load(fh)
+        for node in doc["nodes"]:
+            if node.get("id") in (406, 407):
+                node["type"] = "UnetLoaderGGUF"
+                node["widgets_values"] = ["wan22RemixI2VGGUFV20_highQ80.gguf"
+                                          if node["id"] == 406
+                                          else "wan22RemixI2VGGUFV20_lowQ80.gguf"]
+        with open(out, "w", encoding="utf-8") as fh:
+            json.dump(doc, fh, ensure_ascii=False)
+        res5 = generator.write_blueprint(mode="update")
+        got = {n["id"]: (n.get("type"), (n.get("widgets_values") or [None])[0])
+               for n in res5["workflow"]["nodes"] if n.get("id") in (406, 407)}
+        ok(got == {406: ("UnetLoaderGGUF", "wan22RemixI2VGGUFV20_highQ80.gguf"),
+                   407: ("UnetLoaderGGUF", "wan22RemixI2VGGUFV20_lowQ80.gguf")},
+           "重建时视频模型槽还是 GGUF 加载器 + 原来那个文件：%s" % got)
         outside = os.path.join(tempfile.gettempdir(),
                                "cc_dashboard_should_not_exist.json")
         if os.path.exists(outside):

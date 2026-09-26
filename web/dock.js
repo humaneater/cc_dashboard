@@ -16,6 +16,30 @@
  *     v6.8：修独立窗口（PiP）里「改了没效果」——focused() 以前只看主文档的
  *     activeElement，PiP 里永远是 false，1.2s 一轮的同步就把正在输入的文字
  *     盖回画布旧值（change 也就不再触发）；顺带在收回 / 关窗时提交没失焦的编辑
+ *  v7：提示词「译」按钮 —— 面板里直接写中文，点一下变英文标签。
+ *     内置绘画词典（web/zh_en_dict.json，1000+ 条，长词优先）；
+ *     长句若装了 Opus-MT（tools/install_translate.py）会自动走后端真翻译。
+ *  v1.9.0：模型下面多一行「外挂资源」——文本编码器 / VAE。
+ *     后端读 ckpt 头部（GET /cc_dashboard/model_info，不加载权重）判断这个模型自带不带；
+ *     自带就整行收起（🛠 可强制展开），缺哪项显示哪项并预填好文件，写 110 / 111 与
+ *     112 / 113 两个来源开关；视频侧（403 / 412）恒显示。每个模型名记住你挑过的那份。
+ *  v1.9.1：修「ANIMA 出白图」——流匹配模型（ANIMA / Wan 2.2）配 karras / exponential
+ *     这类给扩散模型退火的调度会把噪声计划错配（实测均值 254 / 对比度 3，只剩淡轮廓）。
+ *     现在：采样器 / 调度器默认值按模型族分开（ANIMA = er_sde + simple），切到 ANIMA 时
+ *     自动把 karras 换成 simple，重置默认值也按族取，手动选回去时那一行出黄字；
+ *     顺带修「选完 VAE 下拉又视觉上弹回『用模型自带』」（清单重建时保住选中项）+ 选完给一句
+ *     「已写进画布 110 / 111，来源开关 112 / 113 → 外挂」的确认。
+ *  v1.9.2：分辨率推荐真的读模型了。后端还读 __metadata__ 里的训练分辨率（kohya 的
+ *     ss_resolution / ss_bucket_info、ModelSpec 的 modelspec.resolution），有就用；没有
+ *     （本机 18 个成品 ckpt 实测 0 个写）就按张量结构判架构族：SDXL 1024²、SD1.5 512²、
+ *     SD2.x 768²、SD3 / FLUX 1024²、ANIMA 1024²、Wan 832×480。面板侧：
+ *     探到架构族/训练桶 → 推荐项与「训练桶」选项跟着重画（以前只有 anima 才刷，看着像没读）、
+ *     宽高还停在猜测值时才自动跟随、视频模型（406 / 407）也纳入探测。
+ *  v1.9.3：LoRA 下拉能排序（名称 A→Z / Z→A、下载时间 新→旧 / 旧→新）+ ⟳ 刷新。
+ *     清单 = 画布节点那份 ∪ 后端 GET /cc_dashboard/loras（带 mtime），
+ *     刷新会先清 ComfyUI 的目录缓存再扫，刚下好的 LoRA 不用重启就能选；
+ *     后端没起来就退回核心 /object_info（只是没有时间可排）。排序记忆存 localStorage，
+ *     换排序/刷新都不会把你选中的那个 LoRA 冲掉。
  *  v5：浮动窗 + 独立窗口（Document PiP）+ 跟随执行
  * 任何异常只 console.warn，不影响出图。
  *
@@ -26,10 +50,10 @@ import { app } from "../../scripts/app.js";
 
 const ROOT_ID = "cc-dock-root";
 const LS_KEY = "cc_dock_ui_v1";
-const CC_DASHBOARD_VERSION = "1.4.0";   // 与 __init__.py / pyproject.toml 保持一致
+const CC_DASHBOARD_VERSION = "1.9.3";   // 与 __init__.py / pyproject.toml 保持一致
 // 与 blueprint/generator.py 的 BLUEPRINT_REV 一致：蓝图结构一改就两边一起 +1，
 // 面板靠它 + 高清链结构两道判断认出「画布上跑的还是旧蓝图」
-const BLUEPRINT_REV = 4;
+const BLUEPRINT_REV = 7;
 const UPSCALE_CHAIN_NODES = ["CR Upscale Image", "KSampler", "VAEEncode",
   "VAEDecode", "UltimateSDUpscaleNoUpscale", "ColorMatch"];
 const API_BASE = "/cc_dashboard";
@@ -40,6 +64,7 @@ const GEOM_EDGE = 96;     // 至少留这么多像素在视口内，防止拖飞
 const PIPES = [
   ["t2i", "文生图"],
   ["i2i", "图生图精修"],
+  ["i2i_fixed", "图生图"],
   ["i2v", "图生视频"],
   ["flf2v", "首尾帧"],
   ["t2v", "文生视频"],
@@ -63,13 +88,14 @@ const SEG_MAX = 8;          // 每组上限（节点决定的硬上限）
 const SEG_SHOWN_MIN = 3;    // 一开始露几行
 // 管线属于哪一套：图像（提示词 / 参数 / LoRA / 模块）还是视频
 const PIPE_KIND = {
-  t2i: "image", i2i: "image",
+  t2i: "image", i2i: "image", i2i_fixed: "image",
   i2v: "video", flf2v: "video", t2v: "video",
 };
 // 每条管线显示哪些模块按钮
 const PIPE_MODULES = {
   t2i: ["pose", "detailer", "upscale"],
   i2i: ["detailer", "upscale"],
+  i2i_fixed: ["detailer", "upscale"],
   // 视频管线：高清化 → 补帧（先放大再补帧，省一半时间 / 显存）
   i2v: ["vupscale", "vfi"], flf2v: ["vupscale", "vfi"], t2v: ["vupscale", "vfi"],
 };
@@ -110,8 +136,14 @@ const RES_PRESETS = {
     { w: 720, h: 1280, tag: "9:16 · 竖屏 720p" },
   ],
 };
-// 模型推荐分辨率 = 这个模型「训练时用的分辨率」。元数据读不出来（ckpt 里没写），
-// 所以按模型族/名字判断：认不出来就按 SDXL 级 1024²。
+// 模型推荐分辨率 = 这个模型「训练时用的分辨率」，三级来源：
+//   ① 后端读 ckpt 头部（GET /cc_dashboard/model_info，只读头不加载权重）：
+//      · 作者在 __metadata__ 里写了训练分辨率（kohya 的 ss_resolution / ss_bucket_info、
+//        ModelSpec 的 modelspec.resolution）→ 直接用文件里写死的那个，标注「读自文件」；
+//      · 没写（绝大多数成品 ckpt 都没写；本机 18 个实测 0 个有）→ 按张量结构判出架构族，
+//        用该族官方训练分辨率（SDXL 1024²、SD1.5 512²、SD2.x 768²、ANIMA 1024²、Wan 832×480）；
+//   ② 名字兜底（下面这张表）：后端没重启 / .gguf 读不了头部时用；
+//   ③ 都认不出 → SDXL 级 1024²。
 const MODEL_RES = [
   { re: /anima/i, w: 1024, h: 1024, why: "ANIMA 训练分辨率" },
   { re: /illustrious|sd_?xl|sdxl|noob|pony/i, w: 1024, h: 1024,
@@ -121,15 +153,63 @@ const MODEL_RES = [
     why: "SD1.5 训练分辨率" },
 ];
 const MODEL_RES_FALLBACK = { w: 1024, h: 1024, why: "SDXL 级默认（认不出模型族时）" };
-const VIDEO_RES_FALLBACK = { w: 640, h: 640,
-  why: "Wan2.2 起手常用（显存友好；要好画质就选 832×480）" };
+const VIDEO_RES_FALLBACK = { w: 832, h: 480,
+  why: "Wan 2.2 官方 480P 档（要好画质又不怕慢就 1280×720，省显存用 640×640）" };
 
-function recommendedRes(name) {
+/** 只按名字猜（后端读不到头部时兜底） */
+function modelResByName(name) {
   const n = String(name || "");
   for (const r of MODEL_RES) {
     if (r.re.test(n)) return r;
   }
   return MODEL_RES_FALLBACK;
+}
+
+/** 后端读模型头部得出的建议（没读到 → null） */
+function probeRes(name) {
+  const p = modelProbe(name);
+  if (!p || !p.res || !p.res[0] || !p.res[1]) return null;
+  return {
+    w: p.res[0], h: p.res[1],
+    why: p.res_why || "读自模型头部",
+    src: p.res_src || "family",
+    buckets: p.buckets || [],
+  };
+}
+
+function recommendedRes(name) {
+  return probeRes(name) || modelResByName(name);
+}
+
+/** 当前视频模型名（high 优先）；这份蓝图没有 unet 槽时给空串 */
+function videoModelForRes() {
+  try { return readUnet("video_high") || readUnet("video_low") || ""; }
+  catch (e) { return ""; }
+}
+
+/** 按管线取推荐分辨率：图像看 101 那个 ckpt，视频看 406 / 407 那个 unet */
+function recommendedResOf(media) {
+  if (media !== "video") return recommendedRes(currentModel());
+  return probeRes(videoModelForRes()) || VIDEO_RES_FALLBACK;
+}
+
+/** 头部探测回来：宽高还停在「按名字猜出来的推荐值」时，才跟着读出来的真值走。
+
+    只动这一种情况 —— 你手动选过的比例（1216×832、竖图…）一律不碰。
+ */
+function followResToProbe(media, name) {
+  const p = probeRes(name);
+  if (!p) return false;
+  const guess = media === "video" ? VIDEO_RES_FALLBACK : modelResByName(name);
+  const wk = media === "video" ? "video_width" : "width";
+  const hk = media === "video" ? "video_height" : "height";
+  const w = paramNum(wk), h = paramNum(hk);
+  if (w === null || h === null) return false;
+  if (w === p.w && h === p.h) return false;              // 已经一致
+  if (w !== guess.w || h !== guess.h) return false;      // 自己选过的，不动
+  writeResolution(media, p.w, p.h);
+  flashParamStatus("分辨率跟随模型：" + p.w + "×" + p.h + "（" + p.why + "）");
+  return true;
 }
 
 // 采样器 / 调度器下拉（值直接从 KSampler 的节点定义里取，取不到用这份兜底）
@@ -141,13 +221,71 @@ const SCHEDULER_FALLBACK = ["normal", "karras", "exponential", "sgm_uniform",
   "simple", "ddim_uniform", "beta", "linear_quadratic", "kl_optimal"];
 // 图像 / 视频各一套采样器：改哪个只影响对应那几条管线
 const SAMPLER_PIPES = {
-  image: ["t2i", "i2i"],
+  image: ["t2i", "i2i", "i2i_fixed"],
   video: ["i2v", "flf2v", "t2v"],
 };
-const SAMPLER_DEFAULTS = {
-  "__sampler_image": "dpmpp_2m", "__scheduler_image": "karras",
-  "__sampler_video": "euler", "__scheduler_video": "simple",
+// 采样器 / 调度器默认值按模型族分开存。
+// ANIMA 和 Wan 2.2 都是流匹配（flow matching）模型，KSampler 的 scheduler 必须给
+// simple 这一类；karras / exponential 是给扩散模型（eps / v 预测）退火的，套到流匹配上
+// 噪声计划直接错配 —— 实测整张图洗白（均值 254、对比度 3，只剩一层很淡的轮廓）。
+// ANIMA 官方 README 推荐的也是 simple（采样器 er_sde / euler / dpmpp_2m_sde_gpu）。
+const FLOW_SCHED_BAD = ["karras", "exponential"];
+const FLOW_SCHED_OK = ["simple", "beta", "beta57", "sgm_uniform", "ddim_uniform"];
+const SAMPLER_FAMILY = {
+  sdxl: {
+    "__sampler_image": "dpmpp_2m", "__scheduler_image": "karras",
+    "__sampler_video": "euler", "__scheduler_video": "simple",
+  },
+  anima: {
+    "__sampler_image": "er_sde", "__scheduler_image": "simple",
+    "__sampler_video": "euler", "__scheduler_video": "simple",
+  },
 };
+const SAMPLER_DEFAULTS = SAMPLER_FAMILY.sdxl;
+
+/** 当前图像模型属于哪一族（ANIMA / Wan 那条流匹配线，还是 SDXL 那条扩散线） */
+function samplerFamilyOfImage() {
+  return modelIsAnima(currentModel()) ? "anima" : "sdxl";
+}
+
+/** 某个采样器 / 调度器参数此刻该用的默认值（跟着模型族走） */
+function samplerDefaultOf(key) {
+  const fam = SAMPLER_FAMILY[samplerFamilyOfImage()] || SAMPLER_DEFAULTS;
+  return fam[key] || SAMPLER_DEFAULTS[key] || "";
+}
+
+/** 这个调度器能不能用在这个模型上：流匹配模型上 karras / exponential 会出白图 */
+function schedUnsafe(media, val) {
+  if (!val) return false;
+  const flow = media === "video" ? true : modelIsAnima(currentModel());
+  return flow && FLOW_SCHED_BAD.indexOf(String(val)) >= 0;
+}
+
+/** 危险组合的黄字：说明为什么 + 换成什么 */
+function schedWarnText(media, val) {
+  if (!schedUnsafe(media, val)) return "";
+  const who = media === "video" ? "Wan 2.2" : "ANIMA";
+  return who + " 是流匹配（flow matching）模型：" + val + " 这类给扩散模型退火的调度"
+    + "会让噪声计划错配 —— 实测整张图洗白、只剩一层很淡的轮廓。"
+    + "换成 simple（推荐）/ beta / sgm_uniform / ddim_uniform。";
+}
+
+/** 画布上的图像调度器要是「流匹配模型用不了的那两档」，就换成这个族的默认。
+
+    什么时候会用上：打开工作流时那个模型是 ANIMA、调度器却是蓝图里的 karras
+    （老会话留下的 / 你自己选过），以及切模型、写回本地记忆的时候。
+    只动 karras / exponential 这两档 —— 你选的 simple / beta / er_sde 之类不会被碰。
+ */
+function fixFlowScheduler() {
+  const fam = SAMPLER_FAMILY[samplerFamilyOfImage()] || SAMPLER_DEFAULTS;
+  const sched = canvasSampler("image", "scheduler");
+  if (!sched || sched === fam.__scheduler_image || !schedUnsafe("image", sched)) return false;
+  if (writeSamplerToCanvas("image", "scheduler", fam.__scheduler_image) <= 0) return false;
+  storeParam("__scheduler_image", fam.__scheduler_image);
+  flashParamStatus("流匹配模型（ANIMA）用不了 " + sched + "：调度器已换成 "
+    + fam.__scheduler_image + "（" + sched + " 会把图洗白）");
+  return true;
+}
 
 // 参数按模块分区：每块对应画布上的一个模块，模块开着才显示那块。
 // module = 需要哪个模块在跑（null 表示与模块无关）；字段可带 opts.pipes 限定管线。
@@ -155,8 +293,11 @@ const SAMPLER_DEFAULTS = {
 const IMG_PARAM_SECTIONS = [
   { id: "gen", title: "生成参数", params: [
     ["__resolution_image", "分辨率", 0,
-      "出图分辨率预设（下拉）。★ 那项是「当前模型推荐」= 这个模型训练时用的分辨率："
-      + "SDXL / Illustrious / ANIMA 都是 1024×1024，SD1.5 是 512×512。"
+      "出图分辨率预设（下拉）。★ 那项是「当前模型推荐」= 这个模型训练时用的分辨率，"
+      + "面板真的读了模型文件：① 文件里写了训练分辨率（ss_resolution / ss_bucket_info / "
+      + "modelspec.resolution）就用它，悬停能看到「读自文件」；② 没写（绝大多数成品 ckpt 都没写）"
+      + "就按张量结构判架构族 —— SDXL / Illustrious / ANIMA 1024×1024、SD1.5 512×512、"
+      + "SD2.x 768×768、FLUX / SD3 1024×1024；③ 读不到头部（.gguf）才退回按模型名猜。"
       + "下面还收了一批市面主流比例（SDXL 官方训练桶 1152×896 / 1216×832 / 1344×768 / "
       + "1536×640，以及 16:9、9:16、竖屏等）。选了会同时写宽和高；"
       + "想自己填数字就选「自定义」再改下面的宽 / 高；⇄ 一键横竖互换。",
@@ -173,17 +314,20 @@ const IMG_PARAM_SECTIONS = [
     ["__sampler_image", "采样器", 0,
       "采样算法（KSampler 的 sampler_name）。dpmpp_2m 稳、dpmpp_2m_sde 更细、"
       + "euler_ancestral 更活泼、lcm 配 lcm 模型用。改完立刻写进文生图 / 图生图两个子图，"
-      + "高清化和脸手眼那两步有自己的一套，不受这里影响。",
+      + "高清化和脸手眼那两步有自己的一套，不受这里影响。"
+      + "ANIMA 这类流匹配模型官方推荐 er_sde / euler / dpmpp_2m_sde_gpu（默认按族自动给）。",
       { combo: "sampler", media: "image" }],
     ["__scheduler_image", "调度器", 0,
       "噪声调度（KSampler 的 scheduler）。karras 是通用甜点；"
-      + "sgm_uniform 平滑、exponential 偏锐、simple 最朴素。",
+      + "sgm_uniform 平滑、exponential 偏锐、simple 最朴素。"
+      + "⚠ ANIMA / Wan 2.2 是流匹配模型：karras / exponential 会把图洗白，只能选 "
+      + "simple（推荐）/ beta / sgm_uniform / ddim_uniform。换到 ANIMA 时面板会自动纠正。",
       { combo: "scheduler", media: "image" }],
     ["seed", "种子", 1,
       "随机种子。上面「🎲 随机」勾着时每张都换新种子，关掉才按这个数字反复微调"],
     ["denoise", "重绘强度", 0.05,
       "图生图重绘幅度：0.3 只微调、0.5 半重绘、0.7 以上基本重新画。改脸/改手用 0.4~0.55",
-      { pipes: ["i2i"] }],
+      { pipes: ["i2i", "i2i_fixed"] }],
   ] },
   { id: "pose", title: "姿势参数", module: "pose", params: [
     ["pose_strength", "姿势强度", 0.05,
@@ -264,8 +408,9 @@ const IMG_PARAM_SECTIONS = [
 ];
 const VID_PARAMS = [
   ["__resolution_video", "分辨率", 0,
-    "视频分辨率预设（下拉）。★ 那项是 Wan2.2 起手最常用的一档；"
-    + "832×480 是官方 480p 推荐、1280×720 是 720p 但很吃显存。"
+    "视频分辨率预设（下拉）。★ 那项是当前视频模型（画布 406 / 407）读了文件头部之后给的推荐："
+    + "Wan 2.1 / 2.2 这类 DiT 判出来就是官方 480P 档 832×480（1280×720 是 720P，很吃显存）；"
+    + "换别的视频模型会按它的架构族给。"
     + "选了会同时写宽和高，⇄ 一键横竖互换（宽高都要 16 的倍数）。",
     { combo: "resolution", media: "video" }],
   ["video_width", "宽", 16, "视频宽度（像素，16 的倍数）。Wan 2.2 建议 832×480 或 640×640"],
@@ -280,7 +425,8 @@ const VID_PARAMS = [
     + "4 步加速 LoRA 配方用 euler 最稳；不挂加速 LoRA 再考虑 dpmpp_2m 之类。",
     { combo: "sampler", media: "video" }],
   ["__scheduler_video", "调度器", 0,
-    "视频噪声调度。4 步加速配方配 simple；步数拉高（20 步以上）时可换 karras 试试。",
+    "视频噪声调度。4 步加速配方配 simple；Wan 2.2 是流匹配模型，"
+    + "karras / exponential 会把视频洗白（糊成一片灰白），只用 simple / beta / sgm_uniform。",
     { combo: "scheduler", media: "video" }],
   ["video_seed", "种子", 1, "视频种子，跟图像那套一样由「🎲 随机」开关控制"],
 ];
@@ -339,6 +485,12 @@ const PARAM_WARN = {
     "≥3 倍目标：中间那层 4 倍大图会非常吃内存（81 帧 2560×2560 约 6G），"
     + "而且 4x 模型缩回小比例反而更软。视频 1.5~2 倍最实用"],
 };
+// 下拉参数的危险组合：值 = 返回提示文案的函数（空串 = 不提示）。
+// 现在只有一条：流匹配模型（ANIMA / Wan 2.2）配 karras 这类退火调度 → 图被洗白。
+const COMBO_WARN = {
+  "__scheduler_image": () => schedWarnText("image", canvasSampler("image", "scheduler")),
+  "__scheduler_video": () => schedWarnText("video", canvasSampler("video", "scheduler")),
+};
 const LORA_GROUPS = [
   ["image", "图像 LoRA（文生图 + 图生图共用）"],
   ["video_high", "视频 LoRA · high（I2V / FLF2V）"],
@@ -346,11 +498,26 @@ const LORA_GROUPS = [
 ];
 const WIDGET_OF = {
   model_slot: "ckpt_name",
+  unet_slot: "unet_name",
+  te_slot: "clip_name",
+  vae_slot: "vae_name",
   prompt: "value",
   param: "value",
   family: "Input",
   source_image: "image",
   pose_image: "image",
+};
+
+// 外挂资源（v1.9.0）：裸模型（ANIMA 那种没有 TE / VAE 的 DiT）要外挂的文本编码器与 VAE。
+// 面板读模型头部判要不要显示，选完写进 110 / 111（图像）或 403 / 412（视频）。
+const RES_KINDS = [
+  { kind: "te", label: "文本编码器", widget: "clip_name", type: "CLIPLoader" },
+  { kind: "vae", label: "VAE", widget: "vae_name", type: "VAELoader" },
+];
+const RES_BUILTIN = "__builtin";       // 下拉里的「用模型自带」
+const RES_DEFAULT = {                  // 缺件时的预填（按模型族）
+  anima: { te: "qwen_3_06b_base.safetensors", vae: "qwen_image_vae.safetensors" },
+  sdxl: { te: "", vae: "sdxlVAE_sdxlVAE.safetensors" },
 };
 // 模型族预设
 const PRESET = {
@@ -394,7 +561,10 @@ const LS_DEFAULT = {
   focus: true,     // 跟随执行：默认开
   geom: null,      // 浮动窗 {x,y,w,h}
   batch: 1,        // 队列那一排的「数量」（跨刷新记住）
-};
+      pairSync: true,  // 视频模型 high/low 成对联动（改一个自动配另一个）
+      assets: {},      // 每个 ckpt 记住你挑过的外挂 文本编码器 / VAE（v1.9.0）
+      loraSort: "name", // LoRA 下拉排序：name / name_desc / time_desc / time（v1.9.3）
+    };
 
 /**
  * 面板认领的 role:key 清单（与 blueprint/generator.py 写进节点的 properties.cc_dock_*
@@ -403,6 +573,9 @@ const LS_DEFAULT = {
  */
 const HANDLED = {
   model_slot: [null],
+  unet_slot: ["video_high", "video_low"],
+  te_slot: ["image", "video"],
+  vae_slot: ["image", "video"],
   preset_sdxl: [null],
   pose_image: [null],
   clip_encode: ["image_pos", "image_neg", "video_pos", "video_neg"],
@@ -420,11 +593,11 @@ const HANDLED = {
     "video_upscale_batch", "video_upscale_tile"],
   family: ["clip", "vae"],
   lora_group: ["image", "video_high", "video_low"],
-  source_image: ["i2i", "i2v", "flf_start", "flf_end"],
-  pipeline: ["t2i", "i2i", "i2v", "flf2v", "t2v"],
+  source_image: ["i2i", "i2i_fixed", "i2v", "flf_start", "flf_end"],
+  pipeline: ["t2i", "i2i", "i2i_fixed", "i2v", "flf2v", "t2v"],
   module: ["pose_sdxl", "pose_anima", "detailer", "upscale",
     "vupscale", "vfi"],
-  save: ["t2i", "i2i", "i2v", "flf2v", "t2v"],
+  save: ["t2i", "i2i", "i2i_fixed", "i2v", "flf2v", "t2v"],
   // v6.5：子图内部的三级矫正 / SAM 开关（写的是子图定义里那几个节点的 mode）
   detailer_stage: ["face", "hand", "eye"],
   detailer_sam: ["sam"],
@@ -697,23 +870,472 @@ function modelList() {
   return fromDef.slice();
 }
 
-let LORA_CACHE = null;
+// ---------------------------------------------- LoRA 清单：排序 + 刷新（v1.9.3）
+// 面板的下拉清单 = 画布节点自己的 combo（/object_info 那份）∪ 后端清单
+// （GET /cc_dashboard/loras，带每个文件的 mtime）—— 后者才能「按下载时间排」，
+// 也才能让刚下好的 LoRA 不用重启就出现。你选过的那个永远保留，不会被排序冲掉。
+let LORA_CACHE = null;      // 排好序的名字清单
+let LORA_SIG = "";          // 清单签名（排序方式 / 来源 / 版本变了才重排）
+let LORA_META = {};         // 名字 → {mtime, size}
+let LORA_API = null;        // 后端给的名字清单（null = 还没问过）
+let LORA_PREV = [];         // 上一次的清单（用来算「新增 N 个」）
+let LORA_REV = 0;           // 每拉到一次新清单 +1
+let LORA_FETCHED = false;
+let LORA_PENDING = false;
+let LORA_FAIL_AT = 0;       // 上一次问失败的时间（60s 内不自动重试，手点 ⟳ 不受限）
+const LORA_SORTS = [
+  ["name", "名称 ↑ A→Z", "名称 A→Z"],
+  ["name_desc", "名称 ↓ Z→A", "名称 Z→A（倒序）"],
+  ["time_desc", "时间 ↓ 新→旧", "下载时间：新→旧"],
+  ["time", "时间 ↑ 旧→新", "下载时间：旧→新"],
+];
 
-function loraList() {
-  if (LORA_CACHE && LORA_CACHE.length) return LORA_CACHE;
-  const local = comboValues(nodeDef("LoraLoader"), "lora_name");
-  if (local.length) {
-    LORA_CACHE = local.slice();
-    return LORA_CACHE;
+// -------------------------------------------------------- 视频模型（UNET high / low）
+/** 节点自己那份下拉清单（服务端按它那一类加载器给的，最准） */
+function nodeOptions(node, wname) {
+  const w = widgetOf(node, wname);
+  const vals = w && w.options && Array.isArray(w.options.values)
+    ? w.options.values : null;
+  return vals && vals.length ? vals.slice() : [];
+}
+
+/** 本机装了 ComfyUI-GGUF 才把 .gguf 列出来（没装，选了也加载不了） */
+function ggufAvailable() {
+  return !!nodeDef("UnetLoaderGGUF");
+}
+
+/** 这个文件名该配哪个加载器：.gguf → UnetLoaderGGUF，其余 → 核心 UNETLoader */
+function loaderTypeFor(name) {
+  return /\.gguf$/i.test(String(name || "")) && ggufAvailable()
+    ? "UnetLoaderGGUF" : "UNETLoader";
+}
+
+/**
+ * 视频模型清单 = 画布节点自己的下拉 + 核心 UNETLoader（safetensors）
+ * + UnetLoaderGGUF（装了 GGUF 插件才有）。两类加载器读的是同一批文件夹，
+ * 所以本地成对的 GGUF（highQ80 / lowQ80、Q8H / Q8L 这种）不用挪位置就能选。
+ */
+function unetList() {
+  const out = [];
+  const push = (arr) => {
+    for (const v of arr) if (v && out.indexOf(v) < 0) out.push(v);
+  };
+  push(nodeOptions(findNode("unet_slot"), "unet_name"));
+  push(comboValues(nodeDef("UNETLoader"), "unet_name"));
+  if (ggufAvailable()) push(comboValues(nodeDef("UnetLoaderGGUF"), "unet_name"));
+  return out;
+}
+
+/** 清单里按名字找（大小写不同的也认），返回清单里那一份原文 */
+function poolFind(pool, name) {
+  const want = String(name || "");
+  for (const v of pool) {
+    if (String(v) === want) return v;
   }
+  const low = want.toLowerCase();
+  for (const v of pool) {
+    if (String(v).toLowerCase() === low) return v;
+  }
+  return "";
+}
+
+/**
+ * high / low 两档各家写法都不一样，这里把认识的都列出来：命中左边就换成右边。
+ * 顺序 = 优先级（长写法在前，免得 high_noise 被 high 抢先）；
+ * 纯 high / low 那几个词要求前后不是字母，免得 "slow" / "flow" 被当成 low。
+ */
+const TIER_TOKENS = [
+  ["high_noise", "low_noise"], ["low_noise", "high_noise"],
+  ["highnoise", "lownoise"], ["lownoise", "highnoise"],
+  ["highq80", "lowq80"], ["lowq80", "highq80"],
+  ["q8h", "q8l"], ["q8l", "q8h"],
+  ["_high", "_low"], ["_low", "_high"],
+  ["-high", "-low"], ["-low", "-high"],
+  ["high", "low"], ["low", "high"],
+];
+
+/** 文件名里的 high / low 档位标记：返回 {at, len, from, to}，认不出返回 null */
+function tierHit(name) {
+  const s = String(name || "");
+  const low = s.toLowerCase();
+  for (const [a, b] of TIER_TOKENS) {
+    const plain = (a === "high" || a === "low");
+    let at = -1;
+    if (plain) {
+      const m = new RegExp("(^|[^a-z])" + a + "($|[^a-z])").exec(low);
+      if (m) at = m.index + m[1].length;
+    } else {
+      at = low.indexOf(a);
+    }
+    if (at < 0) continue;
+    return { at, len: a.length, from: s.substr(at, a.length), to: b };
+  }
+  // 兜底：像 ...14BHigh / ...14BLow 这种紧挨着字母、又落在文件名结尾的写法
+  const bare = s.replace(/\.(safetensors|sft|ckpt|gguf|pt|bin)$/i, "");
+  const tail = /(high|low)$/i.exec(bare);
+  if (tail) {
+    const word = tail[1];
+    return {
+      at: tail.index, len: word.length, from: word,
+      to: word.toLowerCase() === "high" ? "Low" : "High",
+    };
+  }
+  return null;
+}
+
+/** 换成另一档的文件名；那个文件确实在清单里才认（认不出就当没配对） */
+function tierSwapOf(name, list) {
+  const hit = tierHit(name);
+  if (!hit) return null;
+  const s = String(name);
+  const mate = s.slice(0, hit.at) + hit.to + s.slice(hit.at + hit.len);
+  const pool = list && list.length ? list : unetList();
+  const real = poolFind(pool, mate);
+  return real ? { hit, mate: real } : null;
+}
+
+/** high ↔ low 的另一个；清单里没有就返回空串 */
+function pairOfVideoModel(name, list) {
+  const hit = tierSwapOf(name, list);
+  return hit ? hit.mate : "";
+}
+
+/** 去掉 high / low 那一档之后的族名 —— 用来看两个文件是不是同一套权重的两个专家 */
+function videoFamily(name) {
+  const s = String(name || "");
+  const hit = tierHit(s);
+  const base = hit ? s.slice(0, hit.at) + s.slice(hit.at + hit.len) : s;
+  return base
+    .replace(/[_.\-\s]+$/, "")
+    .replace(/\.(safetensors|sft|ckpt|gguf|pt|bin)$/i, "")
+    .toLowerCase();
+}
+
+/** 链接表：新版前端 graph.links 是字典、老版是数组，两种都认 */
+function linkById(g, id) {
+  if (!g || !g.links) return null;
+  const l = g.links;
+  if (Array.isArray(l)) {
+    for (const x of l) {
+      if (!x) continue;
+      const xid = Array.isArray(x) ? x[0] : x.id;
+      if (Number(xid) !== Number(id)) continue;
+      return Array.isArray(x)
+        ? { origin_id: x[1], origin_slot: x[2], target_id: x[3], target_slot: x[4] }
+        : x;
+    }
+    return null;
+  }
+  return l[id] || null;
+}
+
+/**
+ * 把节点换成另一种同接口的加载器（UNETLoader ↔ UnetLoaderGGUF）：
+ * 输出接回原来那些下游，标记（role / key）和开关状态一起搬过去。
+ * 换不了返回 null，调用方负责退回去 —— 别让面板显示的和画布上的不一致。
+ */
+function swapNodeType(node, type) {
+  const g = node && node.graph ? node.graph : (app.graph || null);
+  const LG = window.LiteGraph;
+  if (!g || !LG || typeof LG.createNode !== "function") return null;
+  let nn = null;
+  try { nn = LG.createNode(type); } catch (e) { return null; }
+  if (!nn) return null;
+  // 先记下要接回去的线段
+  const outs = [];
+  const oslots = node.outputs || [];
+  for (let s = 0; s < oslots.length; s++) {
+    for (const lid of (oslots[s] && oslots[s].links) || []) {
+      const l = linkById(g, lid);
+      if (l) outs.push({ s, tid: l.target_id, ts: l.target_slot });
+    }
+  }
+  const ins = [];
+  const islots = node.inputs || [];
+  for (let s = 0; s < islots.length; s++) {
+    const l = islots[s] && islots[s].link != null ? linkById(g, islots[s].link) : null;
+    if (l) ins.push({ s, oid: l.origin_id, os: l.origin_slot });
+  }
+  try {
+    nn.pos = [node.pos[0], node.pos[1]];
+    if (node.size) nn.size = [node.size[0], node.size[1]];
+    if (node.title) nn.title = node.title;
+    nn.color = node.color;
+    nn.bgcolor = node.bgcolor;
+    nn.mode = node.mode;
+    nn.properties = Object.assign({}, node.properties || {});
+  } catch (e) { /* 抄外观失败不影响功能 */ }
+  try {
+    g.add(nn);
+    g.remove(node);
+    for (const o of outs) {
+      const t = g.getNodeById(o.tid);
+      if (t) nn.connect(o.s, t, o.ts);
+    }
+    for (const i of ins) {
+      const src = g.getNodeById(i.oid);
+      if (src) src.connect(i.os, nn, i.s);
+    }
+  } catch (e) {
+    log("swapNodeType", e);
+    return null;
+  }
+  markChanged();
+  return nn;
+}
+
+/** 槽上的加载器得跟文件名对得上（.gguf 得用 UnetLoaderGGUF）；接不上返回 null */
+function ensureLoaderType(key, name) {
+  const node = findNode("unet_slot", key);
+  if (!node) return null;
+  const want = loaderTypeFor(name);
+  if (String(node.type) === want) return node;
+  if (want === "UnetLoaderGGUF" && !ggufAvailable()) return null;
+  if (!swapNodeType(node, want)) return null;
+  return findNode("unet_slot", key);   // 换过类型就是新对象了，重新找
+}
+
+function readUnet(key) {
+  const n = findNode("unet_slot", key);
+  return n ? String(readValue(n, "unet_slot") || "") : "";
+}
+
+function writeUnet(key, name) {
+  if (!name) return false;
+  const n = ensureLoaderType(key, name);
+  if (!n) return false;
+  writeValue(n, "unet_slot", name);
+  markChanged();
+  return true;
+}
+
+/** 面板上换视频模型：写画布；勾着「⇄ 成对」时把另一个也换成配对的 */
+function onVideoModelChange(key, name) {
+  // 画布上没有这个槽（旧蓝图）就什么都别写 —— 但也别把下拉里的选择擦掉
+  if (!writeUnet(key, name)) {
+    syncVideoModels(true);
+    return;
+  }
+  if (ui.vPairChk && ui.vPairChk.checked) {
+    const mate = pairOfVideoModel(name, unetList());
+    if (mate) writeUnet(key === "video_high" ? "video_low" : "video_high", mate);
+  }
+  // 视频模型也能读头部：Wan = 832×480、别的架构按各自训练分辨率推荐
+  try { probeModel(name); } catch (e) { log("probeModel", e); }
+  try { refreshCombos(true); } catch (e) { log("refreshCombos", e); }
+  sync(true);
+}
+
+/** 下拉里那行字：GGUF 标一下，好看出来用的哪个加载器 */
+function optionLabel(name) {
+  return /\.gguf$/i.test(String(name || "")) ? name + "（GGUF）" : name;
+}
+
+/** high / low 是不是一对（都是 high / low 两档、族名一致）—— 不是就在面板上提示 */
+function videoModelWarning() {
+  const keys = ["video_high", "video_low"];
+  const noSlot = keys.filter((k) => !findNode("unet_slot", k));
+  if (noSlot.length) {
+    return "⚠ 画布上这份蓝图没有视频模型槽（406 / 407）："
+      + "点顶上的橙条载入最新蓝图后再改";
+  }
+  const hi = readUnet("video_high"), lo = readUnet("video_low");
+  if (!hi || !lo) return "⚠ high / low 有一个没选";
+  const hitHi = tierHit(hi), hitLo = tierHit(lo);
+  if (!hitHi || !hitLo) {
+    return "⚠ 认不出这两档的 high / low 标记（文件名里要有 high_noise / low_noise、"
+      + "highQ80 / lowQ80、Q8H / Q8L 这类）";
+  }
+  if (hitHi.from.toLowerCase() === hitLo.from.toLowerCase()) {
+    return "⚠ high 和 low 选成同一档了";
+  }
+  if (videoFamily(hi) !== videoFamily(lo)) {
+    return "⚠ high / low 不是同一套："
+      + videoFamily(hi) + " vs " + videoFamily(lo);
+  }
+  if (loaderTypeFor(hi) !== loaderTypeFor(lo)) {
+    return "⚠ 一个是 GGUF、一个是 safetensors，加载器不同（能跑，但别拿这两个比速度）";
+  }
+  if (loaderTypeFor(hi) === "UnetLoaderGGUF" && !ggufAvailable()) {
+    return "⚠ 选了 GGUF 模型，但本机没装 ComfyUI-GGUF，加载不了";
+  }
+  return "";
+}
+
+/** 当前的排序方式（存 localStorage，跨刷新记住） */
+function loraSortMode() {
+  const m = (ui.st && ui.st.loraSort) || "name";
+  return LORA_SORTS.some((s) => s[0] === m) ? m : "name";
+}
+
+function loraMtime(name) {
+  const m = LORA_META[name];
+  return m && m.mtime ? m.mtime : 0;
+}
+
+/** 面板上选的排序方式 → 排好的名字清单（时间排序要有后端清单，没有就退化成按名字） */
+function sortLoras(list) {
+  const arr = (list || []).slice();
+  const byName = (a, b) => String(a).toLowerCase().localeCompare(String(b).toLowerCase());
+  const mode = loraSortMode();
+  if (mode === "name_desc") return arr.sort((a, b) => byName(b, a));
+  const hasTime = Object.keys(LORA_META).length > 0;
+  if (mode === "name" || !hasTime) return arr.sort(byName);
+  const dir = mode === "time_desc" ? -1 : 1;
+  return arr.sort((a, b) => {
+    const ma = loraMtime(a), mb = loraMtime(b);
+    if (ma && mb) {
+      const d = ma - mb;
+      return d ? dir * d : byName(a, b);
+    }
+    if (ma && !mb) return -1;            // 读不到时间的（刚下完还在写盘）排到最后
+    if (!ma && mb) return 1;
+    return byName(a, b);
+  });
+}
+
+/** 面板下拉用的清单：画布那份 ∪ 后端那份，按你选的顺序排好 */
+function loraList() {
+  if (!LORA_FETCHED) fetchLoras(false);
+  const local = comboValues(nodeDef("LoraLoader"), "lora_name");
+  const api = LORA_API || [];
+  const sig = loraSortMode() + "|" + LORA_REV + "|" + local.length + "|" + api.length
+    + "|" + local.join("\u0001");
+  if (LORA_CACHE && sig === LORA_SIG) return LORA_CACHE;
+  const seen = [];
+  for (const v of local.concat(api)) {
+    if (v && seen.indexOf(v) < 0) seen.push(v);
+  }
+  LORA_SIG = sig;
+  LORA_CACHE = sortLoras(seen);
+  return LORA_CACHE;
+}
+
+/** 把每行那个下拉按当前清单重填一遍（保住你当前选的那一个） */
+function refillLoraPicks() {
+  const names = [""].concat(loraList());
+  for (const gk of Object.keys(ui.loraViews || {})) {
+    for (const v of (ui.loraViews[gk] || [])) {
+      if (!v || !v.pick) continue;
+      const cur = String(v.pick.value || "");
+      v.pick.textContent = "";
+      for (const n of names) v.pick.appendChild(optionEl(n, n === "" ? "— 无 —" : n));
+      ensureOption(v.pick, cur);
+      v.pick.value = cur;
+    }
+  }
+  ui.lastLoraSig = LORA_SIG;
+}
+
+/** 排序 / 刷新之后：重填 + 让面板重新同步一遍 */
+function applyLoraOrder() {
+  refillLoraPicks();
+  sync(true);
+}
+
+/** 排序 / 刷新结果的一句话（三个分组一起显示，6 秒后自动收） */
+let loraNoteTimer = 0;
+function loraNote(text) {
+  for (const el of Object.values(ui.loraNotes || {})) {
+    if (!el) continue;
+    el.textContent = text || "";
+    el.classList.toggle("ccd-ok", !!text);
+  }
+  if (loraNoteTimer) clearTimeout(loraNoteTimer);
+  if (!text) return;
+  loraNoteTimer = setTimeout(() => {
+    for (const el of Object.values(ui.loraNotes || {})) {
+      if (el) { el.textContent = ""; el.classList.remove("ccd-ok"); }
+    }
+  }, 6000);
+}
+
+function setLoraSortMode(v) {
+  if (!LORA_SORTS.some((s) => s[0] === v)) return;
+  ui.st.loraSort = v;
+  saveState(ui.st);
+  LORA_SIG = "";
+  for (const s of Object.values(ui.loraSortSels || {})) {
+    if (s && s.value !== v) s.value = v;
+  }
+  const needTime = (v === "time" || v === "time_desc") && !Object.keys(LORA_META).length;
+  if (needTime) {
+    loraNote("时间排序要读文件时间 → 正在问后端…");
+    fetchLoras(true);
+  } else {
+    loraNote("已按「" + loraSortLabel() + "」排序（新下的 LoRA 点 ⟳ 后按这个顺序插进来）");
+  }
+  applyLoraOrder();
+}
+
+/** 问后端要清单（refresh=true 会先让 ComfyUI 重扫目录）；失败退回核心 /object_info */
+function fetchLoras(refresh) {
+  if (LORA_PENDING) return;
+  if (LORA_FETCHED && !refresh) return;
+  // 接口不通（老进程 / 服务刚起）时别每秒重试：60 秒内只自动试一次，手点 ⟳ 不受限
+  if (!refresh && LORA_FAIL_AT && Date.now() - LORA_FAIL_AT < 60000) return;
+  LORA_PENDING = true;
+  const url = API_BASE + "/loras" + (refresh ? "?refresh=1" : "");
+  // r.ok === false（老进程没有这个路由 → 404）时不硬解析，直接走兜底
+  fetch(url).then((r) => (r && r.ok === false ? null : r.json())).then((j) => {
+    LORA_PENDING = false;
+    if (!j || j.ok !== true || !Array.isArray(j.items)) {
+      LORA_FAIL_AT = Date.now();
+      fetchLorasFallback(refresh);
+      return;
+    }
+    const meta = {}, names = [];
+    for (const it of j.items) {
+      const n = it && it.name;
+      if (!n) continue;
+      meta[n] = it;
+      names.push(n);
+    }
+    if (!names.length && !refresh) return;
+    LORA_META = meta;
+    LORA_API = names;
+    LORA_FETCHED = true;
+    LORA_REV++;
+    if (refresh) {
+      const added = names.filter((n) => LORA_PREV.indexOf(n) < 0);
+      const addTxt = added.length
+        ? "，新增 " + added.length + " 个" + (added.length <= 3 ? "（" + added.join("、") + "）" : "")
+        : "（没有新文件）";
+      loraNote("✔ 已重新扫盘：" + names.length + " 个 LoRA" + addTxt
+        + "；当前按「" + loraSortLabel() + "」排");
+    }
+    LORA_PREV = names.slice();
+    LORA_SIG = "";
+    applyLoraOrder();
+  }).catch(() => {
+    LORA_PENDING = false;
+    LORA_FAIL_AT = Date.now();
+    fetchLorasFallback(refresh);
+  });
+}
+
+/** 当前排序方式的中文说明（给提示文字用） */
+function loraSortLabel() {
+  const hit = LORA_SORTS.find((s) => s[0] === loraSortMode());
+  return hit ? hit[2] : "名称 A→Z";
+}
+
+/** 后端接口还没生效（没重启）时的兜底：核心 /object_info，没有文件时间 */
+function fetchLorasFallback(refresh) {
   fetch("/object_info/LoraLoader").then((r) => r.json()).then((j) => {
     const v = comboValues(j && j.LoraLoader, "lora_name");
-    if (v.length) {
-      LORA_CACHE = v.slice();
-      render();
+    if (!v.length) return;
+    LORA_META = {};
+    LORA_API = v.slice();
+    LORA_FETCHED = true;
+    LORA_REV++;
+    LORA_SIG = "";
+    if (refresh) {
+      loraNote("✔ 已刷新（核心接口，" + v.length + " 个）：读不到文件时间，"
+        + "重启 ComfyUI 后「按时间排序」才可用");
     }
+    applyLoraOrder();
   }).catch(() => { /* 服务没响应就算了 */ });
-  return LORA_CACHE || [];
 }
 
 function isAnimaModel(name) {
@@ -885,6 +1507,249 @@ function fetchTriggerFor(name) {
   } catch (e) { /* ignore */ }
 }
 
+// ------------------------------------------------------------ 中→英翻译
+// 三层：
+//   ① 后端 POST /cc_dashboard/translate —— 装了本机 Opus-MT（tools/install_translate.py）
+//      就是真翻译：含中文一律走模型，长句按句切块、不截断；模型第一次点「译」
+//      时才加载，之后常驻进程内复用；
+//   ② 内置绘画词典 web/zh_en_dict.json —— 模型没装 / 后端不可用时的兜底，
+//      长词优先、输出 danbooru 风格标签；
+//   ③ 词典 JSON 拉不到（离线 / 测试桩）时用下面这份核心词典兜底，
+//      保证「译」按钮永远有反应。
+const TRANSLATE_API = API_BASE + "/translate";
+const TRANSLATE_STATUS_API = API_BASE + "/translate/status";
+const CJK_RE = /[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/;
+const ZH_CORE = {
+  dict: {
+    "一位": "", "一个": "", "的": "", "了": "", "着": "", "在": "", "和": "",
+    "非常": "very", "女孩": "1girl", "男孩": "1boy", "少女": "1girl",
+    "两个女孩": "2girls", "两个人": "2people", "美女": "beautiful woman",
+    "银发": "silver hair", "金发": "blonde hair", "黑发": "black hair",
+    "白发": "white hair", "长发": "long hair", "短发": "short hair",
+    "双马尾": "twintails", "马尾": "ponytail", "呆毛": "ahoge", "刘海": "bangs",
+    "微笑": "smile", "大笑": "grin", "脸红": "blush", "哭泣": "crying",
+    "流泪": "tears", "生气": "angry", "惊讶": "surprised", "冷漠": "expressionless",
+    "看向观众": "looking at viewer", "回头": "looking back", "闭眼": "closed eyes",
+    "张嘴": "open mouth", "站": "standing", "站立": "standing", "坐着": "sitting",
+    "跪着": "kneeling", "躺着": "lying", "跑": "running", "走": "walking",
+    "跳": "jumping", "挥手": "waving", "拿着": "holding", "抱着": "hugging",
+    "双臂交叉": "crossed arms", "双手叉腰": "hands on hips", "托腮": "hand on cheek",
+    "连衣裙": "dress", "白色连衣裙": "white dress", "校服": "school uniform",
+    "水手服": "sailor dress", "和服": "kimono", "浴衣": "yukata", "泳装": "swimsuit",
+    "衬衫": "shirt", "裙子": "skirt", "短裙": "miniskirt", "过膝袜": "thighhighs",
+    "高跟鞋": "high heels", "靴子": "boots", "手套": "gloves", "眼镜": "glasses",
+    "帽子": "hat", "蝴蝶结": "bow", "围巾": "scarf", "项链": "necklace",
+    "室内": "indoors", "室外": "outdoors", "花园": "garden", "海边": "beach",
+    "森林": "forest", "街道": "street", "教室": "classroom", "图书馆": "library",
+    "阳台": "balcony", "窗边": "window", "屋顶": "rooftop", "樱花": "cherry blossoms",
+    "花": "flower", "天空": "sky", "白云": "clouds", "星空": "starry sky",
+    "月亮": "moon", "城市": "city", "山": "mountains", "湖": "lake",
+    "阳光": "sunlight", "夕阳": "sunset", "夜晚": "night", "白天": "day",
+    "雨天": "rain", "下雨": "rain", "雪": "snow", "雾": "fog",
+    "逆光": "backlighting", "柔和光线": "soft lighting", "暖光": "warm lighting",
+    "冷光": "cool lighting", "发光的": "glowing", "霓虹灯": "neon lights",
+    "景深": "depth of field", "背景": "background", "简单背景": "simple background",
+    "白色背景": "white background", "虚化背景": "blurry background",
+    "高清": "highres", "杰作": "masterpiece", "最佳质量": "best quality",
+    "超细节": "super detailed", "写实": "photorealistic", "动漫": "anime",
+    "插画": "illustration", "油画": "oil painting", "水彩": "watercolor",
+    "特写": "close-up", "全身": "full body", "半身": "upper body",
+    "正面": "front view", "侧面": "side view", "背面": "back view",
+    "俯视": "from above", "仰视": "from below", "广角": "wide angle", "视角": "view",
+  },
+  raise: ["1girl", "1boy", "2girls", "2boys", "multiple girls", "solo"],
+};
+let ZH_DICT = null;
+let ZH_DICT_LOADING = null;
+let TRANSLATE_API_MISSING = false;   // 旧进程没这个路由时别再反复打
+let TRANSLATE_ST = null;             // 翻译模型状态缓存 {installed, loaded}
+let TRANSLATE_ST_GET = null;
+
+function zhKeys(dict) {
+  return Object.keys(dict).sort((a, b) => b.length - a.length);
+}
+
+async function loadZhDict() {
+  if (ZH_DICT) return ZH_DICT;
+  if (ZH_DICT_LOADING) return ZH_DICT_LOADING;
+  ZH_DICT_LOADING = (async () => {
+    let raw = null;
+    try {
+      const url = new URL("zh_en_dict.json?v=" + CC_DASHBOARD_VERSION,
+        import.meta.url).href;
+      const res = await fetch(url);
+      if (res && res.ok) raw = await res.json();
+    } catch (e) { /* 离线 / 测试桩 → 核心词典 */ }
+    const d = (raw && raw.dict && typeof raw.dict === "object"
+      && Object.keys(raw.dict).length) ? raw.dict : ZH_CORE.dict;
+    const raise = (raw && Array.isArray(raw.raise)) ? raw.raise : ZH_CORE.raise;
+    ZH_DICT = { dict: d, keys: zhKeys(d), raise: new Set(raise),
+      source: raw ? "full" : "core" };
+    return ZH_DICT;
+  })();
+  return ZH_DICT_LOADING;
+}
+
+/** 在 block[i] 处能匹配到的最长词典词；没有就返回空串 */
+function zhHitAt(block, i, keys) {
+  for (const k of keys) {
+    if (k.length <= block.length - i && block.startsWith(k, i)) return k;
+  }
+  return "";
+}
+
+function translateZhBlock(block, D) {
+  const out = [];
+  const miss = [];
+  let i = 0;
+  while (i < block.length) {
+    const key = zhHitAt(block, i, D.keys);
+    if (key) {
+      const v = D.dict[key];
+      if (v) out.push(v);
+      i += key.length;
+      continue;
+    }
+    const ch = block[i];
+    if (CJK_RE.test(ch)) {
+      let j = i;
+      let buf = "";
+      while (j < block.length && CJK_RE.test(block[j]) && !zhHitAt(block, j, D.keys)) {
+        buf += block[j];
+        j++;
+      }
+      if (buf) miss.push(buf);
+      i = j > i ? j : i + 1;
+      continue;
+    }
+    if (/[A-Za-z0-9_]/.test(ch)) {
+      let j = i;
+      let buf = "";
+      while (j < block.length && /[A-Za-z0-9_'\-.]/.test(block[j])) {
+        buf += block[j];
+        j++;
+      }
+      if (buf) out.push(buf);
+      i = j;
+      continue;
+    }
+    i++;                                   // 空白 / 标点
+  }
+  const raised = [];
+  const rest = [];
+  const raiseHas = (t) => (D.raise && typeof D.raise.has === "function")
+    ? D.raise.has(t) : (D.raise || []).indexOf(t) >= 0;
+  for (const t of out) (raiseHas(t) ? raised : rest).push(t);
+  return { text: raised.concat(rest).join(" ").replace(/\s+/g, " ").trim(),
+    miss, hits: out.length };
+}
+
+function translateZhText(raw, D) {
+  const src = String(raw == null ? "" : raw)
+    .replace(/\u3000/g, " ")
+    .replace(/[，、；;]/g, ",")
+    .replace(/[。！!？?]/g, ",")
+    .replace(/\r\n?/g, "\n");
+  const tags = [];
+  const miss = [];
+  for (const b of src.split(/[,\n]+/)) {
+    const blk = b.trim();
+    if (!blk) continue;
+    if (!CJK_RE.test(blk)) { tags.push(blk); continue; }
+    const r = translateZhBlock(blk, D);
+    if (r.text) tags.push(r.text);
+    else tags.push(blk);                   // 整块都没收录：保留原文，别丢信息
+    for (const m of r.miss) miss.push(m);
+  }
+  const seen = new Set();
+  const clean = [];
+  for (const t of tags) {
+    const s = String(t).replace(/\s+/g, " ").trim();
+    if (!s) continue;
+    const k = s.toLowerCase();
+    if (seen.has(k)) continue;
+    seen.add(k);
+    clean.push(s);
+  }
+  const missU = [];
+  for (const m of miss) if (missU.indexOf(m) < 0) missU.push(m);
+  return { text: clean.join(", "), miss: missU };
+}
+
+/** 拉一次翻译模型状态（只读接口，不会加载模型）；失败按“没装”处理 */
+function refreshTranslateStatus(force) {
+  if (TRANSLATE_ST && !force) return Promise.resolve(TRANSLATE_ST);
+  if (TRANSLATE_ST_GET && !force) return TRANSLATE_ST_GET;
+  TRANSLATE_ST_GET = (async () => {
+    let st = { installed: false, loaded: false, ok: false, error: "" };
+    if (!TRANSLATE_API_MISSING) {
+      try {
+        const res = await fetch(TRANSLATE_STATUS_API + "?v=" + CC_DASHBOARD_VERSION);
+        if (res && res.ok) {
+          const d = await res.json();
+          st = { installed: !!d.installed, loaded: !!d.loaded, ok: !!d.ok,
+            error: d.error || "" };
+        } else if (res && res.status === 404) {
+          TRANSLATE_API_MISSING = true;  // 跑着的是旧进程：直接词典
+        }
+      } catch (e) { /* 拿不到状态就按没装处理，绝不挡住翻译按钮 */ }
+    }
+    TRANSLATE_ST = st;
+    TRANSLATE_ST_GET = null;
+    return st;
+  })();
+  return TRANSLATE_ST_GET;
+}
+
+/** 翻译结果 → 一行短状态（NMT / 词典 / 未收录…） */
+function translateNote(r) {
+  if (!r) return "";
+  if (r.miss && r.miss.length) return "未收录: " + r.miss.join(" / ");
+  if (r.engine === "opus-mt") {
+    if (r.loadMs) return "NMT · 加载 " + (Math.round(r.loadMs / 100) / 10) + "s";
+    return r.chunks > 1 ? ("NMT · " + r.chunks + " 块") : "NMT";
+  }
+  if (r.engine === "dict") return "词典";
+  return "";
+}
+
+/**
+ * 中→英。返回 { text, miss, engine, loadMs, chunks }。
+ * 装了本机 Opus-MT 就一律走真翻译（含中文的长句也直接翻，自动切块不截断）；
+ * 模型没装 / 后端不可用才回落到内置绘画词典（miss 列出没收录的词）。
+ * 不联网（NMT 也是本机模型，第一次点「译」时才加载）。
+ */
+async function translateToEnglish(raw) {
+  const text = String(raw == null ? "" : raw);
+  if (!text.trim()) return { text: "", miss: [], engine: "none" };
+  let D = null;
+  try { D = await loadZhDict(); } catch (e) { D = { dict: ZH_CORE.dict,
+    keys: zhKeys(ZH_CORE.dict), raise: new Set(ZH_CORE.raise) }; }
+  const local = translateZhText(text, D);
+  const st = await refreshTranslateStatus(false);
+  if (st && st.installed && !TRANSLATE_API_MISSING) {
+    try {
+      const res = await fetch(TRANSLATE_API, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      if (res && res.ok) {
+        const d = await res.json();
+        if (d && d.ok && typeof d.text === "string" && d.text.trim()) {
+          if (d.loaded) TRANSLATE_ST = Object.assign({}, st, { loaded: true });
+          return { text: d.text.trim(),
+            miss: Array.isArray(d.miss) ? d.miss : [],
+            engine: d.engine || "opus-mt", loadMs: d.load_ms || 0,
+            chunks: d.chunks || 1, loaded: !!d.loaded };
+        }
+      } else if (res && res.status === 404) {
+        TRANSLATE_API_MISSING = true;    // 运行中的进程还是旧版：下次直接用词典
+      }
+    } catch (e) { /* 后端掉了就回落词典，不影响出图 */ }
+  }
+  return { text: local.text, miss: local.miss, engine: "dict" };
+}
+
 // ---------------------------------------------------------------- 面板
 const CSS = `
 #${ROOT_ID}{position:fixed;left:0;top:0;z-index:99990;display:flex;flex-direction:column;
@@ -905,7 +1770,7 @@ const CSS = `
 #${ROOT_ID}.ccd-drag{opacity:.94;box-shadow:0 16px 40px rgba(0,0,0,.65)}
 #${ROOT_ID} .ccd-brand{font-weight:600;color:#7fd3ff;padding-right:4px;
  white-space:nowrap}
-#${ROOT_ID} .ccd-group{display:flex;align-items:center;gap:4px;
+#${ROOT_ID} .ccd-group{display:flex;align-items:center;gap:4px;flex-wrap:wrap;
  padding:1px 6px;border:1px solid #3b3f4a;border-radius:6px;background:#1b1c22}
 #${ROOT_ID} .ccd-group>label{color:#9aa0ad;font-size:11px;margin-right:2px}
 #${ROOT_ID} button{font:inherit;color:#e8e8ee;background:#282a32;
@@ -945,11 +1810,17 @@ const CSS = `
  resize:vertical;min-height:56px}
 #${ROOT_ID} .ccd-loras{display:grid;gap:8px;
  grid-template-columns:repeat(auto-fit,minmax(232px,1fr))}
-#${ROOT_ID} .ccd-lora-col{border:1px solid #33363f;border-radius:6px;
- padding:4px 6px;background:#1a1b20}
-#${ROOT_ID} .ccd-lora-col>h4{margin:0 0 4px;font-size:11px;color:#9aa0ad;
- font-weight:600}
-#${ROOT_ID} .ccd-lora-rows{max-height:210px;overflow:auto}
+  #${ROOT_ID} .ccd-lora-col{border:1px solid #33363f;border-radius:6px;
+    padding:4px 6px;background:#1a1b20}
+  #${ROOT_ID} .ccd-lora-head{display:flex;align-items:center;gap:5px;margin:0 0 4px}
+  #${ROOT_ID} .ccd-lora-head>h4{margin:0;flex:1;font-size:11px;color:#9aa0ad;
+    font-weight:600}
+  #${ROOT_ID} .ccd-lora-sort{max-width:112px;font-size:11px;padding:1px 2px}
+  #${ROOT_ID} .ccd-lora-refresh{padding:1px 7px;font-size:12px;line-height:1.25}
+  #${ROOT_ID} .ccd-lora-note{display:block;min-height:14px;margin-top:3px;
+    font-size:11px;color:#7d838f;word-break:break-all}
+  #${ROOT_ID} .ccd-lora-note.ccd-ok{color:#5fbf7f}
+  #${ROOT_ID} .ccd-lora-rows{max-height:210px;overflow:auto}
 #${ROOT_ID} .ccd-lora-row{display:grid;grid-template-columns:16px 1fr 54px;
  gap:4px;align-items:center;margin-bottom:2px}
 #${ROOT_ID} .ccd-lora-row select{width:100%;max-width:none}
@@ -1031,22 +1902,51 @@ const CSS = `
 #${ROOT_ID} .ccd-pg-rows{max-height:330px;overflow:auto}
 /* 负面提示词：整块单框，给高一点方便一次看完整条 */
 #${ROOT_ID} .ccd-pg-plain{width:100%;min-height:92px;box-sizing:border-box}
-#${ROOT_ID} .ccd-seg{display:grid;grid-template-columns:26px 1fr auto auto 26px 128px;
+#${ROOT_ID} .ccd-seg{display:grid;grid-template-columns:26px 1fr auto auto 26px 26px 116px;
  gap:4px;align-items:center;margin-bottom:3px}
 #${ROOT_ID} .ccd-seg-no{color:#7d838f;font-size:11px;text-align:right}
 #${ROOT_ID} .ccd-seg textarea{min-height:34px;height:34px}
 #${ROOT_ID} .ccd-seg textarea.ccd-static{opacity:.45}
 #${ROOT_ID} .ccd-seg-chk{display:inline-flex;align-items:center;gap:2px;
  color:#9aa0ad;font-size:11px;white-space:nowrap}
-#${ROOT_ID} .ccd-seg-go{padding:1px 5px}
+#${ROOT_ID} .ccd-seg-go,#${ROOT_ID} .ccd-seg-tr{padding:1px 5px}
+#${ROOT_ID} .ccd-seg-tr{color:#8fd0ff}
+#${ROOT_ID} .ccd-tr-all{padding:1px 6px;font-size:11px;color:#8fd0ff}
 #${ROOT_ID} .ccd-seg-state{color:#7d838f;font-size:11px;overflow:hidden;
  text-overflow:ellipsis;white-space:nowrap}
+#${ROOT_ID} .ccd-seg-state.ccd-note{color:#e0b341}
 #${ROOT_ID} .ccd-seg.ccd-off{opacity:.5}
 #${ROOT_ID} .ccd-seg.ccd-hit .ccd-seg-state{color:#7fd3ff}
 /* LoRA 行状态 */
 #${ROOT_ID} .ccd-lora-status{grid-column:1/-1;font-size:11px;color:#7d838f;
  margin:-1px 0 3px 20px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #${ROOT_ID} .ccd-lora-status.ccd-warn{color:#e0b341}
+/* 视频模型：high / low 两个下拉 + 成对开关 */
+#${ROOT_ID} .ccd-vmodel select{max-width:210px}
+#${ROOT_ID} .ccd-vtag{color:#7d838f;font-size:11px}
+#${ROOT_ID} .ccd-inline{display:inline-flex;align-items:center;gap:3px;
+ color:#9aa0ad;font-size:11px;white-space:nowrap}
+#${ROOT_ID} .ccd-vmodel-warn{color:#e0b341;font-size:11px;max-width:260px;
+ overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#${ROOT_ID} .ccd-vmodel-bad select{border-color:#6b5a24;background:#2f2a1c}
+/* 模型那一格：模型一行 + 外挂资源一行（v1.9.0） */
+#${ROOT_ID} .ccd-stack{flex-direction:column;align-items:flex-start;gap:3px}
+#${ROOT_ID} .ccd-stack>.ccd-row{display:flex;align-items:center;gap:4px;
+ flex-wrap:wrap;min-width:0}
+#${ROOT_ID} .ccd-res{display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+ padding-left:2px;min-width:0}
+#${ROOT_ID} .ccd-res-cell{display:inline-flex;align-items:center;gap:4px;
+ background:#20222a;border:1px solid #343845;border-radius:5px;padding:1px 5px}
+#${ROOT_ID} .ccd-res-cell.ccd-need{border-color:#6b5a24;background:#2a2718}
+#${ROOT_ID} .ccd-res-cell.ccd-need .ccd-vtag{color:#e0b341}
+#${ROOT_ID} .ccd-res select{max-width:270px}
+#${ROOT_ID} .ccd-res-go,#${ROOT_ID} .ccd-res-reload{padding:1px 6px;font-size:11px;
+ color:#8fd0ff}
+#${ROOT_ID} .ccd-res-open{padding:1px 7px;font-size:11px;color:#9aa0ad}
+#${ROOT_ID} .ccd-res-hint{color:#7d838f;font-size:11px;max-width:420px;
+ overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#${ROOT_ID} .ccd-res-hint.ccd-need{color:#e0b341}
+#${ROOT_ID} .ccd-res-hint.ccd-ok{color:#7bc47f}
 `;
 
 function el(tag, props, kids) {
@@ -1096,9 +1996,11 @@ function num(value, step, onInput, width) {
 
 /** 一行提示词分段：文本框 + 插件输入 + 启用 + ⌖ 跳转 + 状态 */
 function buildSegRow(key, i, ph) {
+  const row = { key, idx: i, note: "" };
   const ta = el("textarea", { placeholder: ph || "" });
   ta.title = "第 " + (i + 1) + " 段手填文字（勾上「插件输入」时被忽略）";
   ta.addEventListener("change", () => {
+    row.note = "";
     const n = findNode("prompt", key);
     if (n) writeSegText(n, i, ta.value);
     sync(true);
@@ -1126,6 +2028,42 @@ function buildSegRow(key, i, ph) {
     if (sw) focusNode(sw);
     else log("第 " + (i + 1) + " 段找不到开关节点");
   });
+  const tr = el("button", {
+    class: "ccd-seg-tr", text: "译",
+    title: "把这一段的中文翻成英文提示词。装了本机 Opus-MT 就是真翻译"
+      + "（长句自动切块、不截断；第一次点击要加载模型 1–3 秒），"
+      + "没装或失败才用内置绘画词典。",
+  });
+  tr.addEventListener("click", async () => {
+    const src = ta.value;
+    if (!src.trim()) return;
+    if (!CJK_RE.test(src)) {
+      row.note = "这段已经是英文";
+      sync(true);
+      return;
+    }
+    tr.disabled = true;
+    tr.textContent = "…";
+    row.note = "翻译中…";
+    try { sync(true); } catch (e) { /* ignore */ }
+    try {
+      const r = await translateToEnglish(src);
+      const n = findNode("prompt", key);
+      if (r.text) {
+        ta.value = r.text;
+        if (n) writeSegText(n, i, r.text);
+        row.note = translateNote(r);
+      } else {
+        row.note = r.miss.length ? ("没译出来: " + r.miss.join(" / ")) : "没译出来";
+      }
+    } catch (e) {
+      log("translate", e);
+      row.note = "翻译失败，看控制台";
+    }
+    tr.disabled = false;
+    tr.textContent = "译";
+    try { sync(true); } catch (e) { /* ignore */ }
+  });
   const state = el("span", { class: "ccd-seg-state" });
   const box = el("div", { class: "ccd-seg" }, [
     el("span", { class: "ccd-seg-no", text: "#" + (i + 1) }),
@@ -1137,9 +2075,11 @@ function buildSegRow(key, i, ph) {
     el("label", { class: "ccd-seg-chk", title: "这一段是否参与拼接" },
       [enable, "启用"]),
     go,
+    tr,
     state,
   ]);
-  return { box, ta, plugin, enable, go, state, key, idx: i };
+  Object.assign(row, { box, ta, plugin, enable, go, tr, state });
+  return row;
 }
 
 // ------------------------------------------------------------ 队列一排
@@ -1369,8 +2309,107 @@ function build() {
     pipeBtns[k] = b;
     pipes.appendChild(b);
   }
-  const modelSel = el("select", { title: "模型槽：Illustrious / ANIMA / 任意 ckpt" });
+  const modelSel = el("select", {
+    title: "图像模型（画布 101 模型槽）：Illustrious / ANIMA / 任意 ckpt —— "
+      + "管文生图和图生图，切到名字含 anima 的会自动套 30 步 / CFG 4.5 / 不取层 / 姿势换 LLLite",
+  });
   modelSel.addEventListener("change", () => onModelChange(modelSel.value));
+
+  // 视频模型：Wan 2.2 这类是 high noise + low noise 两个专家，一对一起换
+  const vHighSel = el("select", {
+    title: "视频 high noise 模型（画布 406）：负责前几步的去噪，配 LoRA 时记得选 high 分支那个。"
+      + "清单里 safetensors 和 GGUF 都列了；选 .gguf 会把 406 换成 UnetLoaderGGUF（要装 "
+      + "ComfyUI-GGUF），选回 safetensors 再换回 UNETLoader",
+  });
+  const vLowSel = el("select", {
+    title: "视频 low noise 模型（画布 407）：负责后几步的去噪，配 LoRA 时记得选 low 分支那个。"
+      + "清单里 safetensors 和 GGUF 都列了；选 .gguf 会把 407 换成 UnetLoaderGGUF",
+  });
+  vHighSel.addEventListener("change", () => onVideoModelChange("video_high", vHighSel.value));
+  vLowSel.addEventListener("change", () => onVideoModelChange("video_low", vLowSel.value));
+  const vPairChk = el("input", { type: "checkbox" });
+  vPairChk.checked = st.pairSync !== false;
+  vPairChk.addEventListener("change", () => {
+    ui.st.pairSync = !!vPairChk.checked;
+    saveState(ui.st);
+  });
+  const vPairLab = el("label", {
+    class: "ccd-inline",
+    title: "成对联动：改 high 自动把 low 换成配对的。认这些写法："
+      + "high_noise ↔ low_noise、highQ80 ↔ lowQ80、Q8H ↔ Q8L、_high ↔ _low。"
+      + "另一档的文件不在清单里就不动（比如只有 High 那种半套）。"
+      + "想手动指定两个不同文件时取消勾选",
+  }, [vPairChk, el("span", { text: "⇄ 成对" })]);
+  const vWarn = el("span", { class: "ccd-vmodel-warn ccd-hide" });
+
+  // ---- 外挂资源（v1.9.0）：文本编码器 / VAE 一行，模型下面
+  // 图像侧：模型自带就收起（🛠 可强制展开），缺哪项显示哪项
+  // 视频侧：Wan 这类分离式模型恒需要，所以恒显示
+  const resSel = {}, resCell = {};
+  const resRow = (media) => {
+    const box = el("div", { class: "ccd-res" });
+    box.appendChild(el("span", { class: "ccd-vtag", text: "外挂资源" }));
+    for (const info of RES_KINDS) {
+      const nid = media === "image"
+        ? (info.kind === "te" ? "110" : "111")
+        : (info.kind === "te" ? "403" : "412");
+      const sel = el("select", {
+        class: "ccd-res-sel",
+        title: info.label + "（画布 " + nid + "）：模型不自带时用它补料。"
+          + "这里列的是 models\\" + (info.kind === "te" ? "text_encoders" : "vae")
+          + " 里的文件，选谁就直接写进画布",
+      });
+      sel.addEventListener("change", () => onResPick(media, info.kind, sel.value));
+      const go = el("button", {
+        class: "ccd-res-go", text: "⌖",
+        title: "跳到画布上的" + info.label + "节点（" + nid + "）",
+        onclick: () => {
+          const n = resNode(info.kind, media);
+          if (n) focusNode(n);
+        },
+      });
+      const cell = el("span", { class: "ccd-res-cell" }, [
+        el("span", { class: "ccd-vtag", text: info.label }), sel, go,
+      ]);
+      resSel[media + ":" + info.kind] = sel;
+      resCell[media + ":" + info.kind] = cell;
+      box.appendChild(cell);
+    }
+    box.appendChild(el("button", {
+      class: "ccd-res-reload", text: "⟳",
+      title: "重新拉文件清单（models\\text_encoders / models\\vae）："
+        + "新丢进去的文件点一下就能选，不用重启",
+      onclick: () => { fetchResLists(true); sync(true); },
+    }));
+    const hint = el("span", { class: "ccd-res-hint ccd-hide" });
+    box.appendChild(hint);
+    box.hintEl = hint;
+    return box;
+  };
+  const imageResBox = resRow("image");
+  const videoResBox = resRow("video");
+  const resOpenBtn = el("button", {
+    class: "ccd-res-open", text: "🛠 外挂",
+    title: "模型自带 文本编码器 / VAE 时这一行会收起来；点这里可以强制展开、"
+      + "手动指定外挂文件（比如给 SDXL 换一个 sdxlVAE）",
+    onclick: () => { ui.resOpen = !ui.resOpen; sync(true); },
+  });
+
+  const videoModelGroup = el("div", { class: "ccd-group ccd-vmodel ccd-stack" }, [
+    el("div", { class: "ccd-row" }, [
+      el("label", { text: "视频模型" }),
+      el("span", { class: "ccd-vtag", text: "high" }), vHighSel,
+      el("span", { class: "ccd-vtag", text: "low" }), vLowSel,
+      vPairLab, vWarn,
+    ]),
+    videoResBox,
+  ]);
+  const imageModelGroup = el("div", { class: "ccd-group ccd-stack" }, [
+    el("div", { class: "ccd-row" }, [
+      el("label", { text: "图像模型" }), modelSel, resOpenBtn,
+    ]),
+    imageResBox,
+  ]);
 
   const modBtns = {};
   const mods = el("div", { class: "ccd-group" });
@@ -1426,7 +2465,8 @@ function build() {
       title: "cc_dashboard 插件版本（蓝图 + 面板）",
     }),
     pipes,
-    el("div", { class: "ccd-group" }, [el("label", { text: "模型" }), modelSel]),
+    imageModelGroup,
+    videoModelGroup,
     mods,
     el("button", {
       text: "⟳ 取图",
@@ -1507,8 +2547,36 @@ function build() {
         if (n) writeWidget(n, "value", ta.value);
         sync(true);
       });
+      const trAll = el("button", {
+        class: "ccd-tr-all", text: "中→英",
+        title: "把这条提示词里的中文翻成英文（已经是英文就不动）。"
+          + "装了本机 Opus-MT 就是真翻译，长句自动切块不截断。",
+      });
+      trAll.addEventListener("click", async () => {
+        const src = ta.value;
+        if (!src.trim() || !CJK_RE.test(src)) return;
+        trAll.disabled = true;
+        trAll.textContent = "译…";
+        try {
+          const r = await translateToEnglish(src);
+          if (r.text) {
+            ta.value = r.text;
+            const n = findNode("prompt", k);
+            if (n) writeWidget(n, "value", r.text);
+          }
+          trAll.textContent = r.miss.length ? "中→英 ⚠" : "中→英";
+          trAll.title = r.miss.length
+            ? ("未收录: " + r.miss.join(" / "))
+            : (r.engine === "opus-mt" ? "已用本机 NMT 翻成英文" : "已用词典翻成英文");
+        } catch (e) {
+          log("translate", e);
+          trAll.textContent = "中→英";
+        }
+        trAll.disabled = false;
+        try { sync(true); } catch (e) { /* ignore */ }
+      });
       const box = el("div", { class: "ccd-pg" }, [
-        el("div", { class: "ccd-pg-head" }, [el("h4", { text: label })]),
+        el("div", { class: "ccd-pg-head" }, [el("h4", { text: label }), trAll]),
         ta,
       ]);
       promptBoxes[k] = ta;
@@ -1539,9 +2607,50 @@ function build() {
       syncSegs(true);
     });
     const limit = el("span", { class: "ccd-limit" });
+    const trAll = el("button", {
+      class: "ccd-tr-all", text: "中→英",
+      title: "把本组每段里的中文依次译成英文（已经是英文的段不动）；"
+        + "装了本机 Opus-MT 就是真翻译，长句自动切块不截断，"
+        + "第一次点击要加载模型 1–3 秒。",
+    });
+    trAll.addEventListener("click", async () => {
+      const n0 = findNode("prompt", k);
+      if (!n0) return;
+      trAll.disabled = true;
+      trAll.textContent = "译…";
+      trAll.title = "翻译中…（第一次点击要加载模型，1–3 秒）";
+      const allMiss = [];
+      let done = 0;
+      const engines = [];
+      for (const row of rows) {
+        const src = row.ta.value;
+        if (!src.trim() || !CJK_RE.test(src)) continue;
+        try {
+          const r = await translateToEnglish(src);
+          const n = findNode("prompt", k);
+          if (r.text && n) {
+            row.ta.value = r.text;
+            writeSegText(n, row.idx, r.text);
+            row.note = translateNote(r);
+            if (r.text) done++;
+          }
+          if (r.engine && engines.indexOf(r.engine) < 0) engines.push(r.engine);
+          for (const m of r.miss) if (allMiss.indexOf(m) < 0) allMiss.push(m);
+        } catch (e) { log("translate", e); }
+      }
+      trAll.disabled = false;
+      trAll.textContent = allMiss.length ? "中→英 ⚠" : "中→英";
+      const by = engines.indexOf("opus-mt") >= 0
+        ? "本机 NMT" : (engines.indexOf("dict") >= 0 ? "词典" : "未翻译");
+      trAll.title = allMiss.length
+        ? ("已译 " + done + " 段（" + by + "）；未收录: " + allMiss.join(" / "))
+        : ("已译 " + done + " 段（" + by + "）");
+      try { sync(true); } catch (e) { /* ignore */ }
+    });
     const box = el("div", { class: "ccd-pg" }, [
       el("div", { class: "ccd-pg-head" }, [
         el("h4", { text: label }),
+        trAll,
         el("span", { class: "ccd-sep" }, [el("span", { text: "分隔符" }), sep]),
         el("label", { class: "ccd-seg-chk" }, [all, "全部 8 段"]),
         limit,
@@ -1556,22 +2665,49 @@ function build() {
     text: "正向 8 段按顺序拼接（空段自动跳过），每段一个「手填 / 插件」开关：不勾插件用"
       + "手填文字，勾上就吃那一段节点接进来的插件（没连线时回落到手填）。"
       + "点 ⌖ 跳到那一段节点去连线；写了一段后面会自动多出一行。"
-      + "负面提示词不用分段，就是一个整框，写完直接进编码。",
+      + "负面提示词不用分段，就是一个整框，写完直接进编码。"
+      + "中文可以直接写：点每段的「译」或本组「中→英」就转成英文标签，"
+      + "未收录的词会在右边黄字列出（自己把它补成英文即可）。",
   })]);
 
   // ---- LoRA 页
   const loraCols = {};
+  const loraSortSels = {};
+  const loraNotes = {};
   const loraGrid = el("div", { class: "ccd-loras" });
   for (const [k, label] of LORA_GROUPS) {
     const rows = el("div", { class: "ccd-lora-rows" });
     loraCols[k] = rows;
-    loraGrid.appendChild(el("div", { class: "ccd-lora-col" },
-      [el("h4", { text: label }), rows]));
+    // 排序 / 刷新：只影响面板这个下拉（不动画布），三个分组共用一份设置
+    const sortSel = el("select", {
+      class: "ccd-lora-sort",
+      title: "LoRA 下拉的排序方式（只影响面板，不改画布里的 LoRA）：\n"
+        + "· 名称 A→Z / Z→A：按文件名\n"
+        + "· 时间 新→旧 / 旧→新：按文件修改时间（刚下完的在最前面）\n"
+        + "选择会记住，换页面还在",
+    });
+    for (const [v, shortTxt] of LORA_SORTS) sortSel.appendChild(optionEl(v, shortTxt));
+    sortSel.value = loraSortMode();
+    sortSel.addEventListener("change", () => setLoraSortMode(sortSel.value));
+    loraSortSels[k] = sortSel;
+    const refBtn = el("button", {
+      class: "ccd-lora-refresh", text: "⟳",
+      title: "重新扫一遍 models\\loras（含子目录）：刚下载的 LoRA 立刻出现在下拉里，不用重启 ComfyUI",
+      onclick: () => fetchLoras(true),
+    });
+    const note = el("span", { class: "ccd-lora-note" });
+    loraNotes[k] = note;
+    loraGrid.appendChild(el("div", { class: "ccd-lora-col" }, [
+      el("div", { class: "ccd-lora-head" }, [el("h4", { text: label }), sortSel, refBtn]),
+      rows, note,
+    ]));
   }
   const loraTab = el("div", {}, [loraGrid, el("p", {
     class: "ccd-hint",
     text: "行数跟画布节点一致：在画布上双击节点用 “➕ Add Lora” 加行，这里会自动跟上。"
-      + "每行下面会提示触发词、有没有真的启用、跟当前模型族配不配——锁不住角色时先看这三条。",
+      + "每行下面会提示触发词、有没有真的启用、跟当前模型族配不配——锁不住角色时先看这三条。"
+      + "标题右边的「排序」只管面板下拉的顺序（名称 / 下载时间），⟳ 重新扫盘，"
+      + "刚下好的 LoRA 不用重启就能选到；你选中的那个不会被排序冲掉。",
   })]);
 
   // ---- 参数页
@@ -1630,6 +2766,13 @@ function build() {
         key: k, kind: opts.combo, media: opts.media || "image",
         sel: s, tip: tip || "", sig: "",
       };
+      // 危险组合（比如 flows 模型 + karras）：在这一行下面挂黄字
+      if (COMBO_WARN[k]) {
+        const w = el("span", { class: "ccd-warn-txt" });
+        warnSpans[k] = w;
+        wrap.classList.add("ccd-warn-row");
+        wrap.appendChild(w);
+      }
       return { box: wrap, pipes: (opts && opts.pipes) || null };
     }
     {
@@ -1736,8 +2879,9 @@ function build() {
       class: "ccd-ctl", text: "↺ 重置默认值",
       title: "把参数页里的数字全部恢复默认：分辨率回「当前模型推荐」"
         + "（SDXL / ANIMA 1024×1024，SD1.5 512×512）；步数 / CFG 按当前模型族"
-        + "（SDXL 28 / 5.5，ANIMA 30 / 4.5）；采样器 / 调度器回各自那套默认"
-        + "（图像 dpmpp_2m + karras，视频 euler + simple）；重绘 0.5、姿势 0.8、"
+        + "（SDXL 28 / 5.5，ANIMA 30 / 4.5）；采样器 / 调度器回「当前模型族」那套默认"
+        + "（SDXL：dpmpp_2m + karras；ANIMA 这类流匹配模型：er_sde + simple —— karras 会把图洗白；"
+        + "视频：euler + simple）；重绘 0.5、姿势 0.8、"
         + "脸手眼 阈值 0.55 / 眼阈值 0.70 / 羽化 24 / 脸 0.25 / 手 0.25 / 眼 0.20 / "
         + "检测框放大 512 / 放大上限 1024 / 裁剪倍率 2.5，三级开关和 SAM 也恢复成全开；"
         + "高清 倍数 2 / 整体细化 0.12 / 分块精修 0.12 / 接缝修复 0.30；"
@@ -1794,9 +2938,15 @@ function build() {
       "· 管线按钮：只让选中的那条 Save 节点出图/出视频，其它 Save 静音，不会白跑；"
       + "选完之后面板只显示这条管线要用的提示词 / 参数 / LoRA / 模块。" }),
     el("p", { class: "ccd-hint", text:
-      "· 参数 → 分辨率：★ 那一项是当前模型的训练分辨率（SDXL / Illustrious / ANIMA 1024×1024、"
-      + "SD1.5 512×512），下面收的是 SDXL 官方训练桶和主流 16:9 / 9:16；⇄ 换长宽，"
-      + "选「自定义」就手填宽 / 高。切模型时只有「宽高还停在上一个模型的推荐值」才会自动跟着换，"
+      "· 「图生图」和「图生图精修」的区别：精修在原图尺寸上重绘（2K 源图就是 2K 出图），"
+      + "适合画完接着改；图生图会先把源图缩到你选的分辨率（等比缩放 + 中心裁剪）再重绘，"
+      + "出图尺寸固定等于面板上的宽 × 高，P 图 / 换风格 / 固定尺寸出图用它。" }),
+    el("p", { class: "ccd-hint", text:
+      "· 参数 → 分辨率：★ 那一项不是写死的，是后端读模型头部算出来的（只读张量表，不加载权重）："
+      + "文件里写了训练分辨率就直接用（标「读自文件」），没写就按张量结构判架构族 —— "
+      + "SDXL / Illustrious / ANIMA 1024×1024、SD1.5 512×512、SD2.x 768×768、Wan 832×480；"
+      + "kohya 训练桶（ss_bucket_info）也会一并列出来。下面收的是 SDXL 官方训练桶和主流 16:9 / 9:16；"
+      + "⇄ 换长宽，选「自定义」就手填宽 / 高。切模型 / 探测回来时只有「宽高还停在推荐值」才会自动跟着换，"
       + "你挑过的比例不会被冲掉。" }),
     el("p", { class: "ccd-hint", text:
       "· 参数 → 采样器 / 调度器：清单直接从 KSampler 节点定义拉，装了什么插件就有什么。"
@@ -1811,10 +2961,40 @@ function build() {
       "· 刷新下拉不会改你手动选的图：首尾帧那一对、图生图正在用的源图都会保留；"
       + "只有同步目标、以及点 ⟳ 时当前栏自己那格才换成新图。想换图就在画布上那格下拉里选。" }),
     el("p", { class: "ccd-hint", text:
-      "· 模型切到 anima 会自动套 30 步 / CFG 4.5 / 不取层 / 姿势换成 LLLite。" }),
+      "· 模型切到 anima 会自动套 30 步 / CFG 4.5 / 不取层 / 姿势换成 LLLite；" }),
+    el("p", { class: "ccd-hint", text:
+      "· ⚠ 出白图 / 画面被洗白：ANIMA 和 Wan 2.2 是流匹配（flow matching）模型，"
+      + "KSampler 的调度器必须是 simple / beta / sgm_uniform / ddim_uniform —— "
+      + "karras、exponential 这类给扩散模型退火的调度会把噪声计划错配，"
+      + "整张图就变成灰白一片（只剩很淡的轮廓，换个种子有时又恰好正常）。"
+      + "切到 ANIMA 时面板会自动把 karras 换成 simple，采样器默认给 er_sde；"
+      + "你手动选回 karras 时那一行下面会出黄字。视频那边同理（Wan 也用 simple）。" }),
+    el("p", { class: "ccd-hint", text:
+      "· 外挂资源（模型下面那一行）：面板读 ckpt 头部判断这个模型自带不带 文本编码器 / VAE —— "
+      + "自带（Illustrious 那些）就收起来不用管；裸 DiT（ANIMA 那类）缺哪项显示哪项，"
+      + "并先填好 qwen_3_06b_base + qwen_image_vae，选完写进画布 110 / 111 并把 112 / 113 切到外挂；"
+      + "每个模型名记住你选的那份。视频模型是分离式的，所以视频那边这一行恒显示（403 文本编码器 / 412 VAE）。"
+      + "读不到头部（.gguf / .ckpt / 接口没重启）就退回按名字判断；🛠 可以强制展开手动指定。" }),
+    el("p", { class: "ccd-hint", text:
+      "· 模型分两套：顶栏「图像模型」管文生图 + 图生图（画布 101 模型槽）；"
+      + "「视频模型」是 high / low 两个下拉（画布 406 / 407），"
+      + "管图生视频 / 首尾帧 / 文生视频。Wan 2.2 这类模型是 high、low 两个专家各跑一半步数，"
+      + "两个要成套 —— 勾着「⇄ 成对」时改一个会自动把另一个换成配对的"
+      + "（high_noise ↔ low_noise、highQ80 ↔ lowQ80、Q8H ↔ Q8L 这些都认），"
+      + "成套性对不上会在旁边出黄字。safetensors 和 GGUF 在同一张清单里："
+      + "选 .gguf 会把 406 / 407 换成 UnetLoaderGGUF（要装 ComfyUI-GGUF），选回 safetensors 再换回来。"
+      + "切管线时才显示对应的那一套，省地方。" }),
     el("p", { class: "ccd-hint", text:
       "· 提示词：图像两列（正/负）给文生图和图生图共用，视频两列同理；"
       + "正向 8 段按顺序拼（空段跳过），负向就是一个整框，不分段。" }),
+    el("p", { class: "ccd-hint", text:
+      "· 中→英翻译：提示词框可以直接写中文，点行尾「译」翻这一段，"
+      + "或点本组「中→英」一次翻完。装了本机 Opus-MT 就是真翻译：含中文一律走模型，"
+      + "长句按句切块、不截断，状态栏会写「NMT」。模型第一次点「译」时才加载（1–3 秒），"
+      + "之后常驻内存复用（权重约 0.3 GB、只用系统内存、不占显存），随 ComfyUI 关闭释放。"
+      + "还没装就在插件目录运行 python tools/install_translate.py（约 300 MB，纯离线），"
+      + "重启一次 ComfyUI 即可；没装时自动用内置绘画词典兜底"
+      + "（1000+ 词，danbooru 风格标签，未收录的词黄字列出）——照样能用、全程不联网。" }),
     el("p", { class: "ccd-hint", text:
       "· 一段一个来源：不勾「插件输入」用手填文字；勾上就用接在「第 N 段」节点上的插件文本。" }),
     el("p", { class: "ccd-hint", text:
@@ -1914,13 +3094,18 @@ function build() {
 
   Object.assign(ui, {
     root, pipeBtns, modelSel, modBtns, tabBtns, foldBtn, bodies,
+    vHighSel, vLowSel, vPairChk, vWarn, imageModelGroup, videoModelGroup,
+    resSel, resCell, imageResBox, videoResBox, resOpenBtn,
+    resHint: imageResBox.hintEl, videoResHint: videoResBox.hintEl,
+    resOpen: false,
     focusBtn, pipBtn, dockBtn,
     qNum, qRun, qFront, qStop, qCount, qMsg, qbar,
-    promptBoxes, loraCols, paramInputs, paramSections, segGroups, seedChks,
-    tileChks, roFields, paramCombos, stageChks, warnSpans,
-    imgParamSet, vidParamSet, modHint, parStatus, warn, drift, toolStatus,
-    st, lastModelList: "", lastLoraCount: {}, loraViews: {}, loraNode: {},
-    loraWarn: {}, probeNode: null, segAll: {}, lastPipe: "",
+        promptBoxes, loraCols, paramInputs, paramSections, segGroups, seedChks,
+        tileChks, roFields, paramCombos, stageChks, warnSpans,
+        imgParamSet, vidParamSet, modHint, parStatus, warn, drift, toolStatus,
+        loraSortSels, loraNotes,
+        st, lastModelList: "", lastLoraCount: {}, loraViews: {}, loraNode: {},
+    loraWarn: {}, probeNode: null, segAll: {}, lastPipe: "", lastUnetList: "",
     lastImage: null, runPending: false, paramApplied: false,
     qAt: 0, qRunning: 0, qPending: 0, qMsgTimer: 0,
     lastEdit: null,
@@ -2365,6 +3550,13 @@ function applyPipeFilter() {
   }
   if (ui.imgParamSet) ui.imgParamSet.classList.toggle("ccd-hide", kind !== "image");
   if (ui.vidParamSet) ui.vidParamSet.classList.toggle("ccd-hide", kind !== "video");
+  // 模型也分两套：图像管线只看图像模型，视频管线只看视频模型（high / low）
+  if (ui.imageModelGroup) {
+    ui.imageModelGroup.classList.toggle("ccd-hide", kind !== "image");
+  }
+  if (ui.videoModelGroup) {
+    ui.videoModelGroup.classList.toggle("ccd-hide", kind !== "video");
+  }
   if (ui.modHint) ui.modHint.classList.toggle("ccd-hide", kind === "image");
   const want = kind === "video" ? ["video_high", "video_low"] : ["image"];
   for (const [gk, rows] of Object.entries(ui.loraCols || {})) {
@@ -2717,7 +3909,7 @@ function writeSamplerToCanvas(media, name, val) {
 
 /** 当前宽高落在哪个选项上：__rec（模型推荐） / "1216x832" / __custom */
 function resValueOf(media, w, h) {
-  const rec = media === "video" ? VIDEO_RES_FALLBACK : recommendedRes(currentModel());
+  const rec = recommendedResOf(media);
   if (rec.w === w && rec.h === h) return "__rec";
   for (const p of RES_PRESETS[media] || []) {
     if (p.w === w && p.h === h) return p.w + "x" + p.h;
@@ -2746,18 +3938,41 @@ function refreshCombos(force) {
   for (const c of Object.values(ui.paramCombos || {})) {
     if (!c || !c.sel) continue;
     if (c.kind === "resolution") {
-      const rec = c.media === "video" ? VIDEO_RES_FALLBACK
-        : recommendedRes(currentModel());
-      const sig = c.media + "|" + rec.w + "x" + rec.h;
+      const rec = recommendedResOf(c.media);
+      const buckets = c.media === "video" ? [] : (rec.buckets || []);
+      const sig = c.media + "|" + rec.w + "x" + rec.h + "|" + buckets.length
+        + "|" + String(rec.why || "").length;
       if (!force && sig === c.sig && c.sel.children.length) continue;
       c.sig = sig;
       c.sel.textContent = "";
-      c.sel.appendChild(optionEl("__rec",
-        "★ 推荐 " + rec.w + " × " + rec.h + " · " + rec.why));
+      const recOpt = optionEl("__rec",
+        "★ 推荐 " + rec.w + " × " + rec.h + " · " + rec.why);
+      // 悬停说清这个数字是哪来的（探测结果没有 src 时按「名字兜底」讲）
+      const srcTxt = rec.src === "file" ? "读自模型文件里写的训练分辨率"
+        : rec.src === "family" ? "按模型结构判出的架构族官方训练分辨率"
+          : "接口读不到头部（或旧进程没这个接口）→ 按模型名兜底";
+      try {
+        recOpt.title = srcTxt;
+        // 浏览器的 <option> 不吃 tooltip，说明挂在 select 上才看得见
+        c.sel.title = "★ 推荐 " + rec.w + " × " + rec.h + "　" + srcTxt + "\n"
+          + rec.why + "\n"
+          + (rec.buckets && rec.buckets.length
+            ? "文件里还写了 " + rec.buckets.length + " 个训练桶，已列在下面" : "")
+          + "\n（换模型 / 换视频模型后面板会自动重问一次模型头部）";
+      } catch (e) { /* 桩 / 老前端不支持 title 就算了 */ }
+      c.sel.appendChild(recOpt);
       for (const p of RES_PRESETS[c.media] || []) {
         if (p.w === rec.w && p.h === rec.h) continue;
         c.sel.appendChild(optionEl(p.w + "x" + p.h,
           p.w + " × " + p.h + "　" + p.tag));
+      }
+      // 模型头部里写了训练桶（kohya 的 ss_bucket_info）→ 把真用过的桶也列出来
+      for (const b of buckets) {
+        const [w, h, cnt] = b;
+        const v = w + "x" + h;
+        if (w === rec.w && h === rec.h) continue;
+        if ((c.sel.children || []).some((o) => o.attrs && o.attrs.value === v)) continue;
+        c.sel.appendChild(optionEl(v, w + " × " + h + "　· 模型训练桶（" + cnt + " 张）"));
       }
       c.customOpt = optionEl("__custom", "自定义（直接改下面的宽 / 高）");
       c.sel.appendChild(c.customOpt);
@@ -2794,7 +4009,7 @@ function syncCombos() {
       if (c.sel.value !== want) c.sel.value = want;
     } else {
       const name = c.kind === "sampler" ? "sampler_name" : "scheduler";
-      const cur = canvasSampler(c.media, name) || SAMPLER_DEFAULTS[c.key] || "";
+      const cur = canvasSampler(c.media, name) || samplerDefaultOf(c.key) || "";
       if (!cur) continue;
       ensureOption(c.sel, cur);
       if (c.sel.value !== cur) c.sel.value = cur;
@@ -2819,13 +4034,12 @@ function writeResolution(media, w, h) {
   return true;
 }
 
-function applyComboValue(c, val) {
+function applyComboValue(c, val, opt) {
   if (!c || !val) return false;
   if (c.kind === "resolution") {
     let w, h;
     if (val === "__rec") {
-      const rec = c.media === "video" ? VIDEO_RES_FALLBACK
-        : recommendedRes(currentModel());
+      const rec = recommendedResOf(c.media);
       w = rec.w; h = rec.h;
     } else {
       const m = /^(\d+)x(\d+)$/.exec(val);
@@ -2835,8 +4049,20 @@ function applyComboValue(c, val) {
     return writeResolution(c.media, w, h);
   }
   const name = c.kind === "sampler" ? "sampler_name" : "scheduler";
-  const n = writeSamplerToCanvas(c.media, name, val);
-  storeParam(c.key, val);
+  // 面板自己写（重置默认值 / 换模型 / 刷新后写回记忆）时顺手纠掉流匹配模型的坏调度；
+  // 你手动选的那个值原样写下去，只在行下面挂黄字提醒（opt.user === true）。
+  let use = val;
+  if (c.kind === "scheduler" && !(opt && opt.user) && schedUnsafe(c.media, val)) {
+    const fix = c.media === "video" ? SAMPLER_DEFAULTS.__scheduler_video
+      : samplerDefaultOf("__scheduler_image");
+    if (fix && fix !== val) {
+      use = fix;
+      flashParamStatus("流匹配模型（ANIMA / Wan）用不了 " + val
+        + "：已换成 " + fix + "（" + val + " 会把画面洗白）");
+    }
+  }
+  const n = writeSamplerToCanvas(c.media, name, use);
+  storeParam(c.key, use);
   return n > 0;
 }
 
@@ -2847,7 +4073,7 @@ function onComboPick(key, val) {
     flashParamStatus("已切到自定义分辨率：直接改下面的宽 / 高");
     return;
   }
-  applyComboValue(c, val);
+  applyComboValue(c, val, { user: true });
   markChanged();
   sync(true);
 }
@@ -2884,8 +4110,10 @@ function resetParams() {
     storeParam(k, values[k]);        // 记住「已重置」，刷新后不会再弹回你改过的值
     n++;
   }
-  // 下拉参数：采样器 / 调度器回到各自那套默认
-  for (const [k, v] of Object.entries(SAMPLER_DEFAULTS)) {
+  // 下拉参数：采样器 / 调度器回到「当前模型族」那套默认
+  // （ANIMA / Wan 是流匹配模型：默认 er_sde + simple，不会重置回会把图洗白的 karras）
+  const fam = SAMPLER_FAMILY[samplerFamilyOfImage()] || SAMPLER_DEFAULTS;
+  for (const [k, v] of Object.entries(fam)) {
     const c = ui.paramCombos && ui.paramCombos[k];
     if (!c) continue;
     applyComboValue(c, v);
@@ -2923,19 +4151,202 @@ function flashParamStatus(text) {
   }, 4000);
 }
 
-/** CLIP / VAE 来源开关：1 = ckpt 自带，2 = ANIMA 专用 loader（110 / 111）。 */
-function applyFamilySwitch(anima) {
-  const idx = anima ? 2 : 1;
-  for (const k of ["clip", "vae"]) {
-    for (const n of findNodes("family", k)) writeValue(n, "family", idx);
+// ------------------------------------------- 外挂资源：文本编码器 / VAE（v1.9.0）
+const RES_REMOTE = { te: [], vae: [] };   // /object_info 拉回来的清单
+const RES_SIG = {};                       // 每个下拉上一次的清单签名
+const MODEL_PROBE = {};                   // 模型名 → /cc_dashboard/model_info 结果
+const PROBE_PENDING = {};
+const PROBE_FAIL = {};                    // 探测失败（接口没起来 / 读不了头）→ 60 秒内不重试
+let RES_FETCHED = false;
+const RES_FLASH = { text: "", media: "image" };   // 刚选完给一句「写进画布了」的反馈（4 秒后自动收）
+let resFlashTimer = 0;
+
+function flashResStatus(text, media) {
+  RES_FLASH.text = text || "";
+  RES_FLASH.media = media || "image";
+  if (resFlashTimer) clearTimeout(resFlashTimer);
+  if (!RES_FLASH.text) return;
+  resFlashTimer = setTimeout(() => {
+    RES_FLASH.text = "";
+    try { sync(true); } catch (e) { /* 面板没了就算了 */ }
+  }, 4000);
+}
+
+function resRole(kind) { return kind === "te" ? "te_slot" : "vae_slot"; }
+
+function resNode(kind, media) {
+  return findNode(resRole(kind), media || "image");
+}
+
+function resFile(kind, media) {
+  const n = resNode(kind, media);
+  return n ? String(readValue(n, resRole(kind)) || "") : "";
+}
+
+/** 来源开关（112 CLIP / 113 VAE）：1 = 模型自带，2 = 外挂 */
+function resSwitchOn(kind) {
+  const n = findNode("family", kind === "te" ? "clip" : "vae");
+  return n ? Number(readValue(n, "family")) === 2 : false;
+}
+
+function writeResSwitch(kind, external) {
+  for (const n of findNodes("family", kind === "te" ? "clip" : "vae")) {
+    writeValue(n, "family", external ? 2 : 1);
   }
 }
 
-function onModelChange(name) {
-  const before = currentModel();
-  const n = findNode("model_slot");
-  if (n) writeValue(n, "model_slot", name);
-  const anima = isAnimaModel(name);
+/** 探测结果（没探测到 / 读不了头部就是 null，退回按名字判断） */
+function modelProbe(name) {
+  const p = MODEL_PROBE[name];
+  return p && p.known ? p : null;
+}
+
+// 调试出口（正常出图用不到）：浏览器控制台执行 __ccDock.resetProbes() 就能
+// 丢掉「这个模型探测过 / 探测失败」的缓存，下次同步会重新问一遍后端。
+// 换过 ckpt 文件、或者插件刚升级完不想刷新页面时很有用；自检脚本也用它。
+globalThis.__ccDock = Object.assign(globalThis.__ccDock || {}, {
+  resetProbes() {
+    for (const k of Object.keys(MODEL_PROBE)) delete MODEL_PROBE[k];
+    for (const k of Object.keys(PROBE_PENDING)) delete PROBE_PENDING[k];
+    for (const k of Object.keys(PROBE_FAIL)) delete PROBE_FAIL[k];
+  },
+});
+
+function modelIsAnima(name) {
+  const p = modelProbe(name);
+  return p ? !!p.is_anima : isAnimaModel(name);
+}
+
+/** 这个模型缺不缺 TE / VAE：true 缺、false 自带、null 不知道 */
+function resNeed(kind, name) {
+  const p = modelProbe(name);
+  if (!p) return isAnimaModel(name) ? true : null;
+  return kind === "te" ? !p.has_te : !p.has_vae;
+}
+
+function resList(kind, media) {
+  const info = RES_KINDS.find((x) => x.kind === kind);
+  const out = [];
+  const push = (arr) => {
+    for (const v of (arr || [])) if (v && out.indexOf(v) < 0) out.push(v);
+  };
+  const node = resNode(kind, media);
+  if (node) push(nodeOptions(node, info.widget));
+  push(RES_REMOTE[kind]);
+  push(comboValues(nodeDef(info.type), info.widget));
+  return out;
+}
+
+/** 缺件时预填哪份（按模型族）；清单里没有就不硬塞 */
+function resDefault(kind, name, media) {
+  const fam = modelIsAnima(name) ? RES_DEFAULT.anima : RES_DEFAULT.sdxl;
+  const want = fam[kind] || "";
+  if (!want) return "";
+  const list = resList(kind, media || "image");
+  return (!list.length || list.indexOf(want) >= 0) ? want : "";
+}
+
+function rememberAsset(name, kind, value) {
+  if (!name) return;
+  const all = ui.st.assets || (ui.st.assets = {});
+  const one = all[name] || (all[name] = {});
+  if (one[kind] === value) return;
+  one[kind] = value;
+  saveState(ui.st);
+}
+
+/** 下拉选中 → 写画布（选文件 = 切外挂；选「模型自带」= 切回 1） */
+function onResPick(media, kind, value) {
+  const node = resNode(kind, media);
+  if (!node) return;
+  const label = kind === "te" ? "文本编码器" : "VAE";
+  const slot = media === "image" ? (kind === "te" ? "110" : "111")
+    : (kind === "te" ? "403" : "412");
+  const sw = media === "image" ? (kind === "te" ? "112" : "113") : "";
+  if (value === RES_BUILTIN) {
+    writeResSwitch(kind, false);
+    flashResStatus("✔ " + label + " 改回「模型自带」"
+      + (sw ? "：来源开关 " + sw + " → 1" : ""), media);
+  } else if (value) {
+    writeValue(node, resRole(kind), value);
+    writeResSwitch(kind, true);
+    flashResStatus("✔ " + label + " 已写进画布 " + slot
+      + (sw ? "，来源开关 " + sw + " → 外挂" : "") + "：" + value, media);
+  }
+  if (media === "image") rememberAsset(currentModel(), kind, value);
+  markChanged();
+  sync(true);
+}
+
+/** 换模型 / 首次载入：按「探测到缺什么 + 你上次挑的那份」把两个槽对好 */
+function applyResourceDefaults(name) {
+  if (!name) return;
+  const mem = (ui.st.assets || {})[name] || {};
+  for (const info of RES_KINDS) {
+    const node = resNode(info.kind, "image");
+    if (!node) continue;
+    const cur = String(readValue(node, resRole(info.kind)) || "");
+    const need = resNeed(info.kind, name);
+    let want = mem[info.kind];
+    if (!want) {
+      if (need === false) want = RES_BUILTIN;
+      else if (need === true) {
+        want = resDefault(info.kind, name, "image") || cur || RES_BUILTIN;
+      } else {
+        want = isAnimaModel(name)
+          ? (resDefault(info.kind, name, "image") || cur || RES_BUILTIN)
+          : RES_BUILTIN;
+      }
+    }
+    if (want === RES_BUILTIN) {
+      writeResSwitch(info.kind, false);
+      continue;
+    }
+    const list = resList(info.kind, "image");
+    if (!list.length || list.indexOf(want) >= 0) {
+      writeValue(node, resRole(info.kind), want);
+    }
+    writeResSwitch(info.kind, true);
+  }
+}
+
+/** 模型头部探测：只读接口，一次一个模型；失败/没重启就按名字判断。
+
+    读完头部（拿到架构族 + 训练分辨率）后：预设、外挂资源、推荐分辨率一起对齐。
+    图像模型看 101 槽，视频模型看 406 / 407 —— 两边都可能被探到，谁命中算谁。
+ */
+function probeModel(name) {
+  if (!name || MODEL_PROBE[name] || PROBE_PENDING[name]) return;
+  // 接口没起来（老进程）/ 文件读不了：60 秒内不再重试，免得每秒 sync 都打一遍
+  const failed = PROBE_FAIL[name];
+  if (failed && Date.now() - failed < 60000) return;
+  PROBE_PENDING[name] = true;
+  const url = API_BASE + "/model_info?name=" + encodeURIComponent(name);
+  fetch(url).then((r) => r.json()).then((j) => {
+    delete PROBE_PENDING[name];
+    if (!j || j.known !== true) { PROBE_FAIL[name] = Date.now(); return; }
+    MODEL_PROBE[name] = j;
+    delete PROBE_FAIL[name];
+    // 名字里没写 anima 的 ANIMA 模型：预设（步数 / CFG / 取层 / 姿势族）也跟着换
+    if (currentModel() === name && j.is_anima && !isAnimaModel(name)) {
+      applyModelPreset(name, true);
+      try { applyPoseFamily(); } catch (e) { log("applyPoseFamily", e); }
+    }
+    // 头部读出来的训练分辨率：推荐项文案换掉，宽高还停在猜测值时就顺手跟过去
+    try {
+      if (currentModel() === name) followResToProbe("image", name);
+      if (videoModelForRes() === name) followResToProbe("video", name);
+    } catch (e) { log("followResToProbe", e); }
+    if (currentModel() === name) applyResourceDefaults(name);
+    // 推荐项 / 训练桶都要重画（以前只有 anima 才刷，SDXL 探完不刷 → 看着像没读）
+    try { refreshCombos(true); } catch (e) { log("refreshCombos", e); }
+    markChanged();
+    sync(true);
+  }).catch(() => { delete PROBE_PENDING[name]; PROBE_FAIL[name] = Date.now(); });
+}
+
+/** Ckpt 下拉换模型：只处理 101 槽 */
+function applyModelPreset(name, anima) {
   const preset = anima ? PRESET.anima : PRESET.sdxl;
   const clip = findNode("preset_sdxl");
   if (clip) setMode(clip, preset.clipLayer);
@@ -2943,6 +4354,18 @@ function onModelChange(name) {
     const p = findNode("param", key);
     if (p) writeValue(p, "param", value);
   }
+  // 采样器 / 调度器：流匹配（ANIMA）吃不了 karras / exponential —— 只在那两档时才换掉，
+  // 免得把你特意调好的组合（比如 er_sde + simple）冲掉。
+  try { fixFlowScheduler(); } catch (e) { log("fixFlowScheduler", e); }
+}
+
+function onModelChange(name) {
+  const before = currentModel();
+  const n = findNode("model_slot");
+  if (n) writeValue(n, "model_slot", name);
+  flashResStatus("");            // 上一句「已写进画布 111」说的是旧模型，换模型就作废
+  const anima = modelIsAnima(name);
+  applyModelPreset(name, anima);
   // 分辨率跟着模型走：只在「宽高还是上一个模型的推荐值」时才动它，
   // 免得把你特意选好的比例（比如 832×1216 竖图）在换模型时冲掉。
   try {
@@ -2954,9 +4377,10 @@ function onModelChange(name) {
       flashParamStatus("分辨率跟随模型：" + rec.w + "×" + rec.h + "（" + rec.why + "）");
     }
   } catch (e) { log("model resolution", e); }
-  applyFamilySwitch(anima);   // CLIP / VAE 来源跟模型族走
+  applyResourceDefaults(name);   // 外挂 文本编码器 / VAE 跟模型走（自带就切回 ckpt）
   applyPoseFamily();   // 保持当前开关状态，只换族
   refreshCombos(true);
+  probeModel(name);    // 问一次后端：这个 ckpt 自带不带 TE / VAE
   markChanged();
   sync(true);
 }
@@ -3022,22 +4446,25 @@ function refreshImageCombos(opt) {
 // ------------------------------------------------- 取图：输出图在管线之间传递
 /** 每条管线的图往哪几个取图节点送（「输出图同步」的传递表）。
 
-    文生图 -> 图生图 / 图生视频 / 首尾帧（首、尾都先接上，再自己改尾帧）
+    文生图 -> 图生图精修 / 图生图 / 图生视频 / 首尾帧（首、尾都先接上，再自己改尾帧）
+    图生图精修 -> 图生图 / 图生视频 / 首尾帧
     图生图 -> 图生视频 / 首尾帧
     图生视频、首尾帧、文生视频 -> 没有下游，只作为来源
  */
 const IMG_TO_SOURCES = {
-  t2i: ["i2i", "i2v", "flf_start", "flf_end"],
-  i2i: ["i2v", "flf_start", "flf_end"],
+  t2i: ["i2i", "i2i_fixed", "i2v", "flf_start", "flf_end"],
+  i2i: ["i2i_fixed", "i2v", "flf_start", "flf_end"],
+  i2i_fixed: ["i2v", "flf_start", "flf_end"],
   i2v: [],
   flf2v: [],
   t2v: [],
 };
 // 取图节点的遍历顺序：上游管线在前
-const IMG_SOURCE_ORDER = ["i2i", "i2v", "flf_start", "flf_end"];
+const IMG_SOURCE_ORDER = ["i2i", "i2i_fixed", "i2v", "flf_start", "flf_end"];
 // 反过来：这条管线自己用的是哪个取图节点（没有就退到 output 里最新那张）
 const IMG_OWN_SOURCE = {
-  t2i: null, i2i: "i2i", i2v: "i2v", flf2v: "flf_start", t2v: null,
+  t2i: null, i2i: "i2i", i2i_fixed: "i2i_fixed",
+  i2v: "i2v", flf2v: "flf_start", t2v: null,
 };
 // 每张图最多试几次、间隔多少毫秒（刷新下拉是异步的，多补几次就「不延迟」了）
 const IMG_SYNC_TRIES = [0, 60, 200, 500, 900];
@@ -3273,7 +4700,9 @@ function syncSegs() {
       else if (plug) st = "插件：未连线（点 ⌖ 去连）";
       else if (linked) st = "手填（插件已关）";
       else st = txt.trim() ? "手填" : "空";
+      if (row.note) st = row.note;
       if (row.state.textContent !== st) row.state.textContent = st;
+      row.state.classList.toggle("ccd-note", !!row.note);
       if (sw) row.go.title = "跳到「" + nodeLabel(sw) + "」——把插件输出连到它的插件文本口";
       else row.go.title = "这一段还没接上开关节点";
     }
@@ -3306,14 +4735,20 @@ function syncStageChks() {
   }
 }
 
-/** 参数值超出安全区时在那一行下面提示（脸手眼那五个旋钮） */
+/** 参数值超出安全区（PARAM_WARN）/ 危险组合（COMBO_WARN）时在那一行下面提示 */
 function syncParamWarns() {
   for (const [k, span] of Object.entries(ui.warnSpans || {})) {
+    if (!span) continue;
+    let body = "";
     const rule = PARAM_WARN[k];
-    if (!rule || !span) continue;
-    const n = findNode("param", k);
-    const v = n ? Number(readValue(n, "param")) : NaN;
-    const txt = (isFinite(v) && v >= rule[0]) ? "⚠ " + rule[1] : "";
+    if (rule) {
+      const n = findNode("param", k);
+      const v = n ? Number(readValue(n, "param")) : NaN;
+      if (isFinite(v) && v >= rule[0]) body = rule[1];
+    } else if (COMBO_WARN[k]) {
+      try { body = COMBO_WARN[k]() || ""; } catch (e) { body = ""; }
+    }
+    const txt = body ? "⚠ " + body : "";
     if (span.textContent !== txt) span.textContent = txt;
     if (span.parentNode) span.parentNode.classList.toggle("ccd-hot", !!txt);
   }
@@ -3413,6 +4848,9 @@ function buildLoraRow(group, idx, row) {
 }
 
 function syncLoras() {
+  // 清单变了（刚刷新 / 排序换了 / 后端刚回话）→ 把每行那个下拉重填一遍
+  loraList();
+  if (ui.lastLoraSig !== LORA_SIG) refillLoraPicks();
   for (const [gk] of LORA_GROUPS) {
     const node = findNode("lora_group", gk);
     const box = ui.loraCols[gk];
@@ -3498,12 +4936,14 @@ function syncMissing() {
 // ------------------------------------------------- 画布是不是还在跑旧蓝图
 /** 画布上「高清化」子图的节点类型清单（按子图名字认；两个实例共用一个定义） */
 function upscaleSubgraphTypes() {
+  // 只看图像那条「高清化」。视频那条叫「视频高清化」，里面本来就有 ImageScaleBy
+  // （放大模型放大后再缩回目标倍数），那是正常步骤，不是老蓝图那种「多绕一段」。
   const out = [];
   eachGraph((n) => {
     const sg = n && n.subgraph;
     if (!sg || !sg.nodes) return;
     const nm = String(sg.name || n.title || "");
-    if (!/高清/.test(nm)) return;
+    if (!/高清/.test(nm) || /视频/.test(nm)) return;
     for (const x of sg.nodes) {
       const t = String((x && x.type) || "");
       if (t && out.indexOf(t) < 0) out.push(t);
@@ -3514,11 +4954,20 @@ function upscaleSubgraphTypes() {
 
 /** 工作流 extra 里的蓝图版本戳（读不到就返回 null，不当成「旧」） */
 function blueprintRev() {
-  try {
-    const e = app.graph && app.graph.extra;
-    const b = e && e.cc_dashboard_blueprint;
+  const pick = (obj) => {
+    const b = obj && (obj.cc_dashboard_blueprint
+      || (obj.ds && obj.ds.cc_dashboard_blueprint));
     const v = b && Number(b.rev);
     return isFinite(v) ? v : null;
+  };
+  try {
+    const g = app.graph;
+    let v = pick(g && g.extra);
+    if (v === null && g && typeof g.serialize === "function") {
+      // 有些前端把 extra 挂在 serialize() 出来的那份里
+      try { v = pick(g.serialize().extra); } catch (e) { /* 序列化不了就算了 */ }
+    }
+    return v;
   } catch (e) {
     return null;
   }
@@ -3531,13 +4980,12 @@ function blueprintDrift() {
   const types = upscaleSubgraphTypes();
   if (types.length) {
     const extra = [];
+    // 只有「收尾又拿放大模型跑了一趟」才算老链（v6.3 及以前）。
+    // 光有 ImageScaleBy 不算：视频高清化那条链里也有它，那是缩回目标倍数的正常一步。
     if (types.indexOf("ImageUpscaleWithModel") >= 0) {
       extra.push("收尾又跑了一趟 4x 放大");
       legacy = true;
-    }
-    if (types.indexOf("ImageScaleBy") >= 0) {
-      extra.push("紧接着缩回 ×0.5");
-      legacy = true;
+      if (types.indexOf("ImageScaleBy") >= 0) extra.push("紧接着缩回 ×0.5");
     }
     if (legacy) {
       reasons.push("高清链多绕一段（" + extra.join(" + ")
@@ -3645,19 +5093,31 @@ async function makeBlueprint(mode) {
   }
 }
 
-/** 生成完直接把新蓝图载进画布；老前端不认就地提示从列表打开 */
+/**
+ * 生成完直接把新蓝图载进画布。
+ * 光「写进工作流列表」是不够的：画布上还是内存里那份旧图，用户重开一次才生效 ——
+ * 所以载完要核对版本戳，没换上就明确告诉他去工作流列表重开 00_总控台。
+ */
 function loadBlueprint(wf) {
   if (!wf) return;
   const hint = () => {
     if (ui.toolStatus) {
-      ui.toolStatus.textContent += "　→ 已写进工作流列表，打开 00_总控台 即可";
+      ui.toolStatus.textContent +=
+        "　→ 已写进工作流列表（磁盘那份是新的）：工作流 → 打开 00_总控台 才会换上。";
     }
+  };
+  const done = () => {
+    try { sync(true); } catch (e) { log("sync", e); }
+    try { syncDrift(); } catch (e) { log("syncDrift", e); }
+    const rev = blueprintRev();
+    if (rev === null || rev < BLUEPRINT_REV) hint();
   };
   try {
     const load = app.loadGraphData;
     if (typeof load !== "function") { hint(); return; }
     const p = load.call(app, wf);
-    if (p && typeof p.catch === "function") p.catch(hint);
+    if (p && typeof p.then === "function") p.then(done, hint);
+    else setTimeout(done, 500);
   } catch (e) {
     hint();
   }
@@ -3676,6 +5136,176 @@ function rebindIfGraphChanged() {
   const changed = !!ui.probeNode && ui.probeNode !== probe;
   ui.probeNode = probe;
   return changed;
+}
+
+/** 视频模型下拉：填清单 + 回填画布值 + 配对提示 */
+function syncVideoModels(force) {
+  const list = unetList();
+  const sig = list.join("\u0001");
+  const rows = [
+    [ui.vHighSel, "video_high", readUnet("video_high")],
+    [ui.vLowSel, "video_low", readUnet("video_low")],
+  ];
+  const rebuild = force || sig !== ui.lastUnetList;
+  if (rebuild) ui.lastUnetList = sig;
+  for (const [sel, key, cur] of rows) {
+    if (!sel) continue;
+    // 画布上没这个槽（旧蓝图）就把下拉禁掉 —— 免得改了没生效，看着像「自己还原了」
+    sel.disabled = !findNode("unet_slot", key);
+    // 该显示的是画布上的值；画布读不到就保留你当前选的那个（拖窗、重画都不许清空）
+    const keep = cur || String(sel.value || "");
+    if (rebuild) {
+      sel.textContent = "";
+      for (const v of list) {
+        sel.appendChild(el("option", { value: v, text: optionLabel(v) }));
+      }
+      if (keep && list.indexOf(keep) < 0) {
+        sel.appendChild(el("option", { value: keep, text: optionLabel(keep) }));
+      }
+      sel.value = keep || list[0] || "";
+    } else if (cur && !focused(sel) && sel.value !== cur) {
+      sel.value = cur;
+    }
+  }
+  if (ui.vPairChk) ui.vPairChk.checked = ui.st.pairSync !== false;
+  // 视频模型也读一次头部：推荐分辨率按它的架构族来（Wan 832×480 / 其它按各自训练分辨率）
+  try {
+    for (const [, key] of rows) {
+      const nm = readUnet(key);
+      if (nm) probeModel(nm);
+    }
+  } catch (e) { log("probeModel video", e); }
+  const msg = videoModelWarning();
+  if (ui.vWarn) {
+    ui.vWarn.textContent = msg;
+    ui.vWarn.classList.toggle("ccd-hide", !msg);
+    ui.vWarn.title = msg
+      ? msg + "\n\nWan 2.2 这类模型是 high / low 两个专家各跑一半步数，两个必须是"
+        + "同一套权重的两种噪声档。勾着「⇄ 成对」时改一个会自动配另一个，"
+        + "也可以手动把 high / low 分别指到不同文件。本地成对的 GGUF（highQ80 / lowQ80、"
+        + "Q8H / Q8L 这种）也能直接选，选中后面板会把 406 / 407 换成 UnetLoaderGGUF。"
+      : "视频模型（画布 406 / 407）：Wan 2.2 这类是 high / low 两个专家各跑一半步数，"
+        + "两个要成套；「⇄ 成对」开着时改一个自动配另一个。safetensors 和 GGUF 混在一张"
+        + "清单里，选 GGUF 会自动把加载器换成 UnetLoaderGGUF。";
+  }
+  if (ui.videoModelGroup) {
+    ui.videoModelGroup.classList.toggle("ccd-vmodel-bad", !!msg);
+  }
+}
+
+/** 文件清单：/object_info 拉一次（点 ⟳ 重拉）；新丢进 models 的文件不用重启就能看到 */
+function fetchResLists(force) {
+  if (RES_FETCHED && !force) return;
+  RES_FETCHED = true;
+  for (const info of RES_KINDS) {
+    fetch("/object_info/" + info.type).then((r) => r.json()).then((j) => {
+      const v = comboValues(j && j[info.type], info.widget);
+      if (v.length) {
+        RES_REMOTE[info.kind] = v.slice();
+        sync(true);
+      }
+    }).catch(() => { /* 服务没响应就算了，画布节点自带的清单还能用 */ });
+  }
+}
+
+/** 外挂资源那一行：清单 / 选中值 / 显隐 / 提示，全在这儿对齐 */
+function syncResources(force) {
+  fetchResLists(false);
+  const name = currentModel();
+  for (const media of ["image", "video"]) {
+    for (const info of RES_KINDS) {
+      const id = media + ":" + info.kind;
+      const sel = (ui.resSel || {})[id];
+      const cell = (ui.resCell || {})[id];
+      if (!sel) continue;
+      const node = resNode(info.kind, media);
+      const list = resList(info.kind, media);
+      const withBuiltin = media === "image";
+      const sig = list.join("\u0001") + (withBuiltin ? "|b" : "");
+      if (force || sig !== RES_SIG[id]) {
+        RES_SIG[id] = sig;
+        const keep = String(sel.value || "");
+        sel.textContent = "";
+        if (withBuiltin) {
+          sel.appendChild(optionEl(RES_BUILTIN, "（用模型自带）"));
+        }
+        for (const v of list) sel.appendChild(optionEl(v, v));
+        const canvasVal = node ? String(readValue(node, resRole(info.kind)) || "") : "";
+        for (const v of [keep, canvasVal]) {
+          if (v && v !== RES_BUILTIN && list.indexOf(v) < 0) {
+            sel.appendChild(optionEl(v, v + "（不在清单）"));
+          }
+        }
+        // 重建会把选中项冲回第一项（= 「用模型自带」），看着就像「选了 VAE 又自己弹回去」。
+        // 这里立刻把刚才的选中值还原，即使下拉还带着焦点（画布值本来就没被改）。
+        const keepOk = keep && (keep !== RES_BUILTIN || withBuiltin);
+        if (keepOk) {
+          ensureOption(sel, keep, keep === RES_BUILTIN ? "（用模型自带）" : keep);
+          sel.value = keep;
+        }
+      }
+      if (cell) cell.classList.toggle("ccd-hide", !node);
+      sel.disabled = !node;
+      if (!node) continue;
+      const cur = String(readValue(node, resRole(info.kind)) || "");
+      const external = resSwitchOn(info.kind);
+      const want = (withBuiltin && (!external || !cur)) ? RES_BUILTIN : (cur || "");
+      if (!focused(sel) && sel.value !== want) {
+        if (want) ensureOption(sel, want, want === RES_BUILTIN ? "（用模型自带）" : want);
+        sel.value = want;
+      }
+    }
+  }
+  // 图像侧：模型自带就整行收起（🛠 可强制展开），缺哪项就只显示哪项
+  const need = { te: resNeed("te", name), vae: resNeed("vae", name) };
+  const open = !!ui.resOpen;
+  let any = false;
+  for (const info of RES_KINDS) {
+    const cell = (ui.resCell || {})["image:" + info.kind];
+    if (!cell) continue;
+    const show = open || need[info.kind] !== false;
+    if (show) any = true;
+    cell.classList.toggle("ccd-hide", !show);
+    cell.classList.toggle("ccd-need", need[info.kind] === true);
+  }
+  if (ui.imageResBox) ui.imageResBox.classList.toggle("ccd-hide", !any);
+  if (ui.resOpenBtn) ui.resOpenBtn.classList.toggle("ccd-on", open);
+  if (ui.resHint) {
+    let txt = "";
+    const flash = (RES_FLASH.text && RES_FLASH.media !== "video") ? RES_FLASH.text : "";
+    if (flash) {
+      txt = flash;                    // 刚选完：先说「写进哪儿了」，4 秒后回到常规提示
+    } else if (need.te === true && need.vae === true) {
+      txt = "模型不自带 → 已备好外挂 文本编码器 + VAE";
+    } else if (need.te === true) {
+      txt = "模型不自带文本编码器 → 已备好外挂";
+    } else if (need.vae === true) {
+      txt = "模型不自带 VAE → 已备好外挂";
+    } else if (!modelProbe(name) && isAnimaModel(name)) {
+      txt = "探测接口待重启生效：暂按名字判断";
+    } else if (need.te === null && name) {
+      txt = "读不到模型头部（.gguf / .ckpt）：按名字判断";
+    }
+    ui.resHint.textContent = txt;
+    ui.resHint.classList.toggle("ccd-hide", !txt);
+    ui.resHint.classList.toggle("ccd-ok", !!flash);
+    ui.resHint.classList.toggle("ccd-need", !flash && (need.te === true || need.vae === true));
+    ui.resHint.title = "面板读的是模型头部的张量名（不加载权重、不占显存）：\n"
+      + "· 自带 文本编码器 / VAE 的 ckpt（Illustrious 那些）→ 这一行不用管\n"
+      + "· 裸 DiT（ANIMA 那类只有 model.diffusion_model.*）→ 缺什么显示什么，"
+      + "选完写进画布 110 / 111，并把 112 / 113 两个来源开关切到外挂\n"
+      + "· 每个模型名记住你选的那份；新文件丢进 models\\text_encoders / models\\vae 后点 ⟳\n"
+      + "· 想给自带 VAE 的模型强换外挂，点 🛠 展开即可";
+  }
+  if (ui.videoResHint) {
+    const vflash = (RES_FLASH.text && RES_FLASH.media === "video") ? RES_FLASH.text : "";
+    ui.videoResHint.textContent = vflash;
+    ui.videoResHint.classList.toggle("ccd-hide", !vflash);
+    ui.videoResHint.classList.toggle("ccd-ok", !!vflash);
+    ui.videoResHint.title = "视频模型是分离式的：UNETLoader 只给模型本体，\n"
+      + "文本编码器（403）和 VAE（412）必须外挂。\n"
+      + "Wan 2.2 默认：umt5_xxl_fp8_e4m3fn_scaled.safetensors + wan_2.1_vae.safetensors";
+  }
 }
 
 function sync(force) {
@@ -3714,6 +5344,8 @@ function sync(force) {
       ui.modelSel.value = cur;
     }
   }
+  syncVideoModels(force);
+  syncResources(force);
 
   const active = findNodes("save").filter((n) => n.mode === 0).map(keyOf);
   for (const [k, b] of Object.entries(ui.pipeBtns)) {
@@ -3766,15 +5398,21 @@ function render() {
   ui.loraWarn = {};
   ui.probeNode = null;
   ui.lastPipe = "";
+  for (const k of Object.keys(RES_SIG)) delete RES_SIG[k];
   auditOnce();
-  // 打开工作流时先对齐一次 CLIP / VAE 来源，避免选了 ANIMA 还挂着 ckpt 那份
+  // 打开工作流时先对齐一次 文本编码器 / VAE 来源，避免选了 ANIMA 还挂着 ckpt 那份
   try {
-    applyFamilySwitch(isAnimaModel(currentModel()));
-  } catch (e) { log("applyFamilySwitch", e); }
+    const cur = currentModel();
+    applyResourceDefaults(cur);
+    probeModel(cur);          // 后端读完头部会再对一次（名字里没 anima 的也认）
+  } catch (e) { log("applyResourceDefaults", e); }
   // 种子「🎲 随机」默认开：每次打开页面把画布上的控制项也设成 randomize
   try {
     syncSeedChks(true);
   } catch (e) { log("syncSeedChks", e); }
+  // 打开工作流时先看一次调度器：画布上留着的 karras 遇上 ANIMA 就是白图，先按族纠一遍
+  // （和上面「对齐外挂资源」一个意思，只纠明确会崩的那两档）
+  try { fixFlowScheduler(); } catch (e) { log("fixFlowScheduler", e); }
   sync(true);
 }
 
