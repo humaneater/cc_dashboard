@@ -1013,14 +1013,87 @@ try {
   eq(segRows[6].children[6].textContent, "词典",
     "词典兜底时状态栏标「词典」，不报未收录");
 
-  console.log("\n[10b] 负面提示词 = 单框（不分段、无插件开关）");
+  console.log("\n[10d] 中文底稿框（横向展开 / 译完中文留着 / 底稿记忆）");
+  const zhRow5 = segRows[4];
+  const zhTa5 = zhRow5.children[7];
+  const enTa5 = zhRow5.children[1];
+  const sw5 = app.graph.getNodeById("sw_image_pos_5");
+  eq(zhTa5.tagName, "TEXTAREA", "每段多了一格中文底稿框");
+  ok(zhTa5.classList.contains("ccd-zh"), "中文框带 ccd-zh 标记（排到英文框左边）");
+  eq(zhRow5.classList.contains("ccd-zh-open"), false, "默认收起，不占地方");
+  const zhTog5 = zhRow5.children[0].querySelector("BUTTON");
+  eq(zhTog5.textContent, "中", "行首编号旁边有「中」按钮");
+  zhTog5.dispatch("click");
+  eq(zhRow5.classList.contains("ccd-zh-open"), true, "点「中」横向展开中文框");
+  ok(zhTog5.classList.contains("ccd-on"), "展开后按钮高亮");
+  zhTa5.value = "银发女孩微笑";
+  zhTa5.dispatch("change", {});
+  await tick(10);
+  const zhKey = [...store.keys()].find((k) => k.indexOf("cc_dock_zh_v1:") === 0);
+  ok(!!zhKey, "中文底稿写进 localStorage：" + zhKey);
+  eq(JSON.parse(localStorage.getItem(zhKey) || "{}")["image_pos:4"], "银发女孩微笑",
+    "底稿按「组:段」存好（换页面还在）");
+  eq(sw5.properties.cc_dock_zh, "银发女孩微笑", "底稿也挂到开关节点上（跟工作流文件走）");
+  // 英文框里先塞一句别的：点「译」要以中文底稿为准
+  enTa5.value = "old english text";
+  enTa5.dispatch("change", {});
+  await tick(10);
+  zhRow5.children[5].dispatch("click");
+  await tick(20);
+  eq(enTa5.value, "1girl silver hair smile", "「译」以左边中文底稿为准，写进右边那格");
+  eq(zhTa5.value, "银发女孩微笑", "中文底稿留着，可以反复改、反复译");
+  eq(sw5.widgets[1].value, "1girl silver hair smile", "英文同时写进画布节点");
+  ok(/中文已留底/.test(zhRow5.children[6].textContent), "状态栏标出「中文已留底」");
+  const zhAllBtn = posGroup.children[0].children[5];
+  eq(zhAllBtn.textContent, "中文", "组头有整组「中文」开关");
+  zhAllBtn.dispatch("click");
+  await tick(10);
+  eq(segRows.filter((r) => r.classList.contains("ccd-zh-open")).length, 8,
+    "点一下整组 8 行都展开");
+  eq(JSON.parse(localStorage.getItem("cc_dock_ui_v1")).zhAll.image_pos, true,
+    "整组开关状态记进 localStorage");
+  zhAllBtn.dispatch("click");
+  await tick(10);
+  eq(segRows.filter((r) => r.classList.contains("ccd-zh-open")).length, 0, "再点一下整组收起");
+  // 换工作流再换回来 = 重开时底稿要能铺回框里（有底稿的那一段自动展开）
+  const wfName0 = app.graph.name;
+  app.graph.name = "zz_other_workflow";
+  globalThis.__ccApi.emit("graphConfigured");
+  await tick(60);
+  eq(zhTa5.value, "", "换个工作流：底稿不串门（这里显示空）");
+  app.graph.name = wfName0;
+  globalThis.__ccApi.emit("graphConfigured");
+  await tick(60);
+  eq(zhTa5.value, "银发女孩微笑", "换回来：中文底稿铺回框里");
+  ok(zhRow5.classList.contains("ccd-zh-open"), "有底稿的那一段自动展开");
+
+  console.log("\n[10b] 负面提示词 = 单框（不分段、无插件开关；带一格中文底稿）");
   const negGroup = root().querySelectorAll(".ccd-pg")[1];
   eq(negGroup.querySelectorAll(".ccd-seg").length, 0, "负面提示词没有分段行");
-  const negTa = negGroup.children[1];
+  const negPair = negGroup.children[1];
+  eq(negPair.classList.contains("ccd-pg-pair"), true, "负面整框 + 中文底稿并排成一对");
+  const negZh = negPair.children[0];
+  eq(negZh.tagName, "TEXTAREA", "左边那格是中文底稿框");
+  eq(negPair.classList.contains("ccd-zh-open"), false, "默认收起（不占地方）");
+  const negTa = negPair.children[1];
   eq(negTa.tagName, "TEXTAREA", "负面提示词就是一个文本框");
   eq(negTa.classList.contains("ccd-pg-plain"), true, "这个框是单框样式");
+  const negZhBtn = negGroup.children[0].children[2];
+  eq(negZhBtn.textContent, "中文", "负面组头有「中文」开关（跟正向一个用法）");
+  negZhBtn.dispatch("click");
+  eq(negPair.classList.contains("ccd-zh-open"), true, "点一下横向展开中文底稿");
+  negZh.value = "微笑";
+  negZh.dispatch("change", {});
+  await tick(10);
+  eq(JSON.parse(localStorage.getItem("cc_dock_zh_v1:default") || "{}")["image_neg:0"],
+    "微笑", "负面底稿也按「组:段」记住");
   const negNode = app.graph.getNodeById("t_image_neg");
   eq(negTa.value, "hello image_neg", "面板显示画布上的负面原文");
+  negGroup.children[0].children[1].dispatch("click");        // 中→英
+  await tick(20);
+  eq(negTa.value, "smile", "「中→英」以中文底稿为准，写进右边那格");
+  eq(negZh.value, "微笑", "负面中文底稿也留着");
+  eq(negNode.widgets[0].value, "smile", "英文同时写进画布节点");
   negTa.value = "blurry, extra fingers";
   negTa.dispatch("change", {});
   await tick(10);
@@ -1028,6 +1101,8 @@ try {
   eq(negNode.widgets.length, 1, "负面节点只有一个 widget（没有 enable/段位）");
   const vNegGroup = root().querySelectorAll(".ccd-pg")[3];
   eq(vNegGroup.querySelectorAll(".ccd-seg").length, 0, "视频负面同样是单框");
+  eq(vNegGroup.children[1].classList.contains("ccd-pg-pair"), true,
+    "视频负面那格也带中文底稿（一样默认收起）");
 
   console.log("\n[11] 面板随管线过滤");
   const videoGroup = root().querySelectorAll(".ccd-pg")[2];

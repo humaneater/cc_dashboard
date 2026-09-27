@@ -40,6 +40,11 @@
  *     刷新会先清 ComfyUI 的目录缓存再扫，刚下好的 LoRA 不用重启就能选；
  *     后端没起来就退回核心 /object_info（只是没有时间可排）。排序记忆存 localStorage，
  *     换排序/刷新都不会把你选中的那个 LoRA 冲掉。
+ *  v1.10.0：分段提示词每段多一格「中文草稿」（横向展开）——中文写在左边那格，
+ *     点「译」把英文写进右边那格（画布节点），中文原文一直留着，方便反复改了再翻。
+ *     收起 / 展开：每行编号旁边的「中」按钮，以及提示词组标题的「中文」（整组一起）。
+ *     草稿存两处：localStorage（换页面还在）+ 开关节点 properties.cc_dock_zh
+ *     （跟着工作流文件走，换浏览器也丢不了）。草稿只是底稿，不进 prompt。
  *  v5：浮动窗 + 独立窗口（Document PiP）+ 跟随执行
  * 任何异常只 console.warn，不影响出图。
  *
@@ -50,7 +55,7 @@ import { app } from "../../scripts/app.js";
 
 const ROOT_ID = "cc-dock-root";
 const LS_KEY = "cc_dock_ui_v1";
-const CC_DASHBOARD_VERSION = "1.9.3";   // 与 __init__.py / pyproject.toml 保持一致
+const CC_DASHBOARD_VERSION = "1.10.0";  // 与 __init__.py / pyproject.toml 保持一致
 // 与 blueprint/generator.py 的 BLUEPRINT_REV 一致：蓝图结构一改就两边一起 +1，
 // 面板靠它 + 高清链结构两道判断认出「画布上跑的还是旧蓝图」
 const BLUEPRINT_REV = 7;
@@ -1902,9 +1907,23 @@ const CSS = `
 #${ROOT_ID} .ccd-pg-rows{max-height:330px;overflow:auto}
 /* 负面提示词：整块单框，给高一点方便一次看完整条 */
 #${ROOT_ID} .ccd-pg-plain{width:100%;min-height:92px;box-sizing:border-box}
-#${ROOT_ID} .ccd-seg{display:grid;grid-template-columns:26px 1fr auto auto 26px 26px 116px;
+/* 负面整框也带一格可收起的中文底稿（横向并排，收起时英文框占满） */
+#${ROOT_ID} .ccd-pg-pair{display:flex;gap:4px;align-items:stretch}
+#${ROOT_ID} .ccd-pg-pair>.ccd-zh{display:none;flex:1 1 50%;min-height:92px}
+#${ROOT_ID} .ccd-pg-pair>.ccd-pg-plain{flex:1 1 100%}
+#${ROOT_ID} .ccd-pg-pair.ccd-zh-open>.ccd-zh{display:block}
+#${ROOT_ID} .ccd-seg{display:grid;grid-template-columns:44px 1fr auto auto 26px 26px 116px;
  gap:4px;align-items:center;margin-bottom:3px}
-#${ROOT_ID} .ccd-seg-no{color:#7d838f;font-size:11px;text-align:right}
+/* 中文底稿框：DOM 排在最后，靠 order 排到英文框左边（收起时 display:none 不占位） */
+#${ROOT_ID} .ccd-seg>*{order:2}
+#${ROOT_ID} .ccd-seg>.ccd-seg-no{order:0}
+#${ROOT_ID} .ccd-seg>.ccd-zh{order:1;display:none;background:#171a22;border-color:#4a5464}
+#${ROOT_ID} .ccd-seg.ccd-zh-open{grid-template-columns:44px 1fr 1fr auto auto 26px 26px 116px}
+#${ROOT_ID} .ccd-seg.ccd-zh-open>.ccd-zh{display:block}
+#${ROOT_ID} .ccd-seg-no{color:#7d838f;font-size:11px;display:inline-flex;
+ align-items:center;justify-content:flex-end;gap:2px}
+#${ROOT_ID} .ccd-zh-btn{padding:0 4px;font-size:10px;line-height:15px;color:#9aa0ad}
+#${ROOT_ID} .ccd-zh-btn.ccd-on{color:#cfe9ff;border-color:#58b6e0;background:#24404f}
 #${ROOT_ID} .ccd-seg textarea{min-height:34px;height:34px}
 #${ROOT_ID} .ccd-seg textarea.ccd-static{opacity:.45}
 #${ROOT_ID} .ccd-seg-chk{display:inline-flex;align-items:center;gap:2px;
@@ -1994,11 +2013,37 @@ function num(value, step, onInput, width) {
   return i;
 }
 
-/** 一行提示词分段：文本框 + 插件输入 + 启用 + ⌖ 跳转 + 状态 */
+/** 一行提示词分段：中文底稿（可收起）+ 英文框 + 插件输入 + 启用 + ⌖ 跳转 + 状态 */
 function buildSegRow(key, i, ph) {
   const row = { key, idx: i, note: "" };
+  // 中文底稿：写在左边那格，点「译」把英文写进右边那格；收起时完全不占地方
+  const zhTa = el("textarea", {
+    class: "ccd-zh",
+    placeholder: "中文底稿（点「译」→ 右边）",
+  });
+  zhTa.title = "第 " + (i + 1) + " 段的中文底稿：中文写 / 改好，点右边的「译」，"
+    + "英文会写进右边那格（画布节点）。中文一直留着，可以反复改、反复译。"
+    + "底稿只存在本机和这个工作流文件里，不会进 prompt。";
+  const owner0 = findNode("prompt", key);
+  const zhInit = zhDraftAt(key, i) || readZhProperty(owner0, i);
+  if (zhInit) {
+    zhTa.value = zhInit;
+    storeZhDraft(key, i, zhInit);        // 画布上带过来的底稿也收进本地记忆
+  }
+  zhTa.addEventListener("change", () => {
+    storeZhDraft(key, i, zhTa.value);
+    const n = findNode("prompt", key);
+    if (n) writeZhProperty(n, i, zhTa.value);
+  });
+  const zhBtn = el("button", { class: "ccd-zh-btn", text: "中" });
+  zhBtn.addEventListener("click", () => {
+    setRowZhOpen(row, !row.zhOpen);
+    if (!ui.zhOpen) ui.zhOpen = {};
+    ui.zhOpen[key + ":" + i] = row.zhOpen;
+  });
   const ta = el("textarea", { placeholder: ph || "" });
-  ta.title = "第 " + (i + 1) + " 段手填文字（勾上「插件输入」时被忽略）";
+  ta.title = "第 " + (i + 1) + " 段手填文字（勾上「插件输入」时被忽略）；"
+    + "左边「中」那格是中文底稿，点「译」才会写到这里";
   ta.addEventListener("change", () => {
     row.note = "";
     const n = findNode("prompt", key);
@@ -2035,7 +2080,8 @@ function buildSegRow(key, i, ph) {
       + "没装或失败才用内置绘画词典。",
   });
   tr.addEventListener("click", async () => {
-    const src = ta.value;
+    const useZh = zhTa.value.trim() !== "";
+    const src = useZh ? zhTa.value : ta.value;
     if (!src.trim()) return;
     if (!CJK_RE.test(src)) {
       row.note = "这段已经是英文";
@@ -2052,7 +2098,7 @@ function buildSegRow(key, i, ph) {
       if (r.text) {
         ta.value = r.text;
         if (n) writeSegText(n, i, r.text);
-        row.note = translateNote(r);
+        row.note = useZh ? (translateNote(r) + " · 中文已留底") : translateNote(r);
       } else {
         row.note = r.miss.length ? ("没译出来: " + r.miss.join(" / ")) : "没译出来";
       }
@@ -2066,7 +2112,7 @@ function buildSegRow(key, i, ph) {
   });
   const state = el("span", { class: "ccd-seg-state" });
   const box = el("div", { class: "ccd-seg" }, [
-    el("span", { class: "ccd-seg-no", text: "#" + (i + 1) }),
+    el("span", { class: "ccd-seg-no" }, [zhBtn, el("span", { text: "#" + (i + 1) })]),
     ta,
     el("label", {
       class: "ccd-seg-chk",
@@ -2077,8 +2123,12 @@ function buildSegRow(key, i, ph) {
     go,
     tr,
     state,
+    zhTa,                      // DOM 排在最后，靠 CSS order 挪到英文框左边
   ]);
-  Object.assign(row, { box, ta, plugin, enable, go, tr, state });
+  Object.assign(row, { box, ta, plugin, enable, go, tr, state, zh: zhTa, zhBtn });
+  setRowZhOpen(row, !!(ui.zhOpen && ui.zhOpen[key + ":" + i])
+    || !!(ui.st && ui.st.zhAll && ui.st.zhAll[key])
+    || zhTa.value.trim() !== "");
   return row;
 }
 
@@ -2540,8 +2590,45 @@ function build() {
   for (const [k, label, hint, kind, seg] of PROMPTS) {
     if (!seg) {
       // 负面提示词：一个整体文本框，不分段、不拼接、没有插件开关
+      // （v1.10.0：多一格可收起的中文底稿，跟正向那套一个用法）
+      const zhTa = el("textarea", {
+        class: "ccd-zh",
+        placeholder: "中文底稿（点「译」→ 右边）",
+      });
+      zhTa.title = "这条提示词的中文底稿：中文写 / 改好，点「中→英」，"
+        + "英文写进右边那格（画布节点）；中文一直留着，可以反复改。不进 prompt。";
       const ta = el("textarea", { class: "ccd-pg-plain", placeholder: hint });
-      ta.title = "整条负面提示词（单框，不分段）";
+      ta.title = "整条负面提示词（单框，不分段）；左边「中文」那格是中文底稿，"
+        + "点「中→英」才会写到这里";
+      const ownerN = findNode("prompt", k);
+      const zhInitN = zhDraftAt(k, 0) || readZhProperty(ownerN, 0);
+      if (zhInitN) {
+        zhTa.value = zhInitN;
+        storeZhDraft(k, 0, zhInitN);
+      }
+      zhTa.addEventListener("change", () => {
+        storeZhDraft(k, 0, zhTa.value);
+        const n = findNode("prompt", k);
+        if (n) writeZhProperty(n, 0, zhTa.value);
+      });
+      const pair = el("div", { class: "ccd-pg-pair" }, [zhTa, ta]);
+      const zhBtnAll = el("button", {
+        class: "ccd-tr-all", text: "中文",
+        title: "显示 / 收起左边那格中文底稿（横向展开）。中文只是底稿："
+          + "点「中→英」才把英文写进右边那格，不影响出图；底稿会记住。",
+      });
+      const setZhOpenN = (on) => {
+        pair.classList.toggle("ccd-zh-open", !!on);
+        zhBtnAll.classList.toggle("ccd-on", !!on);
+      };
+      setZhOpenN(!!(ui.st && ui.st.zhAll && ui.st.zhAll[k]) || zhInitN !== "");
+      zhBtnAll.addEventListener("click", () => {
+        const on = !pair.classList.contains("ccd-zh-open");
+        if (!ui.st.zhAll) ui.st.zhAll = {};
+        ui.st.zhAll[k] = on;
+        setZhOpenN(on);
+        saveState(ui.st);
+      });
       ta.addEventListener("change", () => {
         const n = findNode("prompt", k);
         if (n) writeWidget(n, "value", ta.value);
@@ -2553,7 +2640,8 @@ function build() {
           + "装了本机 Opus-MT 就是真翻译，长句自动切块不截断。",
       });
       trAll.addEventListener("click", async () => {
-        const src = ta.value;
+        const useZh = zhTa.value.trim() !== "";
+        const src = useZh ? zhTa.value : ta.value;
         if (!src.trim() || !CJK_RE.test(src)) return;
         trAll.disabled = true;
         trAll.textContent = "译…";
@@ -2567,7 +2655,8 @@ function build() {
           trAll.textContent = r.miss.length ? "中→英 ⚠" : "中→英";
           trAll.title = r.miss.length
             ? ("未收录: " + r.miss.join(" / "))
-            : (r.engine === "opus-mt" ? "已用本机 NMT 翻成英文" : "已用词典翻成英文");
+            : ((r.engine === "opus-mt" ? "已用本机 NMT 翻成英文" : "已用词典翻成英文")
+              + (useZh ? "（中文已留底）" : ""));
         } catch (e) {
           log("translate", e);
           trAll.textContent = "中→英";
@@ -2576,11 +2665,11 @@ function build() {
         try { sync(true); } catch (e) { /* ignore */ }
       });
       const box = el("div", { class: "ccd-pg" }, [
-        el("div", { class: "ccd-pg-head" }, [el("h4", { text: label }), trAll]),
-        ta,
+        el("div", { class: "ccd-pg-head" }, [el("h4", { text: label }), trAll, zhBtnAll]),
+        pair,
       ]);
       promptBoxes[k] = ta;
-      segGroups[k] = { key: k, kind, box, plain: true, ta };
+      segGroups[k] = { key: k, kind, box, plain: true, ta, zh: zhTa, pair, setZhOpen: setZhOpenN };
       promptList.appendChild(box);
       continue;
     }
@@ -2607,9 +2696,26 @@ function build() {
       syncSegs(true);
     });
     const limit = el("span", { class: "ccd-limit" });
+    // 整组一起展开 / 收起左边那格中文底稿（状态记在浏览器里）
+    const zhAll = el("button", {
+      class: "ccd-tr-all", text: "中文",
+      title: "给本组每段显示 / 收起左边那格中文底稿框（横向展开）。"
+        + "中文只是底稿：点每段的「译」或本组「中→英」才把英文写进右边那格，"
+        + "不影响出图；底稿会记住（换页面 / 重开工作流都还在）。",
+    });
+    zhAll.classList.toggle("ccd-on", !!(ui.st && ui.st.zhAll && ui.st.zhAll[k]));
+    zhAll.addEventListener("click", () => {
+      const on = !(ui.st.zhAll && ui.st.zhAll[k]);
+      if (!ui.st.zhAll) ui.st.zhAll = {};
+      ui.st.zhAll[k] = on;
+      for (const row of rows) setRowZhOpen(row, on);
+      zhAll.classList.toggle("ccd-on", on);
+      saveState(ui.st);
+    });
     const trAll = el("button", {
       class: "ccd-tr-all", text: "中→英",
       title: "把本组每段里的中文依次译成英文（已经是英文的段不动）；"
+        + "有中文底稿的段以底稿为准（英文写进右边那格，底稿留着）；"
         + "装了本机 Opus-MT 就是真翻译，长句自动切块不截断，"
         + "第一次点击要加载模型 1–3 秒。",
     });
@@ -2623,7 +2729,7 @@ function build() {
       let done = 0;
       const engines = [];
       for (const row of rows) {
-        const src = row.ta.value;
+        const src = (row.zh && row.zh.value.trim() !== "") ? row.zh.value : row.ta.value;
         if (!src.trim() || !CJK_RE.test(src)) continue;
         try {
           const r = await translateToEnglish(src);
@@ -2654,6 +2760,7 @@ function build() {
         el("span", { class: "ccd-sep" }, [el("span", { text: "分隔符" }), sep]),
         el("label", { class: "ccd-seg-chk" }, [all, "全部 8 段"]),
         limit,
+        zhAll,
       ]),
       rowsBox,
     ]);
@@ -2662,12 +2769,14 @@ function build() {
   }
   const promptTab = el("div", {}, [promptList, el("p", {
     class: "ccd-hint",
-    text: "正向 8 段按顺序拼接（空段自动跳过），每段一个「手填 / 插件」开关：不勾插件用"
+      text: "正向 8 段按顺序拼接（空段自动跳过），每段一个「手填 / 插件」开关：不勾插件用"
       + "手填文字，勾上就吃那一段节点接进来的插件（没连线时回落到手填）。"
       + "点 ⌖ 跳到那一段节点去连线；写了一段后面会自动多出一行。"
       + "负面提示词不用分段，就是一个整框，写完直接进编码。"
-      + "中文可以直接写：点每段的「译」或本组「中→英」就转成英文标签，"
-      + "未收录的词会在右边黄字列出（自己把它补成英文即可）。",
+      + "中文怎么用：点每行编号旁边的「中」（或组头「中文」整组）展开左边那格中文底稿，"
+      + "中文写 / 改好点「译」，英文就写进右边那格——底稿一直留着，可以反复改了再译；"
+      + "也可以直接往右边写英文。未收录的词会在右边黄字列出（自己把它补成英文即可）。"
+      + "负面那个整框也一样：组头「中文」展开左边的中文底稿格（默认收起）。",
   })]);
 
   // ---- LoRA 页
@@ -3110,6 +3219,8 @@ function build() {
     qAt: 0, qRunning: 0, qPending: 0, qMsgTimer: 0,
     lastEdit: null,
   });
+  // 中文底稿：建完行就把记住的铺回去（有底稿的那一段自动展开）
+  try { applyZhDrafts(true); } catch (e) { log("applyZhDrafts", e); }
   refreshCombos();
   applyGeom();
   setTab(st.tab || "prompt", true);
@@ -3646,8 +3757,10 @@ function toggleModule(k, on) {
 // 不会「每次都被重置回默认值」。只有「参数」这一组会记；
 // 模型槽 / LoRA / 提示词 / 管线与模块开关本来就跟着工作流存，不在这里管。
 const PARAM_LS_PREFIX = "cc_dock_params_v1:";
+const ZH_LS_PREFIX = "cc_dock_zh_v1:";      // 每段的中文底稿（v1.10.0）
 
-function paramStoreKey() {
+/** 当前工作流的名字，用来分隔浏览器本地记忆（参数 / 中文底稿各存一份） */
+function wfStoreName() {
   let name = "";
   try {
     const wf = app.extensionManager && app.extensionManager.workflow
@@ -3659,7 +3772,100 @@ function paramStoreKey() {
       name = (app.graph && (app.graph.name || app.graph.id)) || "";
     } catch (e) { /* ignore */ }
   }
-  return PARAM_LS_PREFIX + (String(name).replace(/\\/g, "/") || "default");
+  return String(name).replace(/\\/g, "/") || "default";
+}
+
+function paramStoreKey() { return PARAM_LS_PREFIX + wfStoreName(); }
+
+// ------------------------------------------------- 分段的中文底稿（v1.10.0）
+// 「中文框 → 点译 → 英文写进右边那格（画布节点）」，中文原文一直留着，方便反复改。
+// 存两处：localStorage（换页面还在）+ 开关节点 properties.cc_dock_zh
+// （跟着工作流文件走，换浏览器 / 清缓存也丢不了）。草稿只是底稿，不进 prompt。
+let ZH_CACHE = null, ZH_CACHE_KEY = "";
+
+function zhStoreKey() { return ZH_LS_PREFIX + wfStoreName(); }
+
+function zhDrafts() {
+  const key = zhStoreKey();
+  if (ZH_CACHE && ZH_CACHE_KEY === key) return ZH_CACHE;
+  let o = null;
+  try { o = JSON.parse(localStorage.getItem(key) || "{}"); } catch (e) { o = null; }
+  ZH_CACHE_KEY = key;
+  ZH_CACHE = (o && typeof o === "object") ? o : {};
+  return ZH_CACHE;
+}
+
+/** 第 k 组第 i 段的中文底稿（没有就是空串） */
+function zhDraftAt(k, i) {
+  const v = zhDrafts()[k + ":" + i];
+  return typeof v === "string" ? v : "";
+}
+
+/** 记下这一段的中文底稿（空串 = 删掉这条） */
+function storeZhDraft(k, i, text) {
+  const s = String(text == null ? "" : text);
+  const d = zhDrafts();
+  const key = k + ":" + i;
+  if (String(d[key] == null ? "" : d[key]) === s) return;
+  if (s) d[key] = s; else delete d[key];
+  try { localStorage.setItem(zhStoreKey(), JSON.stringify(d)); } catch (e) { /* ignore */ }
+}
+
+/** 中文底稿同时挂到那一段的开关节点上（随工作流文件保存） */
+function writeZhProperty(node, i, text) {
+  const sw = node ? segSwitch(node, i) : null;
+  if (!sw) return false;
+  try {
+    if (!sw.properties || typeof sw.properties !== "object") sw.properties = {};
+    const s = String(text == null ? "" : text);
+    if (s) sw.properties.cc_dock_zh = s;
+    else delete sw.properties.cc_dock_zh;
+    return true;
+  } catch (e) { return false; }
+}
+
+function readZhProperty(node, i) {
+  const sw = node ? segSwitch(node, i) : null;
+  const v = sw && sw.properties ? sw.properties.cc_dock_zh : null;
+  return typeof v === "string" ? v : "";
+}
+
+/** 展开 / 收起某一行的中文框（只动面板，不动画布） */
+function setRowZhOpen(row, on) {
+  if (!row || !row.box) return;
+  row.zhOpen = !!on;
+  row.box.classList.toggle("ccd-zh-open", !!on);
+  if (row.zhBtn) {
+    row.zhBtn.classList.toggle("ccd-on", !!on);
+    row.zhBtn.title = on
+      ? "收起左边那格中文底稿（右边英文框不受影响）"
+      : "展开左边那格中文底稿：中文写 / 改好，点右边的「译」把英文写进右边那格";
+  }
+}
+
+/** 换工作流时把中文底稿铺回各行（有底稿的那一段自动展开） */
+function applyZhDrafts(force) {
+  const key = zhStoreKey();
+  if (!force && ui.zhAppliedKey === key) return;
+  ui.zhAppliedKey = key;
+  zhDrafts();                       // 让缓存跟上这个工作流
+  for (const [k, g] of Object.entries(ui.segGroups || {})) {
+    const allOn = !!(ui.st && ui.st.zhAll && ui.st.zhAll[k]);
+    if (g.plain) {
+      if (!g.setZhOpen) continue;
+      const v = zhDraftAt(k, 0);
+      if (g.zh && !focused(g.zh) && g.zh.value !== v) g.zh.value = v;
+      if (allOn || v.trim() !== "") g.setZhOpen(true);
+      continue;
+    }
+    for (let i = 0; i < (g.rows || []).length; i++) {
+      const row = g.rows[i];
+      if (!row.zh) continue;
+      const v = zhDraftAt(k, i);
+      if (!focused(row.zh) && row.zh.value !== v) row.zh.value = v;
+      if ((allOn || v.trim() !== "") && !row.zhOpen) setRowZhOpen(row, true);
+    }
+  }
 }
 
 function loadStoredParams() {
@@ -4657,6 +4863,7 @@ function nodeLabel(node) {
 
 /** 提示词分段：文本框 / 启用 / 插件输入 / ⌖ 状态 / 自动展开 */
 function syncSegs() {
+  try { applyZhDrafts(false); } catch (e) { log("applyZhDrafts", e); }
   for (const [k, g] of Object.entries(ui.segGroups || {})) {
     const n = findNode("prompt", k);
     if (!n) continue;
@@ -4676,7 +4883,9 @@ function syncSegs() {
     if (g.all && g.all.checked !== showAll) g.all.checked = showAll;
     let lastUsed = 0;
     for (let i = 0; i < SEG_MAX; i++) {
-      if (segUsed(n, i)) lastUsed = i + 1;
+      const row = g.rows[i];
+      const hasZh = !!(row && row.zh && row.zh.value.trim() !== "");
+      if (segUsed(n, i) || hasZh || zhDraftAt(k, i).trim() !== "") lastUsed = i + 1;
     }
     const vis = showAll ? SEG_MAX
       : Math.max(SEG_SHOWN_MIN, Math.min(SEG_MAX, lastUsed + 2));
@@ -4702,6 +4911,7 @@ function syncSegs() {
       else st = txt.trim() ? "手填" : "空";
       if (row.note) st = row.note;
       if (row.state.textContent !== st) row.state.textContent = st;
+      row.state.title = st;          // 窄格里会被省略号截断，悬停看全
       row.state.classList.toggle("ccd-note", !!row.note);
       if (sw) row.go.title = "跳到「" + nodeLabel(sw) + "」——把插件输出连到它的插件文本口";
       else row.go.title = "这一段还没接上开关节点";
