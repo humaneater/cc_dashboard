@@ -45,6 +45,15 @@
  *     收起 / 展开：每行编号旁边的「中」按钮，以及提示词组标题的「中文」（整组一起）。
  *     草稿存两处：localStorage（换页面还在）+ 开关节点 properties.cc_dock_zh
  *     （跟着工作流文件走，换浏览器也丢不了）。草稿只是底稿，不进 prompt。
+ *  v1.11.0：同步来源菜单 —— ▾ 选「从哪儿拿图」，↻ 同步 按选中的来源写下游：
+ *     · 上次结果：本次会话最后出的图（没有就用 output/ 最新那张），默认来源
+ *     · 历史选择：列 output/ 里的图（缩略图 + 时间，最新在前），定位到上次结果那条，
+ *       方便挑「同一时段之前」的图
+ *     · 自定义：上传本地图片到 input/cc_dashboard/
+ *     · 视频尾帧：视频管线可用，PyAV 抽视频最后一帧存 output/cc_tail/ 再当图片输入
+ *       （图生视频→i2v；首尾帧→起始帧，可切结束帧；文生视频→i2v + 起始帧）
+ *     后三个来源各自记住本次会话选过的那张（不落盘），↻ 同步 直接写它；换成它们之后
+ *     「跑完图自动传最新」停用（免得把你选的顶掉），切回「上次结果」即恢复。
  *  v5：浮动窗 + 独立窗口（Document PiP）+ 跟随执行
  * 任何异常只 console.warn，不影响出图。
  *
@@ -55,7 +64,7 @@ import { app } from "../../scripts/app.js";
 
 const ROOT_ID = "cc-dock-root";
 const LS_KEY = "cc_dock_ui_v1";
-const CC_DASHBOARD_VERSION = "1.10.0";  // 与 __init__.py / pyproject.toml 保持一致
+const CC_DASHBOARD_VERSION = "1.11.0";  // 与 __init__.py / pyproject.toml 保持一致
 // 与 blueprint/generator.py 的 BLUEPRINT_REV 一致：蓝图结构一改就两边一起 +1，
 // 面板靠它 + 高清链结构两道判断认出「画布上跑的还是旧蓝图」
 const BLUEPRINT_REV = 7;
@@ -569,6 +578,7 @@ const LS_DEFAULT = {
       pairSync: true,  // 视频模型 high/low 成对联动（改一个自动配另一个）
       assets: {},      // 每个 ckpt 记住你挑过的外挂 文本编码器 / VAE（v1.9.0）
       loraSort: "name", // LoRA 下拉排序：name / name_desc / time_desc / time（v1.9.3）
+      syncMode: "last", // 同步来源模式：last / history / custom / tail（v1.11.0）
     };
 
 /**
@@ -1966,6 +1976,64 @@ const CSS = `
  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #${ROOT_ID} .ccd-res-hint.ccd-need{color:#e0b341}
 #${ROOT_ID} .ccd-res-hint.ccd-ok{color:#7bc47f}
+/* v1.11.0：同步来源菜单 + 历史 / 自定义 / 尾帧弹层 */
+#${ROOT_ID} .ccd-sync-wrap{display:inline-flex;align-items:center;gap:2px}
+#${ROOT_ID} .ccd-sync-caret{padding:2px 5px;font-size:10px;line-height:1.3;
+ min-width:0}
+#${ROOT_ID} .ccd-sync-msg{color:#7fd3ff;font-size:11px;max-width:340px;
+ overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#${ROOT_ID} .ccd-sync-msg.ccd-bad{color:#ff9f9f}
+#${ROOT_ID} .ccd-menu{position:fixed;z-index:99982;min-width:236px;
+ background:#20222a;border:1px solid #4a4f5c;border-radius:7px;
+ box-shadow:0 10px 26px rgba(0,0,0,.62);padding:4px}
+#${ROOT_ID} .ccd-menu-item{display:flex;flex-direction:column;gap:1px;
+ padding:5px 8px;border-radius:5px;cursor:pointer;user-select:none}
+#${ROOT_ID} .ccd-menu-item:hover{background:#31343e}
+#${ROOT_ID} .ccd-menu-item b{font-weight:600;font-size:12px;color:#e8e8ee}
+#${ROOT_ID} .ccd-menu-item span{color:#8b919e;font-size:11px;line-height:1.3}
+#${ROOT_ID} .ccd-menu-item.ccd-dis{opacity:.45;cursor:default}
+#${ROOT_ID} .ccd-menu-item.ccd-dis:hover{background:transparent}
+#${ROOT_ID} .ccd-menu-item.ccd-md-on{background:#20363f}
+#${ROOT_ID} .ccd-menu-item.ccd-md-on:hover{background:#2b4b58}
+#${ROOT_ID} .ccd-menu-item.ccd-md-on b{color:#9fe0ff}
+#${ROOT_ID} .ccd-sync-caret.ccd-on{background:#2f6f8f;border-color:#58b6e0;color:#fff}
+#${ROOT_ID} .ccd-pop{position:fixed;z-index:99982;left:50%;top:50%;
+ transform:translate(-50%,-50%);display:flex;flex-direction:column;
+ width:min(760px,94vw);max-height:78vh;background:#1d1f26;
+ border:1px solid #4a4f5c;border-radius:8px;
+ box-shadow:0 14px 40px rgba(0,0,0,.7);overflow:hidden}
+#${ROOT_ID} .ccd-pop-head{display:flex;align-items:center;gap:8px;
+ padding:6px 9px;background:#24262e;border-bottom:1px solid #343845}
+#${ROOT_ID} .ccd-pop-head>h3{margin:0;flex:1 1 auto;font-size:12px;color:#cfe3ff;
+ font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#${ROOT_ID} .ccd-pop-close{padding:1px 7px;font-size:12px}
+#${ROOT_ID} .ccd-pop-note{padding:4px 9px;color:#8b919e;font-size:11px;
+ border-bottom:1px solid #2c3038;background:#1a1c22}
+#${ROOT_ID} .ccd-pop-body{overflow:auto;padding:4px 5px;flex:1 1 auto;min-height:60px}
+#${ROOT_ID} .ccd-pop-status{padding:3px 9px;color:#7fd3ff;font-size:11px;
+ border-top:1px solid #2c3038;min-height:20px}
+#${ROOT_ID} .ccd-pop-status.ccd-bad{color:#ff9f9f}
+#${ROOT_ID} .ccd-flf-mode{display:flex;align-items:center;gap:6px;padding:4px 9px;
+ border-bottom:1px solid #2c3038;color:#9aa0ad;font-size:11px}
+#${ROOT_ID} .ccd-flf-mode button.ccd-on{background:#2f6f8f;border-color:#58b6e0;
+ color:#fff;font-weight:600}
+#${ROOT_ID} .ccd-pick{display:flex;align-items:center;gap:7px;padding:3px 6px;
+ border:1px solid transparent;border-radius:5px;cursor:pointer}
+#${ROOT_ID} .ccd-pick:hover{background:#2a2d36}
+#${ROOT_ID} .ccd-pick.ccd-cur{background:#20363f;border-color:#3f7ea0}
+#${ROOT_ID} .ccd-pick-img{width:58px;height:42px;object-fit:cover;flex:0 0 auto;
+ border-radius:3px;background:#101116;border:1px solid #2c3038}
+#${ROOT_ID} .ccd-pick-ico{width:58px;height:42px;flex:0 0 auto;display:inline-flex;
+ align-items:center;justify-content:center;background:#101116;border-radius:3px;
+ border:1px solid #2c3038;color:#8b919e;font-size:18px}
+#${ROOT_ID} .ccd-pick-main{flex:1 1 auto;min-width:0}
+#${ROOT_ID} .ccd-pick-name{font-size:12px;color:#e8e8ee;overflow:hidden;
+ text-overflow:ellipsis;white-space:nowrap}
+#${ROOT_ID} .ccd-pick-time{color:#7d838f;font-size:11px}
+#${ROOT_ID} .ccd-pick-tag{flex:0 0 auto;color:#7fd3ff;font-size:10px;
+ border:1px solid #3f7ea0;border-radius:9px;padding:0 6px}
+#${ROOT_ID} .ccd-pop-more{color:#7d838f;font-size:11px;text-align:center;
+ padding:5px 0}
 `;
 
 function el(tag, props, kids) {
@@ -2508,6 +2576,20 @@ function build() {
     onclick: () => toggleDocked(),
   });
 
+  // ---- 取图 / 同步：▾ 选「从哪儿拿图」（模式），↻ 按这个模式同步（v1.11.0）
+  const syncBtn = el("button", {
+    text: "↻ 同步",
+    title: "按 ▾ 里选的来源把图传给下游取图节点",
+    onclick: () => runSync(),
+  });
+  const syncCaret = el("button", {
+    class: "ccd-sync-caret", text: "▾",
+    title: "换同步来源：上次结果 / 历史选择 / 自定义 / 视频尾帧",
+    onclick: () => toggleSyncMenu(syncCaret),
+  });
+  const syncWrap = el("span", { class: "ccd-sync-wrap" }, [syncBtn, syncCaret]);
+  const syncMsg = el("span", { class: "ccd-sync-msg" });
+
   const bar = el("div", { class: "ccd-bar" }, [
     el("span", { class: "ccd-brand", text: "🎛 总控台" }),
     el("span", {
@@ -2521,17 +2603,13 @@ function build() {
     el("button", {
       text: "⟳ 取图",
       title: "刷新 output/ 里的图片下拉（LoadImageOutput），"
-        + "把最新那张填进当前栏的取图节点、并传给下游取图节点；"
+        + "把最新那张填进当前栏的取图节点；当前来源是「上次结果」时还会传给下游取图节点，"
+        + "换过来源（历史选择 / 自定义 / 视频尾帧）就只换当前栏，下游按 ↻ 同步 走；"
         + "别的栏你自己选的图不会被冲掉",
       onclick: () => refreshImageCombos({ own: true }),
     }),
-    el("button", {
-      text: "↻ 同步",
-      title: "把最后产出的图传给下游取图节点："
-        + "文生图 → 图生图 / 图生视频 / 首尾帧；图生图 → 图生视频 / 首尾帧。"
-        + "刚跑完的图立刻生效（用 Save 报回来的文件名），不用等下拉刷新",
-      onclick: () => { refreshImageCombos(); syncOutputImageSoon(); sync(true); },
-    }),
+    syncWrap,
+    syncMsg,
     el("span", { class: "ccd-spacer" }),
     tabs,
     el("div", { class: "ccd-group" }, [focusBtn, pipBtn, dockBtn]),
@@ -3062,10 +3140,21 @@ function build() {
       + "图像那套写文生图 + 图生图两个子图，视频那套写 I2V / 首尾帧 / T2V；"
       + "高清化与脸手眼矫正有各自的稳定配方，不跟着这里改。" }),
     el("p", { class: "ccd-hint", text:
-      "· ⟳ 取图 / ↻ 同步：把最后产出的那张图传给下游取图节点 —— "
+      "· ⟳ 取图 / ↻ 同步：↻ 同步 按「当前来源」把图写进下游取图节点 —— "
       + "文生图 → 图生图 / 图生视频 / 首尾帧，图生图 → 图生视频 / 首尾帧（视频管线没有下游，不会被改）。"
-      + "刚跑完的图由 Save 节点报回文件名，点一下立刻写入、不用等下拉刷新（以前那点延迟就在这）；"
-      + "这次会话还没跑过图，就用 output 里最新的一张。" }),
+      + "默认来源「上次结果」= 刚跑完的那张，Save 报回文件名、点一下立刻写入，不用等下拉刷新"
+      + "（这次会话还没跑过图就用 output 里最新的一张）。" }),
+    el("p", { class: "ccd-hint", text:
+      "· ↻ 同步 旁边的 ▾ 菜单 —— 选「从哪儿拿图」（当前来源前面有 ✓，不是默认时 ▾ 会亮起来）："
+      + "「上次结果」= 本次会话最后出的那张；「历史选择」= 列 output/ 里的图（缩略图 + 时间，"
+      + "自动定位到上次结果那条，往下就是更早生成的）；「自定义」= 上传本地图片到 input/cc_dashboard/；"
+      + "「视频尾帧」= 抽一段视频的最后一帧（存 output/cc_tail/）当图片输入 —— "
+      + "图生视频写 i2v 槽、首尾帧写起始帧（弹层里可切结束帧）、文生视频写 i2v + 首尾帧起始帧。"
+      + "历史 / 自定义 / 尾帧会记住本次会话你选的那张，再点 ↻ 同步 直接写它（想换图：把 ▾ 里同一项再点一次）。"
+      + "图像管线里的「视频尾帧」是灰的（只在视频管线可用）。" }),
+    el("p", { class: "ccd-hint", text:
+      "· 换成历史选择 / 自定义 / 视频尾帧之后，「跑完图自动把最新那张传下去」会停用"
+      + "（不然你刚选的那张会被顶掉），⟳ 取图 也只换当前栏；想恢复自动传图就把来源切回「上次结果」。" }),
     el("p", { class: "ccd-hint", text:
       "· 刷新下拉不会改你手动选的图：首尾帧那一对、图生图正在用的源图都会保留；"
       + "只有同步目标、以及点 ⟳ 时当前栏自己那格才换成新图。想换图就在画布上那格下拉里选。" }),
@@ -3216,9 +3305,14 @@ function build() {
         st, lastModelList: "", lastLoraCount: {}, loraViews: {}, loraNode: {},
     loraWarn: {}, probeNode: null, segAll: {}, lastPipe: "", lastUnetList: "",
     lastImage: null, runPending: false, paramApplied: false,
+    syncBtn, syncMsg, syncCaret, syncFlfSlot: "flf_start", syncLayer: null,
+    syncBackdrop: null, syncDismiss: null, syncOpenAt: 0,
+    // 各来源模式会话内记住的那张图（不落盘：别记住已经删掉的文件）
+    syncPick: { history: null, custom: null, tail: null },
     qAt: 0, qRunning: 0, qPending: 0, qMsgTimer: 0,
     lastEdit: null,
   });
+  try { paintSyncMode(); } catch (e) { log("paintSyncMode", e); }
   // 中文底稿：建完行就把记住的铺回去（有底稿的那一段自动展开）
   try { applyZhDrafts(true); } catch (e) { log("applyZhDrafts", e); }
   refreshCombos();
@@ -3494,6 +3588,7 @@ function popIn(fromClosed) {
 }
 
 async function togglePiP(force) {
+  closeSyncLayers();          // 浮层挂在面板里，换窗口前先收掉
   const want = force === undefined ? !inPiP() : !!force;
   try {
     if (want) await popOut();
@@ -3505,6 +3600,7 @@ async function togglePiP(force) {
 }
 
 function toggleDocked() {
+  closeSyncLayers();
   if (inPiP()) popIn(false);
   ui.st.docked = !ui.st.docked;
   if (!ui.st.geom) ui.st.geom = clampGeom({});
@@ -4416,6 +4512,19 @@ globalThis.__ccDock = Object.assign(globalThis.__ccDock || {}, {
     for (const k of Object.keys(PROBE_PENDING)) delete PROBE_PENDING[k];
     for (const k of Object.keys(PROBE_FAIL)) delete PROBE_FAIL[k];
   },
+  // v1.11.0 同步菜单：自检脚本 / 控制台调试用（浏览器里也能点这些排查）
+  openSyncMenu() { return toggleSyncMenu(ui.syncCaret); },
+  closeSync() { closeSyncLayers(); },
+  syncApply(v) { return applyPickedImage(v, "已同步"); },
+  syncLast() { return syncLastResult(); },
+  syncMode(m) { return m === undefined ? syncMode() : setSyncMode(m); },
+  syncNow() { return runSync(); },
+  syncPack() { return Object.assign({}, ui.syncPick || {}); },
+  syncTargets() { return syncTargetsFor(activePipe(), ui.syncFlfSlot); },
+  setFlfSlot(s) {
+    ui.syncFlfSlot = s === "flf_end" ? "flf_end" : "flf_start";
+  },
+  openImagePicker, openVideoTailPicker, uploadCustomImage,
 });
 
 function modelIsAnima(name) {
@@ -4644,6 +4753,11 @@ function refreshImageCombos(opt) {
   ui.lastModelList = "";
   loraList();
   fetchLoraTriggers();
+  // 换过同步来源时「取图」只换当前栏：下游得按 ↻ 同步 用你选的那张（见下方自动同步开关）
+  if (takeOwn && syncMode() !== "last") {
+    flashSyncStatus("⟳ 取图 只换当前栏；下游按 ↻ 同步（当前来源："
+      + SYNC_MODE_LABEL[syncMode()] + "）");
+  }
   // 刷新是异步的：连着再补几次，新图一进下拉就立刻传到下游，不用再点第二次
   syncOutputImageSoon();
   sync(true);
@@ -4763,8 +4877,11 @@ function activeOutputImage() {
 /** 把当前管线的图同步到下游管线。返回真正改动的节点数。
 
     幂等：值一样就跳过，所以可以反复调用（刷新下拉是异步的，要试几次）。
+    只在默认来源（「上次结果」）下自动跑：换成历史 / 自定义 / 尾帧之后，
+    跑完图不再把最新那张盖到你挑好的图上（要新的就把来源切回「上次结果」）。
  */
 function applyOutputImage() {
+  if (syncMode() !== "last") return 0;
   const pipe = activePipe();
   const dsts = IMG_TO_SOURCES[pipe] || [];
   if (!dsts.length) return 0;
@@ -4806,6 +4923,619 @@ function syncOutputImageSoon() {
     }
   };
   step();
+}
+
+// ------------------------------------------- 同步来源菜单（v1.11.0）
+// ▾ = 选「同步来源」这个模式：上次结果 / 历史选择 / 自定义 / 视频尾帧；
+// ↻ = 按当前模式把图写进下游取图节点。除了「上次结果」（本次会话最后出的那张，
+// 没有就用 output 最新），其余三个模式各自记住这个会话里你最近选过的一张，
+// 还没选过就当场把选图流程弹出来。
+// 选图后不走 refreshImageCombos（下拉刷新是异步的），直接把真实值写进取图节点，
+// 点完就生效、没有延迟。目标范围仍按「当前管线 → 它的下游」，视频管线例外：
+// 图生视频写自己的 i2v 槽，首尾帧写起始 / 结束帧（可切），文生视频写 i2v + 起始帧。
+const SYNC_MODES = ["last", "history", "custom", "tail"];
+const SYNC_MODE_LABEL = {
+  last: "上次结果", history: "历史选择", custom: "自定义", tail: "视频尾帧",
+};
+const TARGET_LABEL = {
+  i2i: "图生图精修", i2i_fixed: "图生图", i2v: "图生视频",
+  flf_start: "首尾帧·起", flf_end: "首尾帧·终",
+};
+const VIDEO_TAIL_TARGETS = { i2v: ["i2v"], t2v: ["i2v", "flf_start"] };
+const PICK_PAGE = 60;                        // 历史列表一次先渲染多少条
+
+function targetLabel(k) { return TARGET_LABEL[k] || k; }
+
+/** 这条管线的图该写到哪几个取图节点：图像管线按下游表；视频管线写自己的输入槽 */
+function syncTargetsFor(pipe, flfSlot) {
+  const dsts = IMG_TO_SOURCES[pipe];
+  if (dsts && dsts.length) return dsts.slice();
+  const slot = flfSlot === "flf_end" ? "flf_end" : "flf_start";
+  if (pipe === "i2v") return (VIDEO_TAIL_TARGETS.i2v || []).slice();
+  if (pipe === "flf2v") return [slot];
+  if (pipe === "t2v") return (VIDEO_TAIL_TARGETS.t2v || []).slice();
+  return [];
+}
+
+function shortImgName(v) {
+  const s = String(v || "").replace(/\s*\[(output|input|temp)\]\s*$/, "");
+  const i = s.lastIndexOf("/");
+  return i >= 0 ? s.slice(i + 1) : s;
+}
+
+function fmtSize(n) {
+  const b = Number(n) || 0;
+  if (b >= 1048576) return (b / 1048576).toFixed(1) + " MB";
+  if (b >= 1024) return Math.round(b / 1024) + " KB";
+  return b + " B";
+}
+
+function fmtPickTime(ms) {
+  const t = Number(ms) || 0;
+  if (!t) return "";
+  const diff = Date.now() - t;
+  if (diff >= 0 && diff < 60000) return "刚刚";
+  if (diff >= 0 && diff < 3600000) return Math.floor(diff / 60000) + " 分钟前";
+  const d = new Date(t);
+  const pad = (n) => (n < 10 ? "0" : "") + n;
+  const today = new Date();
+  const key = (x) => x.getFullYear() + "-" + x.getMonth() + "-" + x.getDate();
+  const hm = pad(d.getHours()) + ":" + pad(d.getMinutes());
+  if (key(d) === key(today)) return "今天 " + hm;
+  const yest = new Date(today.getTime() - 86400000);
+  if (key(d) === key(yest)) return "昨天 " + hm;
+  return (d.getMonth() + 1) + "-" + d.getDate() + " " + hm;
+}
+
+function thumbUrlOf(it) {
+  let url = "/view?filename=" + encodeURIComponent(it.name)
+    + "&type=output&preview=webp&channel=rgb";
+  if (it.subfolder) {
+    url += "&subfolder=" + encodeURIComponent(it.subfolder);
+  }
+  return apiUrlOf(url);
+}
+
+/** 把一张图写进指定的取图节点；返回 {hits, changed}（幂等：值一样就不动） */
+function writeImageToTargets(value, targets) {
+  const hits = [];
+  let changed = 0;
+  if (!isImageValue(value)) return { hits, changed };
+  for (const key of targets || []) {
+    const node = sourceNode(key);
+    if (!node) continue;
+    const w = widgetOf(node, "image");
+    if (!w) continue;
+    hits.push(key);
+    if (w.value !== value) changed++;
+    ensureWidgetValue(w, value);          // 值不在下拉里也塞进去，画布上不会空白
+    try {
+      if (node.graph && typeof node.graph.setDirtyCanvas === "function") {
+        node.graph.setDirtyCanvas(true, false);
+      }
+    } catch (e) { /* ignore */ }
+  }
+  if (changed) markChanged();
+  return { hits, changed };
+}
+
+let syncMsgTimer = 0;
+
+/** 用户明确选了一张图：取消还挂着的自动同步重试，别让它 1.7 秒后再把手选的顶回去 */
+function cancelSyncSoon() {
+  if (imgSyncTimer) {
+    clearTimeout(imgSyncTimer);
+    imgSyncTimer = null;
+  }
+}
+
+function flashSyncStatus(text, bad) {
+  if (ui.syncMsg) {
+    ui.syncMsg.textContent = text || "";
+    ui.syncMsg.classList.toggle("ccd-bad", !!bad);
+  }
+  if (syncMsgTimer) clearTimeout(syncMsgTimer);
+  if (text) {
+    syncMsgTimer = setTimeout(() => {
+      if (ui.syncMsg) {
+        ui.syncMsg.textContent = "";
+        ui.syncMsg.classList.remove("ccd-bad");
+      }
+    }, bad ? 8000 : 5000);
+  }
+}
+
+/** 选好一张图之后的统一动作：按当前管线写到目标取图槽 + 一句反馈 */
+function applyPickedImage(value, why) {
+  cancelSyncSoon();                         // 手选优先于「刚跑完」的自动重试
+  paintSyncMode();                          // 记住的图名写进 ↻ / ▾ 的提示里
+  const pipe = activePipe();
+  const targets = syncTargetsFor(pipe, ui.syncFlfSlot);
+  if (!targets.length) {
+    flashSyncStatus("这条管线没有图片输入槽，没法写入", true);
+    return false;
+  }
+  const r = writeImageToTargets(value, targets);
+  if (!r.hits.length) {
+    flashSyncStatus("画布上没找到取图节点（" + targets.join(" / ") + "）", true);
+    return false;
+  }
+  const name = shortImgName(value);
+  const to = r.hits.map(targetLabel).join(" / ");
+  if (r.changed) {
+    flashSyncStatus("✓ " + (why || "已同步") + " " + name
+      + " → " + to + "（" + r.hits.length + " 处）");
+  } else {
+    flashSyncStatus("✓ " + (why || "已同步") + "：" + name
+      + " 本来就在 " + to + "（没改动）");
+  }
+  return true;
+}
+
+function docOfRoot() {
+  try {
+    const d = ui.root && ui.root.ownerDocument;
+    if (d && d.body) return d;
+  } catch (e) { /* ignore */ }
+  return document;
+}
+
+/** 关掉 ▾ 菜单 / 历史弹层 / 尾帧弹层（幂等，随便调用） */
+function closeSyncLayers() {
+  unbindSyncDismiss();
+  for (const k of ["syncLayer", "syncBackdrop"]) {
+    try {
+      const n = ui[k];
+      if (n && n.parentNode) n.parentNode.removeChild(n);
+    } catch (e) { /* ignore */ }
+    ui[k] = null;
+  }
+}
+
+/** 祖先判定：真 DOM 走 contains，测试桩没有就顺着 parentNode 爬 */
+function inTree(ancestor, node) {
+  if (!ancestor || !node) return false;
+  if (ancestor === node) return true;
+  try {
+    if (typeof ancestor.contains === "function") return !!ancestor.contains(node);
+  } catch (e) { /* 落到 parentNode 兜底 */ }
+  let n = node;
+  for (let i = 0; n && i < 200; i++) {
+    if (n === ancestor) return true;
+    n = n.parentNode || null;
+  }
+  return false;
+}
+
+/** 点浮层外面 / 按 ESC 就收起来（不用遮罩层，免得挡住面板本身的操作） */
+function bindSyncDismiss(anchor) {
+  unbindSyncDismiss();
+  const doc = docOfRoot();
+  const onDown = (ev) => {
+    const t = (ev && (ev.target || ev.srcElement)) || null;
+    if (inTree(ui.syncLayer, t)) return;
+    if (inTree(anchor, t)) return;
+    closeSyncLayers();
+  };
+  const onKey = (ev) => {
+    const k = ev && (ev.key || ev.keyCode);
+    if (k === "Escape" || k === "Esc" || k === 27) closeSyncLayers();
+  };
+  try { doc.addEventListener("pointerdown", onDown, true); } catch (e) { /* ignore */ }
+  try { doc.addEventListener("mousedown", onDown, true); } catch (e) { /* ignore */ }
+  try { doc.addEventListener("keydown", onKey, true); } catch (e) { /* ignore */ }
+  ui.syncDismiss = { doc, onDown, onKey };
+}
+
+function unbindSyncDismiss() {
+  const h = ui.syncDismiss;
+  ui.syncDismiss = null;
+  if (!h || !h.doc) return;
+  try { h.doc.removeEventListener("pointerdown", h.onDown, true); } catch (e) { /* ignore */ }
+  try { h.doc.removeEventListener("mousedown", h.onDown, true); } catch (e) { /* ignore */ }
+  try { h.doc.removeEventListener("keydown", h.onKey, true); } catch (e) { /* ignore */ }
+}
+
+/**
+ * 把浮层挂进面板根节点里（CSS 选择器都带 #cc-dock-root 前缀，挂 body 上会没样式）。
+ * 浮层自己是 position:fixed，根节点又没有 transform，所以不会被根节点的
+ * overflow:hidden 裁掉，也不受面板缩放影响；PiP 里会跟着面板一起挪到独立窗口。
+ */
+function mountSyncLayer(node, anchor) {
+  closeSyncLayers();
+  const host = ui.root || docOfRoot().body;
+  host.appendChild(node);
+  ui.syncLayer = node;
+  bindSyncDismiss(anchor || ui.syncCaret || null);
+  return node;
+}
+
+/** 当前同步来源模式（localStorage 里的脏值一律退回「上次结果」） */
+function syncMode() {
+  const m = ui.st && ui.st.syncMode;
+  return SYNC_MODES.indexOf(m) >= 0 ? m : "last";
+}
+
+/** 主按钮 / ▾ 的样子跟着模式走：非「上次结果」时 ▾ 高亮，title 里带上已记住的图名 */
+function paintSyncMode() {
+  const m = syncMode();
+  const memo = m === "last" ? null : (ui.syncPick && ui.syncPick[m]) || null;
+  if (ui.syncCaret) {
+    ui.syncCaret.classList.toggle("ccd-on", m !== "last");
+    ui.syncCaret.title = "换同步来源（当前：" + SYNC_MODE_LABEL[m] + "）";
+  }
+  if (ui.syncBtn) {
+    const what = m === "last"
+      ? "本次会话最后出的那张（没有就用 output 最新）"
+      : SYNC_MODE_LABEL[m] + (memo ? " · " + shortImgName(memo) : "（还没选图）");
+    ui.syncBtn.title = "按当前来源「" + SYNC_MODE_LABEL[m] + "」把图传给下游取图节点："
+      + what
+      + "；文生图 → 图生图精修 / 图生图 / 图生视频 / 首尾帧，图生图 → 图生视频 / 首尾帧";
+  }
+  return m;
+}
+
+function setSyncMode(m, quiet) {
+  if (SYNC_MODES.indexOf(m) < 0) m = "last";
+  if (ui.st) {
+    ui.st.syncMode = m;
+    saveState(ui.st);
+  }
+  if (m !== "last") cancelSyncSoon();        // 别让挂着的「传最新」重试再来顶
+  paintSyncMode();
+  if (!quiet) {
+    flashSyncStatus("同步来源：" + SYNC_MODE_LABEL[m]
+      + (m === "last" ? "" : "（点 ↻ 同步 应用；跑完不再自动传新图）"));
+  }
+  return m;
+}
+
+/** 打开某个模式对应的选图流程（历史 / 自定义 / 尾帧） */
+function openSyncPickerFor(m) {
+  if (m === "history") return openImagePicker();
+  if (m === "custom") return pickCustomImage();
+  if (m === "tail") return openVideoTailPicker();
+  return null;
+}
+
+/** 「↻ 同步」：按 ▾ 选的来源同步；还没选过图的模式就把选图流程叫出来 */
+function runSync() {
+  const m = syncMode();
+  if (m === "last") {
+    refreshImageCombos();                  // 顺手刷一遍 output 下拉（异步，写完再说）
+    return syncLastResult();
+  }
+  if (m === "tail" && PIPE_KIND[activePipe()] !== "video") {
+    flashSyncStatus("「视频尾帧」只在视频管线上可用（图生视频 / 首尾帧 / 文生视频）", true);
+    return false;
+  }
+  const v = ui.syncPick && ui.syncPick[m];
+  if (typeof v === "string" && v) {
+    return applyPickedImage(v, "已同步" + SYNC_MODE_LABEL[m]);
+  }
+  flashSyncStatus("「" + SYNC_MODE_LABEL[m] + "」还没选图，先挑一张");
+  return openSyncPickerFor(m);
+}
+
+/** ▾ 菜单：4 个来源，点一项 = 把它设成当前模式（再点 ↻ 同步 应用）；
+
+    历史 / 自定义 / 尾帧还没选过图时，点这项直接把选图流程弹出来；
+    已经是当前模式了再点一次 = 换一张。
+ */
+function toggleSyncMenu(anchor) {
+  const wasMenu = !!(ui.syncLayer && ui.syncLayer.classList &&
+    ui.syncLayer.classList.contains("ccd-menu"));
+  closeSyncLayers();
+  if (wasMenu) return;                       // 再点一下 = 收起
+  const pipe = activePipe();
+  const isVideo = PIPE_KIND[pipe] === "video";
+  const cur = syncMode();
+  const canPick = { last: false, history: true, custom: true, tail: isVideo };
+  const items = [
+    ["last", "上次结果", "本次会话最后出的那张（没有就用 output 最新）", false],
+    ["history", "历史选择", "列 output/ 里的图，挑更早生成的", false],
+    ["custom", "自定义", "上传本地图片（存到 input/cc_dashboard/）", false],
+    ["tail", "视频尾帧",
+      isVideo ? "抽一段视频的最后一帧当图片输入"
+        : "仅视频管线可用（图生视频 / 首尾帧 / 文生视频）",
+      !isVideo],
+  ];
+  const menu = el("div", { class: "ccd-menu" });
+  for (const [key, label, desc, dis] of items) {
+    const on = key === cur;
+    const memo = (key === "last" || !ui.syncPick) ? null : ui.syncPick[key];
+    const sub = (on && canPick[key])
+      ? (memo ? "已选：" + shortImgName(memo) + "（再点这项可换）"
+        : "还没选图 —— 点 ↻ 同步 现在挑一张")
+      : desc + (on ? "（当前）" : "");
+    const it = el("div", {
+      class: "ccd-menu-item" + (dis ? " ccd-dis" : "") + (on ? " ccd-md-on" : ""),
+      title: dis ? desc : label + "：" + desc,
+    }, [el("b", { text: (on ? "✓ " : "") + label }), el("span", { text: sub })]);
+    if (!dis) {
+      it.addEventListener("click", () => {
+        const pickNow = canPick[key] && (key === cur || !memo);
+        setSyncMode(key, pickNow);           // 马上要开选图就不用再啰嗦一句
+        closeSyncLayers();
+        if (pickNow) openSyncPickerFor(key);
+      });
+    }
+    menu.appendChild(it);
+  }
+  // 挂在按钮正下方；窗口太靠下就翻到按钮上面
+  let left = 8, top = 40;
+  try {
+    const r = anchor.getBoundingClientRect();
+    const win = rootWin();
+    const vw = win && win.innerWidth ? win.innerWidth : 1280;
+    const vh = win && win.innerHeight ? win.innerHeight : 800;
+    left = Math.max(4, Math.min(r.left, vw - 252));
+    top = r.bottom + 2;
+    if (top > vh - 170) top = Math.max(4, r.top - 168);
+  } catch (e) { /* 测试桩没有布局就放左上角 */ }
+  menu.style.left = Math.round(left) + "px";
+  menu.style.top = Math.round(top) + "px";
+  mountSyncLayer(menu, anchor);
+  return menu;
+}
+
+/** 「上次结果」：优先本次会话 Save 报回来的文件名，没有就用 output 最新那张 */
+function syncLastResult() {
+  const img = syncSourceImage();
+  if (!img) {
+    flashSyncStatus("没有可同步的图：output 里还没有图片", true);
+    return false;
+  }
+  return applyPickedImage(img, "已同步上次结果");
+}
+
+/** 弹层骨架：标题 + 说明 + 可选工具行 + 列表 + 状态 */
+function buildPickLayer(title, note, extra) {
+  const head = el("div", { class: "ccd-pop-head" }, [
+    el("h3", { text: title }),
+    el("button", {
+      class: "ccd-pop-close", text: "✕", title: "关闭",
+      onclick: () => closeSyncLayers(),
+    }),
+  ]);
+  const body = el("div", { class: "ccd-pop-body" });
+  const status = el("div", { class: "ccd-pop-status", text: "正在读列表…" });
+  const kids = [head, el("div", { class: "ccd-pop-note", text: note })];
+  if (extra) kids.push(extra);
+  kids.push(body, status);
+  const pop = el("div", { class: "ccd-pop" }, kids);
+  pop.__body = body;
+  pop.__status = status;
+  return pop;
+}
+
+/** 首尾帧的两个目标：起始帧（默认，续接上一段）/ 结束帧 */
+function buildFlfModeRow() {
+  const wrap = el("div", { class: "ccd-flf-mode" });
+  wrap.appendChild(el("span", { text: "首尾帧填到：" }));
+  const btns = {};
+  const set = (slot, flash) => {
+    ui.syncFlfSlot = slot === "flf_end" ? "flf_end" : "flf_start";
+    for (const k of Object.keys(btns)) {
+      btns[k].classList.toggle("ccd-on", k === ui.syncFlfSlot);
+    }
+    if (flash) {
+      flashSyncStatus("首尾帧目标：" +
+        (ui.syncFlfSlot === "flf_end" ? "结束帧" : "起始帧"));
+    }
+  };
+  for (const [slot, label] of [["flf_start", "起始帧"], ["flf_end", "结束帧"]]) {
+    const b = el("button", {
+      class: "ccd-flf-btn", text: label,
+      title: slot === "flf_start"
+        ? "上一段的尾帧接到下一段的开头（默认）"
+        : "作为本段视频的结束帧",
+    });
+    b.addEventListener("click", () => set(slot, true));
+    btns[slot] = b;
+    wrap.appendChild(b);
+  }
+  set(ui.syncFlfSlot, false);
+  return wrap;
+}
+
+function fetchOutputFiles(kind) {
+  return fetch(API_BASE + "/output_files?kind=" + encodeURIComponent(kind))
+    .then((r) => r.json());
+}
+
+/** 读 output 清单 → 渲染列表；分页 60 条，滚动到底点「加载更多」 */
+function fillPickLayer(pop, kind, onPick, opt) {
+  const options = opt || {};
+  fetchOutputFiles(kind).then((j) => {
+    if (!j || j.ok !== true || !Array.isArray(j.items)) {
+      throw new Error("接口没就绪（要重启一次 ComfyUI）");
+    }
+    renderPickRows(pop, kind, j.items, onPick, options);
+    pop.__status.textContent = "共 " + j.items.length + " 条"
+      + (j.count > j.items.length ? "（列表只显示最近 " + j.items.length + " 条）" : "");
+  }).catch((e) => {
+    pop.__status.textContent = "读列表失败：" + ((e && e.message) || e)
+      + "；确认插件已升到 v1.11.0 并重启过 ComfyUI";
+    pop.__status.classList.add("ccd-bad");
+    log("output_files", e);
+  });
+}
+
+function renderPickRows(pop, kind, items, onPick, opt) {
+  const body = pop.__body;
+  body.textContent = "";
+  const cur = typeof ui.lastImage === "string" ? ui.lastImage : "";
+  let marked = 0, scrolled = false;
+  const shown = [];
+  const addRow = (it, idx) => {
+    const isCur = (cur && it.value === cur) || (!cur && idx === 0);
+    const row = el("div", { class: "ccd-pick" + (isCur ? " ccd-cur" : "") });
+    if (kind === "video") {
+      row.appendChild(el("span", { class: "ccd-pick-ico", text: "🎬" }));
+    } else {
+      row.appendChild(el("img", { class: "ccd-pick-img", src: thumbUrlOf(it) }));
+    }
+    row.appendChild(el("div", { class: "ccd-pick-main" }, [
+      el("div", {
+        class: "ccd-pick-name",
+        text: (it.subfolder ? it.subfolder + "/" : "") + it.name,
+        title: it.value,
+      }),
+      el("div", {
+        class: "ccd-pick-time",
+        text: fmtPickTime((it.mtime || 0) * 1000)
+          + (it.size ? " · " + fmtSize(it.size) : ""),
+      }),
+    ]));
+    if (isCur) {
+      row.appendChild(el("span", {
+        class: "ccd-pick-tag", text: cur ? "上次结果" : "最新",
+      }));
+      marked++;
+      if (!scrolled) {
+        scrolled = true;
+        setTimeout(() => {
+          try {
+            if (row.scrollIntoView) row.scrollIntoView({ block: "center" });
+          } catch (e) { /* ignore */ }
+        }, 0);
+      }
+    }
+    row.addEventListener("click", () => onPick(it));
+    body.appendChild(row);
+  };
+  for (let i = 0; i < items.length && i < PICK_PAGE; i++) {
+    shown.push(items[i]);
+    addRow(items[i], i);
+  }
+  if (items.length > shown.length) {
+    const more = el("div", {
+      class: "ccd-pop-more",
+      text: "还有 " + (items.length - shown.length) + " 条 —— 点这里加载更多",
+    });
+    more.addEventListener("click", () => {
+      const start = shown.length;
+      const end = Math.min(items.length, start + PICK_PAGE);
+      for (let i = start; i < end; i++) {
+        shown.push(items[i]);
+        addRow(items[i], i);
+      }
+      if (shown.length >= items.length) {
+        more.textContent = "已到最底（共 " + items.length + " 条）";
+      } else {
+        more.textContent = "还有 " + (items.length - shown.length)
+          + " 条 —— 点这里加载更多";
+      }
+    });
+    body.appendChild(more);
+  }
+  if (opt && opt.statusAfter) {
+    pop.__status.textContent = opt.statusAfter(marked);
+  }
+}
+
+/** 历史选择：output 里的图片，时间倒序；定位到「上次结果」那条，往下就是更早的 */
+function openImagePicker() {
+  const pop = buildPickLayer("历史选择 · output 里的图片",
+    "按时间倒序（最新在前）；标「上次结果」那条就是你刚出的图，"
+    + "往下翻就是更早生成的。点一行立即写入当前管线的取图节点。");
+  mountSyncLayer(pop);
+  fillPickLayer(pop, "image", (it) => {
+    if (ui.syncPick) ui.syncPick.history = it.value;   // 记住：之后 ↻ 同步 直接用这张
+    applyPickedImage(it.value, "已同步历史选择");
+    closeSyncLayers();
+  });
+}
+
+/** 视频尾帧：视频管线可用；抽最后一帧 → 写目标槽 */
+function openVideoTailPicker() {
+  if (PIPE_KIND[activePipe()] !== "video") {
+    flashSyncStatus("「视频尾帧」只在视频管线上可用", true);
+    return null;
+  }
+  const pipe = activePipe();
+  const note = pipe === "flf2v"
+    ? "选一段视频 → 截最后一帧 → 填到首尾帧的起始帧（默认）或结束帧。"
+    : (pipe === "t2v"
+      ? "选一段视频 → 截最后一帧 → 同时填到图生视频的取图槽和首尾帧的起始帧，"
+        + "接着生成下一段用。"
+      : "选一段视频 → 截最后一帧 → 填到图生视频的取图槽，接着生成下一段用。");
+  const extra = pipe === "flf2v" ? buildFlfModeRow() : null;
+  const pop = buildPickLayer("视频尾帧 · output 里的视频",
+    note + "（尾帧 PNG 存到 output/cc_tail/，不混进图片历史）", extra);
+  mountSyncLayer(pop);
+  fillPickLayer(pop, "video", (it) => runTailFrame(it, pop));
+  return pop;
+}
+
+function runTailFrame(it, pop) {
+  pop.__status.textContent = "正在截取尾帧…";
+  pop.__status.classList.remove("ccd-bad");
+  fetch(API_BASE + "/tail_frame", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ file: it.value }),
+  }).then((r) => r.json()).then((j) => {
+    if (!j || j.ok !== true || !j.value) {
+      throw new Error((j && j.error) || "接口没就绪（要重启一次 ComfyUI）");
+    }
+    if (ui.syncPick) ui.syncPick.tail = j.value;       // 记住：之后 ↻ 同步 直接用这张
+    applyPickedImage(j.value, "视频尾帧");
+    closeSyncLayers();
+  }).catch((e) => {
+    pop.__status.textContent = "截取失败：" + ((e && e.message) || e);
+    pop.__status.classList.add("ccd-bad");
+    log("tail_frame", e);
+  });
+}
+
+/** 自定义：本地选图 → 官方 /upload/image 到 input/cc_dashboard/ → 写目标槽 */
+function pickCustomImage() {
+  const doc = docOfRoot();
+  const inp = el("input", {
+    type: "file", accept: "image/*", class: "ccd-hide",
+  });
+  inp.addEventListener("change", () => {
+    const f = inp.files && inp.files[0];
+    try { if (inp.parentNode) inp.parentNode.removeChild(inp); } catch (e) { /* ignore */ }
+    if (f) uploadCustomImage(f);
+  });
+  // 挂到面板里（.ccd-hide 的选择器带根前缀，挂 body 上会露出一个空文件框）
+  (ui.root || doc.body).appendChild(inp);
+  try {
+    inp.click();
+  } catch (e) {
+    flashSyncStatus("这个窗口不让直接弹文件框，请用画布取图节点的「choose file」", true);
+    log("自定义上传", e);
+  }
+}
+
+function uploadCustomImage(file) {
+  if (!file) return null;
+  flashSyncStatus("正在上传 " + (file.name || "图片") + "…");
+  let fd = null;
+  try {
+    fd = new FormData();
+    fd.append("image", file, file.name || "custom.png");
+    fd.append("type", "input");
+    fd.append("subfolder", "cc_dashboard");
+  } catch (e) { log("FormData", e); }
+  return fetch(apiUrlOf("/upload/image"), { method: "POST", body: fd })
+    .then((r) => r.json())
+    .then((j) => {
+      if (!j || !j.name) throw new Error("上传失败");
+      const rel = (j.subfolder ? String(j.subfolder).replace(/\\/g, "/") + "/" : "")
+        + j.name;
+      const value = rel + " [input]";
+      if (ui.syncPick) ui.syncPick.custom = value;     // 记住：之后 ↻ 同步 直接用这张
+      applyPickedImage(value, "已上传");
+      return value;
+    })
+    .catch((e) => {
+      flashSyncStatus("上传失败：" + ((e && e.message) || e), true);
+      return null;
+    });
 }
 
 // ---------------------------------------------------------------- 同步
@@ -5521,6 +6251,7 @@ function syncResources(force) {
 function sync(force) {
   if (!ui.root) return;
   if (!hasMarkers()) {
+    closeSyncLayers();
     ui.root.style.display = "none";
     ui.bound = false;
     return;

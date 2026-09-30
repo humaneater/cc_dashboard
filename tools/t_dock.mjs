@@ -2947,6 +2947,350 @@ try {
     globalThis.fetch = keepFetch4;
   }
 
+  // ------------------------------------------- 同步来源菜单（v1.11.0）
+  console.log("\n[28] 同步 ▾ 菜单：上次结果 / 历史选择 / 自定义 / 视频尾帧");
+  {
+    const keepFetch5 = globalThis.fetch;
+    const NOW = Date.now();
+    const IMGS = [
+      { name: "refined_05000_.png", subfolder: "", mtime: NOW / 1000 - 10,
+        size: 123456, value: "refined_05000_.png [output]" },
+      { name: "refined_04999_.png", subfolder: "", mtime: NOW / 1000 - 600,
+        size: 234567, value: "refined_04999_.png [output]" },
+      { name: "refined_04998_.png", subfolder: "", mtime: NOW / 1000 - 1200,
+        size: 345678, value: "refined_04998_.png [output]" },
+    ];
+    const VIDS = [
+      { name: "total_i2v_00023_.mp4", subfolder: "video",
+        mtime: NOW / 1000 - 30, size: 2563662,
+        value: "video/total_i2v_00023_.mp4 [output]" },
+      { name: "total_t2v_00001_.mp4", subfolder: "video",
+        mtime: NOW / 1000 - 300, size: 1563662,
+        value: "video/total_t2v_00001_.mp4 [output]" },
+    ];
+    const tailCalls = [], uploadCalls = [], outAsk = [];
+    globalThis.fetch = async (url, opt) => {
+      const u = String(url || "");
+      if (u.indexOf("/cc_dashboard/output_files") >= 0) {
+        const kind = u.indexOf("kind=video") >= 0 ? "video" : "image";
+        const items = kind === "video" ? VIDS : IMGS;
+        outAsk.push(kind);
+        return { ok: true, status: 200,
+          json: async () => ({ ok: true, kind, count: items.length,
+            items: items.slice() }) };
+      }
+      if (u.indexOf("/cc_dashboard/tail_frame") >= 0) {
+        tailCalls.push(JSON.parse((opt && opt.body) || "{}"));
+        return { ok: true, status: 200, json: async () => ({
+          ok: true, value: "cc_tail/cc_tail_x.png [output]",
+          width: 64, height: 48, frames: 6 }) };
+      }
+      if (u.indexOf("/upload/image") >= 0) {
+        uploadCalls.push(u);
+        return { ok: true, status: 200, json: async () => ({
+          name: "my_upload.png", subfolder: "cc_dashboard", type: "input" }) };
+      }
+      if (u.indexOf("/queue") >= 0) {
+        return { ok: true, status: 200,
+          json: async () => ({ queue_running: [], queue_pending: [] }) };
+      }
+      return { ok: true, status: 200, json: async () => ({}) };
+    };
+
+    const wImg5 = (k) => app.graph.getNodeById("src_" + k).widgets[0];
+    const setSrc5 = (k, list, cur) => {
+      const w = wImg5(k);
+      w.options = { values: list.slice() };
+      if (cur !== undefined) w.value = cur;
+    };
+    const syncMsgEl = () => root().querySelector(".ccd-sync-msg");
+    const caretBtn = () => [...root().querySelectorAll("BUTTON")].find(
+      (b) => b.classList.contains("ccd-sync-caret"));
+    const syncMainBtn = () => [...root().querySelectorAll("BUTTON")].find(
+      (b) => String(b.textContent) === "↻ 同步");
+    const menuItems = () => root().querySelectorAll(".ccd-menu-item");
+    // 当前模式那项前面带「✓ 」，按名字找的时候先剥掉
+    const menuLabel = (it) => String(it.children[0].textContent).replace(/^✓\s*/, "");
+    const menuItem = (name) => menuItems().find(
+      (it) => menuLabel(it) === name);
+    const popEl = () => root().querySelector(".ccd-pop");
+    const popRows = () => {
+      const p = popEl();
+      return p ? p.querySelectorAll(".ccd-pick") : [];
+    };
+    const popStatus = () => {
+      const p = popEl();
+      return p ? String(p.querySelector(".ccd-pop-status").textContent) : "";
+    };
+    const allText = (n) => {
+      let out = n && n._text ? String(n._text) : "";
+      for (const c of (n && n.children) || []) out += allText(c);
+      return out;
+    };
+
+    pipeBtn("文生图").dispatch("click");
+    await tick(20);
+    eq(globalThis.__ccDock.syncTargets().join(","),
+      "i2i,i2i_fixed,i2v,flf_start,flf_end",
+      "文生图的目标还是那 5 个下游取图节点");
+
+    ok(!!caretBtn(), "同步按钮旁边有 ▾ 菜单按钮");
+    caretBtn().dispatch("click");
+    await tick(20);
+    eq(menuItems().length, 4, "菜单正好 4 项");
+    eq(menuItems().map(menuLabel).join(","),
+      "上次结果,历史选择,自定义,视频尾帧",
+      "菜单名称：上次结果 / 历史选择 / 自定义 / 视频尾帧");
+    eq(globalThis.__ccDock.syncMode(), "last", "默认同步来源模式 = 上次结果");
+    ok(/^✓/.test(String(menuItem("上次结果").children[0].textContent)),
+      "当前模式那一项前面有 ✓");
+    ok(menuItem("视频尾帧").classList.contains("ccd-dis"),
+      "图像管线里「视频尾帧」是灰的（仅视频管线可用）");
+    // v1.11.0 修正：弹层必须挂在面板根节点里，否则 #cc-dock-root 前缀的样式全部失效
+    eq(root().querySelectorAll(".ccd-menu").length, 1,
+      "菜单挂在面板根节点里（CSS 前缀才生效）");
+    eq(mainDoc.body.querySelectorAll(".ccd-backdrop").length, 0,
+      "不再用全屏遮罩（免得挡住面板本身）");
+    mainDoc.dispatch("pointerdown", { target: menuItems()[0] });
+    await tick(10);
+    eq(menuItems().length, 4, "点菜单里面的项不会误关菜单");
+    mainDoc.dispatch("pointerdown", { target: mainDoc.body });
+    await tick(10);
+    eq(menuItems().length, 0, "点面板外面能收起菜单");
+    caretBtn().dispatch("click");
+    await tick(20);
+    eq(menuItems().length, 4, "再点 ▾ 又能打开");
+    mainDoc.dispatch("keydown", { key: "Escape" });
+    await tick(10);
+    eq(menuItems().length, 0, "按 ESC 也能收起菜单");
+
+    // ▾ 只是选来源：点「上次结果」不会自己写画布，点 ↻ 同步 才写
+    setSrc5("i2i", ["keep_a.png"], "keep_a.png");
+    setSrc5("i2v", ["keep_b.png"], "keep_b.png");
+    api.emit("executed", {
+      node: "s_t2i", display_node: "s_t2i", prompt_id: "p28",
+      output: { images: [{ filename: "refined_05000_.png", subfolder: "",
+        type: "output" }] },
+    });
+    await sleep(1200);                       // 等自动同步那几轮重试跑完
+    setSrc5("i2i", ["keep_a.png"], "keep_a.png");
+    setSrc5("i2i_fixed", ["keep_c.png"], "keep_c.png");
+    caretBtn().dispatch("click");
+    await tick(20);
+    menuItem("上次结果").dispatch("click");
+    await tick(20);
+    eq(menuItems().length, 0, "点一项菜单就收起");
+    eq(globalThis.__ccDock.syncMode(), "last", "「上次结果」把来源设成 last");
+    eq(wImg5("i2i").value, "keep_a.png", "光点菜单项不写画布（只切模式）");
+    // 上次结果：用 Save 报回来的那张（哪怕它还没进下拉）
+    syncMainBtn().dispatch("click");
+    await tick(20);
+    eq(wImg5("i2i").value, "refined_05000_.png [output]",
+      "点 ↻ 同步 → 「上次结果」写进图生图取图节点");
+    eq(wImg5("i2i_fixed").value, "refined_05000_.png [output]",
+      "  └ 图生图（固定分辨率）也写了");
+    ok(/已同步上次结果/.test(String(syncMsgEl().textContent)),
+      "状态栏给反馈：" + syncMsgEl().textContent);
+    eq(JSON.parse(localStorage.getItem("cc_dock_ui_v1")).syncMode, "last",
+      "来源模式记进 localStorage");
+
+    // 历史选择：menuItem 点一下 = 切模式，没选过图就直接把选图弹层打开
+    caretBtn().dispatch("click");
+    await tick(20);
+    menuItem("历史选择").dispatch("click");
+    await tick(40);
+    ok(outAsk.indexOf("image") >= 0, "历史选择问了 /cc_dashboard/output_files?kind=image");
+    const rows = popRows();
+    eq(rows.length, 3, "历史列表 3 行（桩数据）");
+    ok(rows[0].classList.contains("ccd-cur"), "第 1 行（最新 = 上次结果）被高亮");
+    ok(/上次结果/.test(allText(rows[0])),
+      "  └ 带「上次结果」标签");
+    ok(allText(rows[0]).indexOf("refined_05000_.png") >= 0
+      && allText(rows[2]).indexOf("refined_04998_.png") >= 0,
+      "顺序是时间倒序（最新在前，往下更早）");
+    ok(/KB|MB/.test(allText(rows[1])), "每行带文件大小 / 时间信息");
+    rows[1].dispatch("click");
+    await tick(20);
+    eq(wImg5("i2i").value, "refined_04999_.png [output]",
+      "点第二行 → 把「同一时段之前」的那张写下游");
+    eq(wImg5("i2v").value, "refined_04999_.png [output]",
+      "  └ 图生视频也同步到了");
+    ok(/refined_04999_/.test(String(syncMsgEl().textContent)),
+      "状态栏报出写的是哪张：" + syncMsgEl().textContent);
+    eq(popRows().length, 0, "选完自动关掉弹层");
+    // 刚跑完那会儿还挂着自动同步重试：手选之后不能被它顶回最新那张
+    await sleep(700);
+    eq(wImg5("i2i").value, "refined_04999_.png [output]",
+      "挂起的自动同步被取消，手选的图不会被顶回最新的");
+    eq(globalThis.__ccDock.syncMode(), "history",
+      "点「历史选择」把来源模式设成 history");
+    eq(globalThis.__ccDock.syncPack().history, "refined_04999_.png [output]",
+      "选中的那张被记成 history 模式的图");
+    // 再点一次当前项 = 换图：重新弹选图列表
+    caretBtn().dispatch("click");
+    await tick(20);
+    menuItem("历史选择").dispatch("click");
+    await tick(40);
+    eq(popRows().length, 3, "再点当前来源 → 重新弹选图列表（换图）");
+    mainDoc.dispatch("keydown", { key: "Escape" });
+    await tick(10);
+    eq(popRows().length, 0, "ESC 收起选图列表");
+    // 模式生效：跑出新图也不会自动把「最新那张」盖到你选的图上
+    api.emit("executed", {
+      node: "s_t2i", display_node: "s_t2i", prompt_id: "p28b",
+      output: { images: [{ filename: "refined_05001_.png", subfolder: "",
+        type: "output" }] },
+    });
+    await sleep(1200);
+    eq(wImg5("i2i").value, "refined_04999_.png [output]",
+      "「历史选择」模式下跑完新图：自动传图停用，你选的图还在");
+    setSrc5("i2i", ["keep_a.png"], "keep_a.png");
+    syncMainBtn().dispatch("click");
+    await tick(40);
+    eq(wImg5("i2i").value, "refined_04999_.png [output]",
+      "「历史选择」模式下 ↻ 同步 写的是记住的那张，不是最新那张");
+    ok(/已同步历史选择/.test(String(syncMsgEl().textContent)),
+      "状态栏点名用的是历史选择：" + syncMsgEl().textContent);
+    // ⟳ 取图 在换过来源后只换当前栏，并给一句说明
+    const takeBtn2 = [...root().querySelectorAll("BUTTON")].find(
+      (b) => String(b.textContent).indexOf("取图") >= 0);
+    takeBtn2.dispatch("click");
+    await tick(30);
+    ok(/取图 只换当前栏/.test(String(syncMsgEl().textContent)),
+      "换过来源时 ⟳ 取图 说明只换当前栏：" + syncMsgEl().textContent);
+    // 切回「上次结果」：自动传图恢复
+    caretBtn().dispatch("click");
+    await tick(20);
+    menuItem("上次结果").dispatch("click");
+    await tick(20);
+    eq(globalThis.__ccDock.syncMode(), "last", "切回「上次结果」模式");
+    api.emit("executed", {
+      node: "s_t2i", display_node: "s_t2i", prompt_id: "p28c",
+      output: { images: [{ filename: "refined_05002_.png", subfolder: "",
+        type: "output" }] },
+    });
+    await sleep(1200);
+    eq(wImg5("i2i").value, "refined_05002_.png [output]",
+      "切回 last：跑完的图又自动传给下游了");
+
+    // 自定义：上传到 input/cc_dashboard/，写 [input] 值
+    const upRes = await globalThis.__ccDock.uploadCustomImage(
+      { name: "my_upload.png", size: 12 });
+    await tick(20);
+    eq(upRes, "cc_dashboard/my_upload.png [input]", "上传返回值带 [input] 后缀");
+    eq(wImg5("i2i").value, "cc_dashboard/my_upload.png [input]",
+      "自定义图片写进取图节点（走 input/ 目录）");
+    ok(uploadCalls.length > 0, "确实调了官方 /upload/image");
+    ok(/已上传/.test(String(syncMsgEl().textContent)),
+      "状态栏报「已上传」");
+    ok(/\[input\]$/.test(String(wImg5("i2i").value))
+      && wImg5("i2i").options.values.indexOf("cc_dashboard/my_upload.png [input]") >= 0,
+      "  └ 值不在原下拉里也会补进清单（画布不空白）");
+    eq(globalThis.__ccDock.syncPack().custom, "cc_dashboard/my_upload.png [input]",
+      "上传的那张被记成 custom 模式的图");
+    // 切到「自定义」：已经记住过图，点菜单项只切模式，不再弹文件框
+    caretBtn().dispatch("click");
+    await tick(20);
+    menuItem("自定义").dispatch("click");
+    await tick(20);
+    eq(globalThis.__ccDock.syncMode(), "custom", "「自定义」把来源模式设成 custom");
+    eq(popEl(), null, "已经记过图：切到「自定义」不再弹文件框");
+    setSrc5("i2i", ["keep_a.png"], "keep_a.png");
+    syncMainBtn().dispatch("click");
+    await tick(40);
+    eq(wImg5("i2i").value, "cc_dashboard/my_upload.png [input]",
+      "「自定义」模式下 ↻ 同步 写回那张上传的图");
+
+    // 视频尾帧：文生视频 → i2v + 首尾帧起始帧
+    pipeBtn("文生视频").dispatch("click");
+    await tick(20);
+    eq(globalThis.__ccDock.syncTargets().join(","), "i2v,flf_start",
+      "文生视频的目标 = 图生视频槽 + 首尾帧起始帧（按你的选择）");
+    setSrc5("i2v", ["old_i2v.png"], "old_i2v.png");
+    setSrc5("flf_start", ["old_s.png"], "old_s.png");
+    caretBtn().dispatch("click");
+    await tick(20);
+    ok(!menuItem("视频尾帧").classList.contains("ccd-dis"),
+      "视频管线里「视频尾帧」可用");
+    menuItem("视频尾帧").dispatch("click");
+    await tick(40);
+    ok(outAsk.indexOf("video") >= 0, "尾帧弹层问了 kind=video");
+    eq(popRows().length, 2, "视频列表 2 行（桩数据，含子目录）");
+    ok(/video\//.test(allText(popRows()[0])),
+      "视频行显示子目录路径：" + allText(popRows()[0]).slice(0, 40));
+    popRows()[0].dispatch("click");
+    await tick(60);
+    eq(tailCalls.length, 1, "调了一次 /cc_dashboard/tail_frame");
+    eq(tailCalls[0].file, "video/total_i2v_00023_.mp4 [output]",
+      "  └ 传的是选中的视频值");
+    eq(wImg5("i2v").value, "cc_tail/cc_tail_x.png [output]",
+      "尾帧填进图生视频取图槽");
+    eq(wImg5("flf_start").value, "cc_tail/cc_tail_x.png [output]",
+      "  └ 文生视频同时还填了首尾帧起始帧");
+    ok(/视频尾帧/.test(String(syncMsgEl().textContent)),
+      "状态栏报「视频尾帧」：" + syncMsgEl().textContent);
+    eq(globalThis.__ccDock.syncMode(), "tail", "「视频尾帧」把来源模式设成 tail");
+    eq(globalThis.__ccDock.syncPack().tail, "cc_tail/cc_tail_x.png [output]",
+      "尾帧被记成 tail 模式的图");
+    setSrc5("i2v", ["old_i2v.png"], "old_i2v.png");
+    setSrc5("flf_start", ["old_s.png"], "old_s.png");
+    syncMainBtn().dispatch("click");
+    await tick(40);
+    eq(wImg5("i2v").value, "cc_tail/cc_tail_x.png [output]",
+      "「视频尾帧」模式下 ↻ 同步 写回那张尾帧");
+    eq(wImg5("flf_start").value, "cc_tail/cc_tail_x.png [output]",
+      "  └ 首尾帧起始帧也跟着写");
+
+    // 首尾帧：默认起始帧，可切结束帧
+    pipeBtn("首尾帧").dispatch("click");
+    await tick(20);
+    globalThis.__ccDock.setFlfSlot("flf_start");
+    setSrc5("flf_start", ["old_s.png"], "old_s.png");
+    setSrc5("flf_end", ["old_e.png"], "old_e.png");
+    globalThis.__ccDock.openVideoTailPicker();
+    await tick(40);
+    const modeRow = popEl().querySelector(".ccd-flf-mode");
+    ok(!!modeRow, "首尾帧的尾帧弹层有「起始帧 / 结束帧」切换");
+    const modeBtns = modeRow.querySelectorAll("BUTTON");
+    eq(modeBtns.length, 2, "  └ 两个按钮");
+    ok(modeBtns[0].classList.contains("ccd-on"), "  └ 默认选起始帧");
+    eq(globalThis.__ccDock.syncTargets().join(","), "flf_start",
+      "  └ 目标 = 起始帧");
+    modeBtns[1].dispatch("click");
+    await tick(10);
+    ok(modeBtns[1].classList.contains("ccd-on")
+      && !modeBtns[0].classList.contains("ccd-on"), "点一下切到结束帧");
+    eq(globalThis.__ccDock.syncTargets().join(","), "flf_end",
+      "  └ 目标 = 结束帧");
+    popRows()[0].dispatch("click");
+    await tick(60);
+    eq(wImg5("flf_end").value, "cc_tail/cc_tail_x.png [output]",
+      "尾帧写进首尾帧的结束帧");
+    eq(wImg5("flf_start").value, "old_s.png",
+      "  └ 起始帧没被动（切到结束帧了）");
+    globalThis.__ccDock.setFlfSlot("flf_start");
+
+    // 图生视频：写自己的 i2v 槽
+    pipeBtn("图生视频").dispatch("click");
+    await tick(20);
+    eq(globalThis.__ccDock.syncTargets().join(","), "i2v",
+      "图生视频的目标 = 自己的 i2v 槽");
+    eq(globalThis.__ccDock.syncLast(), true, "「上次结果」在图生视频上也能用");
+
+    // 图像管线里 tail 模式点同步 → 只提示，不写画布
+    pipeBtn("文生图").dispatch("click");
+    await tick(20);
+    globalThis.__ccDock.syncMode("tail");
+    setSrc5("i2i", ["keep_a.png"], "keep_a.png");
+    globalThis.__ccDock.syncNow();
+    await tick(20);
+    ok(/只在视频管线上可用/.test(String(syncMsgEl().textContent)),
+      "图像管线里 tail 模式点 ↻ 同步 会提示：" + syncMsgEl().textContent);
+    eq(wImg5("i2i").value, "keep_a.png", "  └ 不会乱写画布");
+    eq(globalThis.__ccDock.syncMode("last"), "last", "调试口能把来源模式设回 last");
+    globalThis.fetch = keepFetch5;
+  }
+
 } catch (e) {
   results.fail++;
   console.log("\n运行期异常：" + (e && e.stack ? e.stack : e));

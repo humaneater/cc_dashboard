@@ -13,6 +13,9 @@
   GET  /cc_dashboard/model_info?name=…  这个 ckpt 自带不带文本编码器 / VAE、属于哪个架构族、
                                         训练分辨率多少（只读张量名与 __metadata__，不加载权重）
   GET  /cc_dashboard/loras               LoRA 清单 + 文件时间（面板排序 / 刷新；?refresh=1 强扫）
+  GET  /cc_dashboard/output_files?kind=image|video
+                                         output/ 里的图片 / 视频清单（同步 ▾ → 历史选择 / 视频尾帧）
+  POST /cc_dashboard/tail_frame          {"file":"video/xxx.mp4 [output]"} → 抽最后一帧存 PNG
 
 另外注册一个画布节点「中→英 翻译（提示词）」：CCTranslateZhEn。
 """
@@ -24,18 +27,20 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 if _HERE not in sys.path:
     sys.path.insert(0, _HERE)
 
-__version__ = "1.10.0"
+__version__ = "1.11.0"
 
 try:                                    # 作为插件包导入
     from . import translate as _translate
     from . import modelinfo as _modelinfo
     from . import lorainfo as _lorainfo
+    from . import outputinfo as _outputinfo
     from .blueprint import generator as _generator
     from .tools import paths as _paths
 except ImportError:                     # 以顶层模块 / 脚本方式导入
     import translate as _translate
     import modelinfo as _modelinfo
     import lorainfo as _lorainfo
+    import outputinfo as _outputinfo
     from blueprint import generator as _generator
     from tools import paths as _paths
 
@@ -183,6 +188,47 @@ def _register_routes():
             res = _lorainfo.listing(refresh)
         except Exception as e:
             res = {"ok": False, "error": "%r" % (e,), "count": 0, "items": [], "dirs": []}
+        res["version"] = __version__
+        return web.json_response(res)
+
+    @routes.get("/cc_dashboard/output_files")
+    async def cc_dashboard_output_files(request):
+        """只读：output/ 里的图片 / 视频清单（同步 ▾ → 历史选择 / 视频尾帧）。
+
+        ?kind=image（默认）或 ?kind=video；带 mtime，面板按时间倒序显示。
+        """
+        try:
+            kind = request.rel_url.query.get("kind", "image")
+        except Exception:
+            kind = "image"
+        try:
+            loop = asyncio.get_running_loop()
+            res = await loop.run_in_executor(
+                None, lambda: _outputinfo.list_output(kind))
+        except Exception as e:
+            res = {"ok": False, "error": "%r" % (e,), "count": 0, "items": []}
+        res["version"] = __version__
+        return web.json_response(res)
+
+    @routes.post("/cc_dashboard/tail_frame")
+    async def cc_dashboard_tail_frame(request):
+        """抽视频最后一帧：写 output/cc_tail/、返回 [output] 值给面板写进取图节点。"""
+        try:
+            data = await request.json()
+        except Exception:
+            data = {}
+        if not isinstance(data, dict):
+            data = {}
+        try:
+            loop = asyncio.get_running_loop()
+            res = await loop.run_in_executor(
+                None, lambda: _outputinfo.extract_tail_frame(data))
+        except ValueError as e:
+            return web.json_response({"ok": False, "error": str(e)},
+                                     status=400)
+        except Exception as e:
+            return web.json_response({"ok": False, "error": "%r" % (e,)},
+                                     status=500)
         res["version"] = __version__
         return web.json_response(res)
 

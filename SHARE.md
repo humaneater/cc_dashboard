@@ -21,6 +21,7 @@ node   tools/t_dock.mjs         # 面板行为（需要 node，没有就跳过�
 python tools/t_translate.py     # 翻译自检（装了 Opus-MT 才跑；没装可跳过）
 python tools/t_modelinfo.py     # 模型头部探测（架构族 / 训练分辨率 / 缺不缺 TE·VAE）
 python tools/t_lorainfo.py      # LoRA 清单（名字 + 文件时间 + 刷新重扫）
+python tools/t_outputinfo.py    # output 清单 + 视频抽尾帧（过滤 / 倒序 / 越界 / 像素）
 ```
 
 全绿再往外发。`t_plugin.py` 还会提醒你「预置蓝图落后于生成器」——
@@ -155,7 +156,7 @@ git tag v1.0.1 && git push && git push --tags
 ```bash
 python tools/t_plugin.py && python tools/check_dashboard.py && python tools/t_sim.py \
   && node tools/t_dock.mjs && python tools/t_translate.py && python tools/t_modelinfo.py \
-  && python tools/t_lorainfo.py && python tools/make_zip.py
+  && python tools/t_lorainfo.py && python tools/t_outputinfo.py && python tools/make_zip.py
 ```
 
 跑完把 `dist/cc_dashboard-*.zip` 发出去，或者 `git push` —— 对方解压/装完重启就能用。

@@ -93,14 +93,17 @@ def main():
                 "blueprint/generator.py", "pyproject.toml", "README.md",
                 "SHARE.md", "tools/gen_dashboard.py", "tools/check_dashboard.py",
                 "tools/t_sim.py", "tools/t_dock.mjs", "tools/make_zip.py",
-                "translate.py", "web/zh_en_dict.json",
+                "translate.py", "outputinfo.py", "tools/t_outputinfo.py",
+                "web/zh_en_dict.json",
                 "tools/install_translate.py"):
         ok(os.path.exists(os.path.join(PLUGIN, rel)), "有 %s" % rel)
     init_src = read(os.path.join(PLUGIN, "__init__.py"))
     ok('WEB_DIRECTORY = "web"' in init_src, "WEB_DIRECTORY 指向 web/")
     ok("/cc_dashboard/status" in init_src and "/cc_dashboard/blueprint" in init_src
-       and "/cc_dashboard/translate" in init_src,
-       "注册了 status / blueprint / translate 三个接口")
+       and "/cc_dashboard/translate" in init_src
+       and "/cc_dashboard/output_files" in init_src
+       and "/cc_dashboard/tail_frame" in init_src,
+       "注册了 status / blueprint / translate / output_files / tail_frame 五个接口")
     ok("CCTranslateZhEn" in init_src, "注册了「中→英 翻译」画布节点")
     ok("ensure_blueprint_installed" in init_src, "首次安装会放置预置蓝图")
 
