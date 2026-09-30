@@ -1,7 +1,7 @@
 [project]
 name = "cc_dashboard"
 description = "ComfyUI 总控台：浮动控制面板 + 蓝图生成器 + 中→英提示词翻译。一条龙多管线（文生图 / 图生图精修 / 图生视频 / 首尾帧 / 文生视频），跨 SDXL(Illustrious) 与 ANIMA 切换，姿势 / 脸手眼矫正 / 高清化都能一键开关。"
-version = "1.11.0"
+version = "1.11.1"
 license = { file = "LICENSE" }
 # 纯前端扩展 + 本地脚本，不需要额外的 pip 依赖
 dependencies = []

@@ -45,7 +45,7 @@
  *     收起 / 展开：每行编号旁边的「中」按钮，以及提示词组标题的「中文」（整组一起）。
  *     草稿存两处：localStorage（换页面还在）+ 开关节点 properties.cc_dock_zh
  *     （跟着工作流文件走，换浏览器也丢不了）。草稿只是底稿，不进 prompt。
- *  v1.11.0：同步来源菜单 —— ▾ 选「从哪儿拿图」，↻ 同步 按选中的来源写下游：
+ *  v1.11.0：同步来源菜单 —— ▾ 选「从哪儿拿图」，↻ 同步 按选中的来源取图：
  *     · 上次结果：本次会话最后出的图（没有就用 output/ 最新那张），默认来源
  *     · 历史选择：列 output/ 里的图（缩略图 + 时间，最新在前），定位到上次结果那条，
  *       方便挑「同一时段之前」的图
@@ -54,6 +54,12 @@
  *       （图生视频→i2v；首尾帧→起始帧，可切结束帧；文生视频→i2v + 起始帧）
  *     后三个来源各自记住本次会话选过的那张（不落盘），↻ 同步 直接写它；换成它们之后
  *     「跑完图自动传最新」停用（免得把你选的顶掉），切回「上次结果」即恢复。
+ *  v1.11.1：修「图生图精修同步不上」——
+ *     · ↻ 同步 先写「当前管线自己的取图节点」（图生图精修 / 图生图 / 图生视频 / 首尾帧），
+ *       写不成才只往下游传；以前只写下游，在图生图精修那一栏点同步只会改到「图生图」。
+ *     · 写完值补叫一次取图节点自己的图片回调：前端 1.5x 靠它把选中文件挂进 nodeOutputs
+ *       重画节点预览，只写 w.value 的话下拉变了、画布上那张图还停在旧的。
+ *     · ⟳ 取图 刷新后那几次「还原你没选的格子」不再把同步刚写进来的当前管线那格顶回去。
  *  v5：浮动窗 + 独立窗口（Document PiP）+ 跟随执行
  * 任何异常只 console.warn，不影响出图。
  *
@@ -64,7 +70,7 @@ import { app } from "../../scripts/app.js";
 
 const ROOT_ID = "cc-dock-root";
 const LS_KEY = "cc_dock_ui_v1";
-const CC_DASHBOARD_VERSION = "1.11.0";  // 与 __init__.py / pyproject.toml 保持一致
+const CC_DASHBOARD_VERSION = "1.11.1";  // 与 __init__.py / pyproject.toml 保持一致
 // 与 blueprint/generator.py 的 BLUEPRINT_REV 一致：蓝图结构一改就两边一起 +1，
 // 面板靠它 + 高清链结构两道判断认出「画布上跑的还是旧蓝图」
 const BLUEPRINT_REV = 7;
@@ -2579,7 +2585,8 @@ function build() {
   // ---- 取图 / 同步：▾ 选「从哪儿拿图」（模式），↻ 按这个模式同步（v1.11.0）
   const syncBtn = el("button", {
     text: "↻ 同步",
-    title: "按 ▾ 里选的来源把图传给下游取图节点",
+    title: "按 ▾ 里选的来源取图，写进这条管线的取图节点（图生图精修 / 图生图 / 图生视频 / 首尾帧），"
+      + "顺手交给下游取图节点",
     onclick: () => runSync(),
   });
   const syncCaret = el("button", {
@@ -4731,7 +4738,8 @@ function refreshImageCombos(opt) {
   // 下拉是异步拉回来的：等它落地，再把不该改的格子还原成你原来选的
   const restore = () => {
     const pipe = activePipe();
-    const dsts = IMG_TO_SOURCES[pipe] || [];
+    // 同步要写的那几格（自己的取图槽 + 下游）就该换成新图，别还原
+    const dsts = syncTargetsFor(pipe, ui.syncFlfSlot);
     const own = IMG_OWN_SOURCE[pipe];
     for (const [n, w, old] of keep) {
       if (typeof old !== "string" || !old || w.value === old) continue;
@@ -4739,11 +4747,7 @@ function refreshImageCombos(opt) {
       if (dsts.indexOf(key) >= 0) continue;      // 同步目标：就该换成新图
       if (takeOwn && key === own) continue;      // 当前栏「取图」：也换成新图
       ensureWidgetValue(w, old);
-      try {
-        if (n.graph && typeof n.graph.setDirtyCanvas === "function") {
-          n.graph.setDirtyCanvas(true, false);
-        }
-      } catch (e) { /* ignore */ }
+      pokeImagePreview(n, w);                    // 还原也要重挂预览，别停在半路上
     }
   };
   for (const ms of [80, 300, 900, 1800]) setTimeout(restore, ms);
@@ -4831,6 +4835,27 @@ function ensureWidgetValue(w, v) {
   w.value = v;
 }
 
+/** 写完取图节点（LoadImageOutput）的值，还得叫一次它自己的回调。
+
+    前端 1.5x 的节点预览不是照着 widget.value 画的：combo 的回调才会把你选的文件
+    挂进 app.nodeOutputs，画布上那张图跟着重挂（前端 useImageUploadWidget 里给
+    image 组合框换的就是这个回调）。以前只写 w.value，值对了、预览还停在旧图上，
+    成图看着像「同步没生效」。放在值后面叫，顺序不能反。
+ */
+function pokeImagePreview(node, w) {
+  if (!node || !w) return;
+  try {
+    if (typeof w.callback === "function") {
+      w.callback(w.value, app.canvas, node, [0, 0], null);
+    }
+  } catch (e) { log("image preview", e); }
+  try {
+    if (node.graph && typeof node.graph.setDirtyCanvas === "function") {
+      node.graph.setDirtyCanvas(true, false);
+    }
+  } catch (e) { /* ignore */ }
+}
+
 function sourceNode(key) {
   return findNodes("source_image", key)[0] || null;
 }
@@ -4895,11 +4920,7 @@ function applyOutputImage() {
     if (!w) continue;
     if (w.value === img) continue;
     ensureWidgetValue(w, img);
-    try {
-      if (node.graph && typeof node.graph.setDirtyCanvas === "function") {
-        node.graph.setDirtyCanvas(true, false);
-      }
-    } catch (e) { /* ignore */ }
+    pokeImagePreview(node, w);
     n++;
   }
   return n;
@@ -4946,15 +4967,26 @@ const PICK_PAGE = 60;                        // 历史列表一次先渲染多�
 
 function targetLabel(k) { return TARGET_LABEL[k] || k; }
 
-/** 这条管线的图该写到哪几个取图节点：图像管线按下游表；视频管线写自己的输入槽 */
+/** 这条管线的图该写到哪几个取图节点。
+
+    图像管线：先写「它自己的取图槽」（文生图没有这一格），再写下游 —— 在
+    图生图精修 / 图生图 那一栏点 ↻ 同步，意思就是「换我这条管线要用的源图」，
+    顺手把同一张交给下游，和以前一样。
+    视频管线：本来写的就是自己的输入槽（图生视频 → i2v；首尾帧 → 起帧或止帧；
+    文生视频没有取图节点，写 i2v + 起帧），保持原样。
+ */
 function syncTargetsFor(pipe, flfSlot) {
-  const dsts = IMG_TO_SOURCES[pipe];
-  if (dsts && dsts.length) return dsts.slice();
   const slot = flfSlot === "flf_end" ? "flf_end" : "flf_start";
   if (pipe === "i2v") return (VIDEO_TAIL_TARGETS.i2v || []).slice();
   if (pipe === "flf2v") return [slot];
   if (pipe === "t2v") return (VIDEO_TAIL_TARGETS.t2v || []).slice();
-  return [];
+  const list = [];
+  const own = IMG_OWN_SOURCE[pipe];
+  if (own) list.push(own);
+  for (const k of IMG_TO_SOURCES[pipe] || []) {
+    if (list.indexOf(k) < 0) list.push(k);
+  }
+  return list;
 }
 
 function shortImgName(v) {
@@ -5009,11 +5041,7 @@ function writeImageToTargets(value, targets) {
     hits.push(key);
     if (w.value !== value) changed++;
     ensureWidgetValue(w, value);          // 值不在下拉里也塞进去，画布上不会空白
-    try {
-      if (node.graph && typeof node.graph.setDirtyCanvas === "function") {
-        node.graph.setDirtyCanvas(true, false);
-      }
-    } catch (e) { /* ignore */ }
+    pokeImagePreview(node, w);            // 顺带把画布上那张预览图换成新图
   }
   if (changed) markChanged();
   return { hits, changed };
@@ -5168,9 +5196,9 @@ function paintSyncMode() {
     const what = m === "last"
       ? "本次会话最后出的那张（没有就用 output 最新）"
       : SYNC_MODE_LABEL[m] + (memo ? " · " + shortImgName(memo) : "（还没选图）");
-    ui.syncBtn.title = "按当前来源「" + SYNC_MODE_LABEL[m] + "」把图传给下游取图节点："
-      + what
-      + "；文生图 → 图生图精修 / 图生图 / 图生视频 / 首尾帧，图生图 → 图生视频 / 首尾帧";
+    ui.syncBtn.title = "按当前来源「" + SYNC_MODE_LABEL[m] + "」取图：" + what
+      + "；写进当前管线的取图节点，再往下游传（文生图 → 图生图精修 / 图生图 /"
+      + " 图生视频 / 首尾帧，图生图精修 → 图生图 / 视频，图生图 → 视频）";
   }
   return m;
 }

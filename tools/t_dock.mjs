@@ -381,7 +381,15 @@ function buildGraph() {
     ["flf_end", "old_e.png", ["old_e.png", "older.png"]],
   ]) {
     // 真前端：点 refresh 会重新拉列表，并按 control_after_refresh=first 把值改成第一项（最新）
-    const imgW = widget("image", cur, { options: { values: list.slice() } });
+    // 真前端：LoadImageOutput 的 image 组合框带回调，写完值要叫它一次，节点预览
+    // （画布上那张图）才会换；只写 value 会停在旧图上（v1.11.1 修的）
+    const imgW = widget("image", cur, {
+      options: { values: list.slice() },
+      callback(v) {
+        if (!globalThis.__ccPreviewPokes) globalThis.__ccPreviewPokes = [];
+        globalThis.__ccPreviewPokes.push([k, v]);
+      },
+    });
     const refW = widget("refresh", "refresh", {
       callback: () => {
         const vs = imgW.options && imgW.options.values;
@@ -1549,18 +1557,35 @@ try {
   eq(wImg("flf_end").value, "new_t2i.png", "文生图 → 首尾帧（尾帧）先接上同一张");
   ok(wImg("i2v").options.values.indexOf("new_t2i.png") >= 0,
     "新图不在下拉里时也会补进下拉（不会显示空白）");
-  // 切到图生图：再点同步，只往下游（图生视频 / 首尾帧）传
+  // 切到图生图精修：再点同步，先换「我这条管线自己那格」，再往下游传（v1.11.1）
   pipeBtn("图生图精修").dispatch("click");
   await tick();
+  eq(globalThis.__ccDock.syncTargets().join(","),
+    "i2i,i2i_fixed,i2v,flf_start,flf_end",
+    "图生图精修的目标 = 自己那格 + 下游四格");
   setSrcList("i2v", ["keep_i2v.png", "new_t2i.png"], "keep_i2v.png");
-  // 图生图自己精修出了另一张
-  setSrcList("i2i", ["refine_x.png", "new_t2i.png"], "refine_x.png");
+  // 图生图自己精修出了另一张；自己那格里原来挑的是别的图
+  setSrcList("i2i", ["refine_x.png", "new_t2i.png"], "old_pick.png");
+  globalThis.__ccPreviewPokes = [];
   syncBtn2.dispatch("click");
   await sleep(1300);
+  eq(wImg("i2i").value, "refine_x.png",
+    "图生图精修自己的取图节点换成刚出的那张（以前只传下游，这格不动）");
   eq(wImg("i2v").value, "refine_x.png", "图生图 → 图生视频：用的是图生图的图");
   eq(wImg("flf_start").value, "refine_x.png", "图生图 → 首尾帧（首帧）同步了");
-  eq(nodeSrc("i2i").properties.cc_dock_key, "i2i", "图生图取图节点没被自己改掉");
+  eq(nodeSrc("i2i").properties.cc_dock_key, "i2i", "取图节点的 cc_dock_key 没被写坏");
   eq(wImg("i2i_fixed").value, "refine_x.png", "图生图精修 → 图生图：精修完的图能接着 P");
+  const ownPokes = (globalThis.__ccPreviewPokes || []).filter((p) => p[0] === "i2i");
+  ok(ownPokes.length > 0 && ownPokes[ownPokes.length - 1][1] === "refine_x.png",
+    "写完值又叫了一次取图节点的预览回调（画布上那张图才会跟着换）");
+  // 「上次结果」这条路先刷新下拉（control_after_refresh: first），刷新完那几次还原
+  // 重试不能把刚同步进来的自己那格顶回旧值
+  setSrcList("i2i", ["refine_newest.png", "refine_x.png"], "old_pick.png");
+  globalThis.__ccDock.syncMode("last");
+  syncBtn2.dispatch("click");
+  await sleep(2200);   // 覆盖 80 / 300 / 900 / 1800ms 四次还原
+  eq(wImg("i2i").value, "refine_newest.png",
+    "「上次结果」同步完，自己那格不会被下拉还原重试顶回旧图");
   // 视频管线没有下游：点同步不该动任何东西
   const beforeV = wImg("i2v").value;
   pipeBtn("图生视频").dispatch("click");

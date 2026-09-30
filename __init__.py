@@ -27,7 +27,7 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 if _HERE not in sys.path:
     sys.path.insert(0, _HERE)
 
-__version__ = "1.11.0"
+__version__ = "1.11.1"
 
 try:                                    # 作为插件包导入
     from . import translate as _translate
